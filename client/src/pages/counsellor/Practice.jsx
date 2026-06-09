@@ -1,3 +1,242 @@
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { api } from "../../lib/api";
+import { useAuth } from "../../lib/auth.jsx";
+import Card, { CardHeader } from "../../ui/Card";
+import Button from "../../ui/Button";
+import Input from "../../ui/Input";
+import Textarea from "../../ui/Textarea";
+import Select from "../../ui/Select";
+import Spinner from "../../ui/Spinner";
+import EmptyState from "../../ui/EmptyState";
+import Badge from "../../ui/Badge";
+import DifficultyBadge from "../../ui/DifficultyBadge";
+
+const DIFFICULTY_OPTIONS = [
+  { value: "easy", label: "Easy" },
+  { value: "medium", label: "Medium" },
+  { value: "hard", label: "Hard" },
+];
+
 export default function Practice() {
-  return null;
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const [personas, setPersonas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  const [personaId, setPersonaId] = useState("");
+  const [title, setTitle] = useState("Free practice");
+  const [difficulty, setDifficulty] = useState("medium");
+  const [situation, setSituation] = useState("");
+  const [contextNotes, setContextNotes] = useState("");
+
+  const [touched, setTouched] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setLoadError("");
+    api
+      .getPersonas()
+      .then((data) => {
+        if (!active) return;
+        setPersonas(Array.isArray(data) ? data : []);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setLoadError(err.message || "Could not load personas.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const selectedPersona = useMemo(
+    () => personas.find((p) => p.id === personaId) || null,
+    [personas, personaId]
+  );
+
+  const personaOptions = useMemo(
+    () => personas.map((p) => ({ value: p.id, label: p.name })),
+    [personas]
+  );
+
+  const personaMissing = touched && !personaId;
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setTouched(true);
+    setSubmitError("");
+    if (!personaId) return;
+
+    setSubmitting(true);
+    try {
+      const res = await api.startSession({
+        mode: "practice",
+        counsellorId: user.id,
+        personaId,
+        scenario: {
+          title: title.trim() || "Free practice",
+          difficulty,
+          situation: situation.trim(),
+          contextNotes: contextNotes.trim(),
+        },
+      });
+      navigate("/app/session/" + res.sessionId);
+    } catch (err) {
+      setSubmitError(err.message || "Could not start the session. Please try again.");
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-6">
+      <header className="space-y-1">
+        <h1 className="text-2xl font-bold tracking-tight text-ink">Free practice</h1>
+        <p className="text-sm text-muted">
+          Spin up a self-directed practice call against any student persona. Pick who you are talking to,
+          set the scene, and start whenever you are ready — you still get a full coaching report at the end.
+        </p>
+      </header>
+
+      <Card className="p-6">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-16">
+            <Spinner size={28} />
+            <p className="text-sm text-muted">Loading personas…</p>
+          </div>
+        ) : loadError ? (
+          <EmptyState
+            icon={
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+                <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+            }
+            title="Couldn't load personas"
+            hint={loadError}
+            action={
+              <Button variant="secondary" size="sm" onClick={() => window.location.reload()}>
+                Try again
+              </Button>
+            }
+          />
+        ) : personas.length === 0 ? (
+          <EmptyState
+            icon={
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+                <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM4 21v-1a6 6 0 0112 0v1" />
+              </svg>
+            }
+            title="No personas available yet"
+            hint="An admin needs to create at least one student persona before you can run a practice call."
+          />
+        ) : (
+          <form onSubmit={handleSubmit} noValidate className="space-y-6">
+            <CardHeader
+              title="Set up your call"
+              subtitle="These details shape how the AI student behaves and responds."
+            />
+
+            {/* Persona */}
+            <div className="space-y-3">
+              <Select
+                label="Student persona"
+                placeholder="Select a persona…"
+                value={personaId}
+                onChange={(e) => setPersonaId(e.target.value)}
+                options={personaOptions}
+                error={personaMissing ? "Please choose a persona to practice against." : undefined}
+              />
+              {selectedPersona && (
+                <div className="rounded-xl border border-line bg-canvas/60 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold text-ink">{selectedPersona.name}</span>
+                    {selectedPersona.category && (
+                      <Badge color="brand">{selectedPersona.category}</Badge>
+                    )}
+                    {selectedPersona.label && (
+                      <Badge color="slate">{selectedPersona.label}</Badge>
+                    )}
+                  </div>
+                  {selectedPersona.description && (
+                    <p className="mt-2 text-sm text-muted">{selectedPersona.description}</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="h-px bg-line" />
+
+            {/* Scenario */}
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <Input
+                  label="Scenario title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Free practice"
+                />
+                <Select
+                  label="Difficulty"
+                  value={difficulty}
+                  onChange={(e) => setDifficulty(e.target.value)}
+                  options={DIFFICULTY_OPTIONS}
+                />
+              </div>
+
+              <Textarea
+                label="Situation (optional)"
+                rows={3}
+                value={situation}
+                onChange={(e) => setSituation(e.target.value)}
+                placeholder="e.g. The student filled the lead form yesterday and is curious but hesitant about the fees."
+              />
+
+              <Textarea
+                label="Extra context (optional)"
+                rows={3}
+                value={contextNotes}
+                onChange={(e) => setContextNotes(e.target.value)}
+                placeholder="Any background, constraints, or specifics you want the student to keep in mind."
+              />
+            </div>
+
+            {submitError && (
+              <div className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-2.5 text-sm text-danger">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 h-4 w-4 shrink-0">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 8v4m0 4h.01" />
+                </svg>
+                <span>{submitError}</span>
+              </div>
+            )}
+
+            <div className="flex flex-col-reverse items-stretch gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
+              <p className="flex items-center gap-2 text-xs text-muted">
+                <span>Self-directed practice — a full report is saved when you finish.</span>
+                {selectedPersona && <DifficultyBadge level={difficulty} />}
+              </p>
+              <Button type="submit" disabled={submitting} className="sm:min-w-[10rem]">
+                {submitting ? (
+                  <>
+                    <Spinner size={16} className="text-white" />
+                    Starting…
+                  </>
+                ) : (
+                  "Start practice"
+                )}
+              </Button>
+            </div>
+          </form>
+        )}
+      </Card>
+    </div>
+  );
 }

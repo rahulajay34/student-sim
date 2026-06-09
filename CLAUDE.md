@@ -4,78 +4,76 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A **sales-training simulator**. A counsellor (the human user) practices selling the "Executive Certification Programme in Business Analytics and AI" (IIM Ranchi × Masai School) to an **LLM-roleplayed prospective student**. The student has a configurable archetype + personality, moves through a 4-phase counselling call, and only agrees to pay if the counsellor earns a high enough satisfaction score. Supports both typed and fully-in-browser voice conversation.
+A **mock counselling training platform**. Two roles:
+- **Admin** manages a persona library and assigns mock counselling sessions to counsellors.
+- **Counsellor** runs a phase-based, voice-or-text sales simulation against an LLM-roleplayed prospective student for the IIM Ranchi × Masai analytics programme.
 
-Two independent npm packages, no root package.json, not a git repo:
-- `server/` — Express API (ESM), the conversation/scoring engine.
-- `client/` — React 19 + Vite 8 SPA, the chat UI and voice pipeline.
+On session end, an LLM generates a **rubric-based coaching report** from the transcript, persisted to local JSON files and visible to the counsellor (own reports) and admin (all reports). Auth is dummy/pre-seeded; no real security.
+
+Two independent npm packages, no root package.json:
+- `server/` — Express API (ESM) + JSON file store + the conversation/scoring/report engine.
+- `client/` — React 19 + Vite 8 + react-router v7 + Tailwind v4 SPA.
+
+See `CONTRACT.md` (repo root) for the authoritative API shapes, data shapes, routes, design tokens, and UI-kit component props. `docs/superpowers/specs/` holds the design doc.
 
 ## Commands
 
 ```bash
 # Server (port 3001) — needs OLLAMA_API_KEY in repo-root .env
-cd server && npm install
-npm start          # node index.js
-npm run dev        # node --watch index.js (auto-restart)
+cd server && npm install && npm start         # or: npm run dev (node --watch)
 
-# Client (Vite dev server, proxies /api → localhost:3001)
-cd client && npm install
-npm run dev        # start dev server
-npm run build      # production build
-npm run lint       # eslint .
-npm run preview    # serve the build
+# Client (Vite dev server, proxies /api -> :3001)
+cd client && npm install && npm run dev
+npm run build      # production build      | npm run lint   # eslint .
 
-# Verify the local TTS model works end-to-end (writes voice-smoke.wav)
+# End-to-end API smoke test (server must be running)
+node scripts/smoke-api.mjs
+
+# Verify local TTS model works (writes voice-smoke.wav)
 cd client && node scripts/tts-smoke.mjs
 ```
 
-Run **both** server and client for a working app. There is no test framework; `tts-smoke.mjs` is the only standalone verification script.
+Note: if `npm run dev/build/lint` fails with "Permission denied" on a `node_modules/.bin/*` shim, run `chmod +x node_modules/.bin/*` (a quirk of this filesystem; the bins ship without the execute bit).
 
 ## Environment
 
-- `.env` lives at the **repo root** (server reads `../.env` via `dirname(import.meta.url)`), and must contain `OLLAMA_API_KEY`.
-- The LLM is **Ollama Cloud** (`gpt-oss:120b` served from `https://ollama.com` with a Bearer token) — **not** a local Ollama install.
-- `server/gemini.js` is misleadingly named: it uses Ollama, not Google Gemini. The `@google/generative-ai` dependency is vestigial/unused. Don't reintroduce Gemini calls expecting it to be wired up.
+- `.env` at the **repo root** (server reads `../.env`); must contain `OLLAMA_API_KEY`.
+- The LLM is **Ollama Cloud** (`gpt-oss:120b` via `https://ollama.com` with a Bearer token) — not a local Ollama, and **not** Google Gemini despite the legacy project name. `server/ollama.js` is the client.
 
 ## Server architecture (`server/`)
 
-The whole engine lives in three files, all driven by `index.js`'s `POST /api/chat` handler. One chat turn does, in order:
+`index.js` wires the REST API; logic is split into focused modules:
+- `store.js` — JSON file store under `server/data/*.json`. `users.json` + `personas.json` ship seeded; `assignments.json`/`sessions.json`/`reports.json` are created empty on first run. Generic `getAll/getById/insert/update/remove`.
+- `phases.js` — the heuristic 4-phase state machine (Introduction → Course Info → Concerns → Closing). `advancePhase` mutates `session.currentPhase` based on message counts + keyword detection.
+- `prompt.js` — composes the student system prompt from **persona + scenario + phase + score** (the general profile, phase instructions, score bands, and `courseContext.js` are shared scaffolding; personas supply the variable identity).
+- `engine.js` — `getFirstMessage` / `getStudentReply`; builds the Ollama message array from the **server-owned** transcript (student→assistant, counsellor→user, with a synthetic opening trigger).
+- `scoring.js` — per-message −10..+10 LLM scoring → live satisfaction score.
+- `report.js` — `generateReport`: one LLM call over the transcript → rubric scores + phase breakdown + strengths/improvements + outcome; the overall % is computed deterministically from the fixed 6-criterion `RUBRIC` (weights sum to 100; bands <50 / 50–74 / ≥75).
 
-1. `advancePhase(session, "counsellor", message)` — maybe advance the phase based on the counsellor's message.
-2. `scoreMessage(counsellorMessage, lastStudentMessage)` — a **separate LLM call** that rates the counsellor's move −10..+10; `updateScore` clamps the running satisfaction score to 0–100.
-3. `sendMessage(...)` — generate the student reply, with the current phase **and** score baked into the system prompt.
-4. `advancePhase(session, "student", reply)` — maybe advance again based on the reply.
+**Per chat turn** (`POST /api/sessions/:id/message`): advance phase on counsellor msg → score it → append to transcript → generate student reply → advance phase on reply → persist. The server owns the transcript; the client never sends history.
 
-Two coupled state machines govern behaviour:
-
-- **Phase state machine** (`sessions.js`, `advancePhase`): 1 Introduction → 2 Course Information → 3 Concerns/Objections → 4 Closing. Transitions are **heuristic**, not LLM-decided: message counts per role plus keyword detection (`PHASE2_KEYWORDS`, e.g. "iim", "masai", "curriculum", "fee"). Each session tracks per-phase message counters.
-- **Satisfaction score** (starts 50, agreement threshold 70): the LLM scorer's output drives it. The score maps to an emotional-state band (`buildScoreSection`) injected into the prompt. **Hard rule encoded in the prompt:** if the counsellor tries to close while score < 70, the student must firmly decline.
-
-**Prompt assembly** (`gemini.js` `buildSystemPrompt`) is the heart of the persona. It concatenates: archetype label → counsellor's free-text description → general student profile → `COURSE_CONTEXT` (static facts: fees, curriculum, faculty — `courseContext.js`) → situation → archetype core anxiety → current-phase instructions → current-score emotional state → archetype-specific per-phase behaviour → global rules (short replies, match Hinglish/English, never break character). Editing student behaviour almost always means editing one of the `ARCHETYPE_*` / `PHASE_*` constants here.
-
-The four archetypes (`studying`, `graduate`, `same-field`, `diff-field`) each have distinct anxieties and phase-by-phase scripts.
-
-**Sessions are in-memory** (`Map` in `sessions.js`). Restarting the server drops all sessions; the client then gets 404s and must start a new session.
+**Sessions snapshot** the persona+scenario (`personaSnapshot`/`scenarioSnapshot`) at start, so later library edits don't rewrite history. A per-assignment `personaPromptOverride` replaces the persona's `behaviourPrompt` for that mock.
 
 ## Client architecture (`client/`)
 
-- `App.jsx` — three-screen flow: `ArchetypePicker` → `DescriptionForm` (free-text persona description, posts `/api/start`) → `ChatInterface`.
-- `ChatInterface.jsx` — chat loop, phase indicator, satisfaction score bar. **Role mapping for the LLM:** student = `assistant`, counsellor = `user`. `buildHistory` prepends a synthetic `"Start the conversation"` user turn because the opening student message has no preceding user turn and Ollama requires alternating roles. A single `submitMessage` path serves both typed and spoken input (`submitRef` keeps the voice hook pointed at the freshest closure).
+- `main.jsx` — react-router setup: role-guarded layouts. `/login`; admin under `AdminLayout` (`/admin/*`); counsellor under `CounsellorLayout` (`/app/*`); the live chat `/app/session/:sessionId` runs full-bleed.
+- `lib/auth.jsx` — `AuthProvider`/`useAuth`/`ProtectedRoute`; dummy login cached in `localStorage` (`mct_user`).
+- `lib/api.js` — flat `api` object, one method per endpoint; throws `Error(data.error)` on non-2xx.
+- `lib/format.js` — score/band/difficulty/rubric color helpers, date/initials formatters.
+- `ui/` — the shared Tailwind UI kit (Button, Card, Input, Modal, Badge, Table, Sidebar, ScoreMeter, etc.). `layouts/` wrap pages with `Sidebar` + `Topbar`.
+- `pages/` — `admin/*`, `counsellor/*` (incl. `Session.jsx`, the revamped chat reusing the voice pipeline), and `shared/` (`ReportDetail` + `RubricBar`/`ScoreArcChart`/`TranscriptView`/`PhaseStepper`).
 
-### Voice pipeline (fully local, in-browser — no cloud STT/TTS)
+### Voice pipeline (`src/voice/*`, fully in-browser — reused, not rewritten)
 
-Push-to-talk: **hold Space to speak, release to send; press Space again to interrupt the student mid-sentence** (barge-in). Ignored while focus is in the textarea.
+`Session.jsx` uses `useVoiceConversation({onUserUtterance})`. Push-to-talk = hold Space (interrupt while speaking). STT = `whisper-tiny.en` (`stt.js`), TTS = Kokoro-82M (`tts.js`), gapless playback with epoch-based barge-in (`audioPlayer.js`). Models download once, browser-cached, WebGPU→WASM fallback.
 
-- `useVoiceConversation.js` — orchestrates the state machine: `off → loading → idle → recording → transcribing → speaking`. Records via `MediaRecorder`, decodes to 16 kHz Float32, discards <100 ms clips.
-- `stt.js` — `whisper-tiny.en` via `@huggingface/transformers`.
-- `tts.js` — Kokoro-82M via `kokoro-js`; streams synthesis sentence-by-sentence. Note: it creates and `close()`s its own `TextSplitterStream` because kokoro-js otherwise never flushes the final sentence.
-- `audioPlayer.js` — `StreamingAudioPlayer` schedules gapless chunks on one `AudioContext`; an `epoch` counter bumped on `stop()` is the barge-in mechanism (the TTS loop stops feeding the moment the epoch changes).
-- Models download once (~80–330 MB) and are browser-cached. WebGPU is used when available, else WASM (`dtype` chosen accordingly).
+### Tailwind + Vite gotchas (do not "clean up")
 
-### Vite gotcha (do not "clean up")
-
-`vite.config.js` `optimizeDeps.exclude` lists `@huggingface/transformers`, `kokoro-js`, `@ricky0123/vad-web`, `onnxruntime-web`. These ship WASM loaders whose paths Vite's pre-bundler rewrites to broken `.vite/deps/ort-wasm-*.mjs` (404). They **must** stay excluded, and `@ricky0123/vad-web` must be `import()`-ed lazily, or the WASM/WebGPU backends fail to initialise.
+- Tailwind v4 via the `@tailwindcss/vite` plugin (in `vite.config.js`); design tokens live in `src/index.css` under `@theme` (custom utilities like `bg-canvas`, `text-ink`, `text-muted`, `border-line`, `bg-brand-600`, `text-success/warn/danger`).
+- `vite.config.js` `optimizeDeps.exclude` (`@huggingface/transformers`, `kokoro-js`, `@ricky0123/vad-web`, `onnxruntime-web`) is **load-bearing** — removing it breaks the WASM/WebGPU loaders. `@ricky0123/vad-web` must stay lazily `import()`-ed.
+- eslint: `react-refresh/only-export-components` is downgraded to a warning (we co-locate small helpers with providers + the router entry).
 
 ## Notes
 
-- The repo was originally developed on Windows (see the PowerShell entries in `client/.claude/settings.local.json` referencing `c:\Users\rahul\student-sim`); it now runs on macOS. The `*-out.log` / `*-err.log` files at the root are stale process logs, not part of the app.
+- Originally a Windows-developed single-screen MVP (see stale PowerShell entries in `client/.claude/settings.local.json` and the root `*-out.log`/`*-err.log` files); now a two-role platform on macOS.
+- The `OLLAMA_API_KEY` currently sits in plaintext in `.env` (gitignored) and is hardcoded in `client/.claude/settings.local.json` — scrub the latter before sharing.

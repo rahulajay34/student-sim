@@ -22,6 +22,11 @@ export default defineConfig([
       // and the router entry; downgrade the fast-refresh hint to a warning so it
       // doesn't fail CI/builds.
       'react-refresh/only-export-components': 'warn',
+      // These are advisory React-Compiler-era hints, not correctness bugs:
+      // setting loading/error state at the top of a data-fetch effect, and manual
+      // memoization the compiler can't statically preserve. Keep as warnings.
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/preserve-manual-memoization': 'warn',
     },
   },
 ])

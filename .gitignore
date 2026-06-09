@@ -4,3 +4,10 @@ dist/
 *.log
 client/node_modules/
 server/node_modules/
+
+# verification / test artifacts
+verify-*.png
+.playwright-mcp/
+client/.playwright-mcp/
+client/dist/
+voice-smoke.wav
