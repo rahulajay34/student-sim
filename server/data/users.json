@@ -1,0 +1,26 @@
+[
+  {
+    "id": "admin-1",
+    "name": "Aarav Mehta",
+    "email": "admin@masai.com",
+    "password": "admin123",
+    "role": "admin",
+    "avatarColor": "#4F46E5"
+  },
+  {
+    "id": "counsellor-1",
+    "name": "Priya Sharma",
+    "email": "priya@masai.com",
+    "password": "priya123",
+    "role": "counsellor",
+    "avatarColor": "#0EA5E9"
+  },
+  {
+    "id": "counsellor-2",
+    "name": "Rohan Verma",
+    "email": "rohan@masai.com",
+    "password": "rohan123",
+    "role": "counsellor",
+    "avatarColor": "#10B981"
+  }
+]
