@@ -7,7 +7,6 @@ import Table from "../../ui/Table";
 import Select from "../../ui/Select";
 import Badge from "../../ui/Badge";
 import Avatar from "../../ui/Avatar";
-import Spinner from "../../ui/Spinner";
 import EmptyState from "../../ui/EmptyState";
 
 export default function AdminReports() {
@@ -130,9 +129,18 @@ export default function AdminReports() {
 
       <Card className="p-2">
         {loading ? (
-          <div className="flex items-center justify-center gap-3 py-16 text-sm text-muted">
-            <Spinner />
-            <span>Loading reports…</span>
+          <div className="divide-y divide-line">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="flex animate-pulse items-center gap-4 px-4 py-3.5">
+                <div className="h-8 w-8 rounded-full bg-line" />
+                <div className="h-4 w-24 rounded-md bg-line" />
+                <div className="h-4 w-20 rounded-md bg-line" />
+                <div className="h-4 flex-1 rounded-md bg-line" />
+                <div className="h-4 w-12 rounded-md bg-line" />
+                <div className="h-5 w-16 rounded-full bg-line" />
+                <div className="h-4 w-20 rounded-md bg-line" />
+              </div>
+            ))}
           </div>
         ) : error ? (
           <div className="px-4 py-12">

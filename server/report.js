@@ -1,10 +1,10 @@
-// Generates a rubric-based coaching report from a finished session's transcript.
-// One LLM call produces the qualitative judgement; the overall % is computed
-// deterministically from the rubric scores and weights.
-import { chat, extractJson } from "./ollama.js";
-import { PHASE_NAMES } from "./phases.js";
+// Report v2 — grades against the session's rubricSnapshot (anchor-quoted),
+// adds key moments, benchmark comparisons, and practice drills.
+// Falls back to the legacy 6-criterion rubric for pre-v2 sessions.
+import { chat } from "./ollama.js";
+import { BENCHMARKS, STRUCTURE } from "./grounding.js";
 
-export const RUBRIC = [
+export const LEGACY_RUBRIC = [
   { key: "rapport", label: "Rapport & Opening", weight: 15 },
   { key: "discovery", label: "Needs Discovery", weight: 20 },
   { key: "objections", label: "Objection Handling", weight: 25 },
@@ -13,90 +13,176 @@ export const RUBRIC = [
   { key: "communication", label: "Communication & Empathy", weight: 10 },
 ];
 
-const LEVELS = { 1: "Poor", 2: "Developing", 3: "Competent", 4: "Proficient", 5: "Excellent" };
+const LEVEL_LABELS = { 1: "Poor", 2: "Developing", 3: "Competent", 4: "Proficient", 5: "Excellent" };
+const PHASE_NAMES_V2 = ["Opening", "Discovery", "Presentation", "Objections & Negotiation", "Close"];
 
-const clampScore = (n) => Math.max(1, Math.min(5, Math.round(Number(n)) || 1));
 const bandFor = (pct) => (pct >= 75 ? "Excellent" : pct >= 50 ? "Good" : "Needs Work");
 
 function transcriptText(transcript) {
-  return transcript
-    .map((t) => `${t.role === "counsellor" ? "COUNSELLOR" : "STUDENT"}: ${t.text}`)
+  return (transcript || [])
+    .map((m, i) => {
+      const who = m.role === "counsellor" ? "COUNSELLOR" : "STUDENT";
+      let line = `[turn ${i}] ${who}: ${m.text}`;
+      // Append delivery metrics for counsellor entries when present.
+      if (m.role === "counsellor" && m.deliveryMetrics) {
+        const dm = m.deliveryMetrics;
+        const parts = [];
+        if (dm.tone !== undefined) parts.push(`tone=${dm.tone}`);
+        if (Number.isFinite(dm.wpm)) parts.push(`${Math.round(dm.wpm)}wpm`);
+        if (Number.isFinite(dm.pauseRatio)) parts.push(`pauses=${dm.pauseRatio}`);
+        if (parts.length > 0) line += ` [delivery: ${parts.join(", ")}]`;
+      }
+      // Append non-neutral student emotion when present.
+      if (m.role === "student" && m.emotion && m.emotion !== "neutral") {
+        line += ` [student emotion: ${m.emotion}]`;
+      }
+      return line;
+    })
     .join("\n");
 }
 
-function buildPrompt(session) {
-  const rubricLines = RUBRIC.map((r) => `- ${r.key} (${r.label}, weight ${r.weight}%)`).join("\n");
-  return `You are a senior sales-training coach evaluating a mock counselling call. A counsellor was selling the "Executive Certification Programme in Business Analytics and AI" (IIM Ranchi x Masai) to a simulated prospective student.
+// Voice delivery is only gradable when delivery metrics exist on the transcript.
+function sessionHasVoiceMetrics(session) {
+  return (session.transcript || []).some((m) => m.deliveryMetrics);
+}
+
+// Criteria actually graded for this session (drop voice_delivery for text sessions).
+export function effectiveCriteria(session) {
+  const snap = session.rubricSnapshot;
+  if (!snap?.criteria?.length) return { criteria: LEGACY_RUBRIC.map((c) => ({ ...c, anchors: null })), legacy: true };
+  let criteria = snap.criteria;
+  if (!sessionHasVoiceMetrics(session)) criteria = criteria.filter((c) => c.key !== "voice_delivery");
+  return { criteria, legacy: false };
+}
+
+function buildPrompt(session, criteria) {
+  const c = session.courseSnapshot;
+  const courseLine = c
+    ? `A counsellor was selling "${c.name}" (${c.institute} x Masai School) to a simulated prospective student.`
+    : `A counsellor was selling the "Executive Certification Programme in Business Analytics and AI" (IIM Ranchi x Masai) to a simulated prospective student.`;
+  const courseFacts = c ? `
+COURSE FACTS (ground truth — penalize the counsellor under "knowledge" for contradicting these):
+- Fee: ${c.feeTotal ? `₹${c.feeTotal}` : "not published"}; seat-block: ${c.feeBooking ? `₹${c.feeBooking}` : "₹4,000"}; ${c.feeNote}
+- Duration: ${c.duration}; Format: ${c.format}
+- Curriculum: ${(c.curriculum || []).join("; ")}
+` : "";
+
+  const rubricLines = criteria.map((r) => {
+    const anchorText = r.anchors
+      ? ` Anchors: 1=${r.anchors["1"]} | 3=${r.anchors["3"]} | 5=${r.anchors["5"]}`
+      : "";
+    return `- ${r.key} (${r.label}, weight ${r.weight}%).${anchorText}`;
+  }).join("\n");
+
+  const m = session.milestones || {};
+  const milestoneLines = `MILESTONE COVERAGE (tracked automatically): discovery done: ${!!m.discoveryDone}; presentation done: ${!!m.presentationDone}; payment asked: ${!!m.paymentAsked}; objections raised by student: ${m.objectionsRaised ?? "n/a"}. Real benchmark: the payment ask lands ~${STRUCTURE.paymentAskNorms?.typicalAtPct ?? 78}% into the call and appears in ${STRUCTURE.paymentAskNorms?.presentInPaidPct ?? 87}% of converting calls.`;
+
+  return `You are a senior sales-training coach evaluating a mock counselling call. ${courseLine}
 
 STUDENT PERSONA: ${session.personaSnapshot?.label || "student"}
 SCENARIO: ${session.scenarioSnapshot?.title || "n/a"} (difficulty: ${session.scenarioSnapshot?.difficulty || "n/a"})
 FINAL STUDENT SATISFACTION: ${session.satisfactionScore}/100 (agreement threshold is 70)
+${courseFacts}
+${milestoneLines}
 
-FULL TRANSCRIPT:
+FULL TRANSCRIPT (turns are numbered):
 ${transcriptText(session.transcript)}
 
-Evaluate the COUNSELLOR (not the student) on these rubric criteria, each scored 1-5:
+Evaluate the COUNSELLOR (not the student) on these rubric criteria, each scored 1-5. The anchors describe what each level sounds like — quote the anchor behaviour you observed:
 ${rubricLines}
 
 Return ONLY a JSON object with this exact shape:
 {
-  "rubric": [ { "key": "rapport", "score": 1-5, "justification": "one sentence grounded in the transcript" }, ... one per criterion ],
-  "phaseBreakdown": [ { "phase": 1, "summary": "...", "didWell": "...", "toImprove": "..." }, ... for phases 1-4 ],
-  "strengths": [ { "point": "...", "quote": "short quote from the counsellor" }, ... 2-3 items ],
-  "improvements": [ { "point": "...", "quote": "short quote", "suggestion": "concrete advice" }, ... 2-3 items ],
+  "rubric": [ { "key": "<criterion key>", "score": 1-5, "justification": "one sentence grounded in the transcript, referencing the matched anchor behaviour" } ],
+  "phaseBreakdown": [ { "phase": 1-5, "summary": "...", "didWell": "...", "toImprove": "..." } ],   // exactly 5, named phases: ${PHASE_NAMES_V2.join(", ")}
+  "strengths": [ { "point": "...", "quote": "short counsellor quote" } ],                            // 2-3
+  "improvements": [ { "point": "...", "quote": "short quote", "suggestion": "concrete advice" } ],   // 2-3
+  "keyMoments": [ { "turn": <number from transcript>, "type": "best"|"miss", "note": "what happened and why it mattered" } ],  // 2-4
+  "drills": [ { "title": "...", "focusCriterion": "<weakest criterion key>", "objectionCategory": "<EXACTLY one of: fee|emi_affordability|parents_family|time_commitment|competing_priorities|trust_legitimacy|job_guarantee_placement|course_fit_relevance|language_english|tech_access|other>", "instruction": "one concrete practice instruction" } ],  // 2-3
   "outcome": "Converted" | "Not Converted",
-  "outcomeDetail": "one sentence on whether the student agreed to pay the 4000 rupee seat fee and why"
+  "outcomeDetail": "one sentence on whether the student agreed to pay ${c?.feeBooking ? `₹${c.feeBooking}` : "the seat-block fee"} and why"
 }
 Score honestly and specifically. Do not output anything except the JSON object.`;
 }
 
-function fallback() {
-  return {
-    rubric: RUBRIC.map((r) => ({ key: r.key, score: 3, justification: "Automatic evaluation was unavailable for this session." })),
-    phaseBreakdown: [1, 2, 3, 4].map((p) => ({ phase: p, name: PHASE_NAMES[p], summary: "Not evaluated.", didWell: "", toImprove: "" })),
-    strengths: [],
-    improvements: [],
-    outcome: "Not Converted",
-    outcomeDetail: "Report generation fell back to defaults.",
-  };
+function extractJson(text) {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end === -1) throw new Error("no JSON in report response");
+  return JSON.parse(text.slice(start, end + 1));
 }
 
-export async function generateReport(session, { counsellorName } = {}) {
-  let parsed;
-  try {
-    parsed = extractJson(await chat([{ role: "user", content: buildPrompt(session) }]));
-  } catch (err) {
-    console.error("Report generation error:", err.message);
-    parsed = fallback();
+const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, Math.round(Number(n) || 0)));
+
+const OBJECTION_ENUM = new Set([
+  "fee", "emi_affordability", "parents_family", "time_commitment",
+  "competing_priorities", "trust_legitimacy", "job_guarantee_placement",
+  "course_fit_relevance", "language_english", "tech_access", "other",
+]);
+
+function sanitizeObjectionCategory(raw) {
+  if (typeof raw !== "string" || !raw.trim()) return "other";
+  const tokens = raw.toLowerCase().split("|").map((t) => t.trim().replace(/[\s/‐-―-]+/g, "_")).filter(Boolean);
+  for (const tok of tokens) {
+    if (OBJECTION_ENUM.has(tok)) return tok;
   }
+  return "other";
+}
 
-  // Normalise rubric, fill missing keys, attach labels/weights/levels.
-  const byKey = Object.fromEntries((parsed.rubric || []).map((r) => [r.key, r]));
-  const rubric = RUBRIC.map((def) => {
-    const got = byKey[def.key] || {};
-    const score = clampScore(got.score);
-    return { key: def.key, label: def.label, weight: def.weight, score, level: LEVELS[score], justification: got.justification || "" };
+export async function generateReport(session, { counsellorName = "" } = {}) {
+  const { criteria } = effectiveCriteria(session);
+  const text = await chat([{ role: "user", content: buildPrompt(session, criteria) }]);
+  const raw = extractJson(text);
+
+  const byKey = new Map((raw.rubric || []).map((r) => [r.key, r]));
+  const totalWeight = criteria.reduce((n, c) => n + c.weight, 0) || 100;
+  const rubric = criteria.map((c) => {
+    const r = byKey.get(c.key) || {};
+    const score = clamp(r.score ?? 3, 1, 5);
+    return {
+      key: c.key, label: c.label,
+      weight: Math.round((c.weight / totalWeight) * 1000) / 10,   // renormalized (voice_delivery may be excluded)
+      score, level: LEVEL_LABELS[score],
+      justification: typeof r.justification === "string" ? r.justification : "(not graded by the model — defaulted to Competent)",
+    };
+  });
+  const percent = Math.round(rubric.reduce((sum, r) => sum + (r.score / 5) * r.weight, 0));
+
+  const phaseBreakdown = PHASE_NAMES_V2.map((name, i) => {
+    const p = (raw.phaseBreakdown || []).find((x) => Number(x.phase) === i + 1) || {};
+    return { phase: i + 1, name, summary: p.summary || "", didWell: p.didWell || "", toImprove: p.toImprove || "" };
   });
 
-  const totalWeight = RUBRIC.reduce((s, r) => s + r.weight, 0);
-  const percent = Math.round(rubric.reduce((s, r) => s + (r.score / 5) * r.weight, 0) / totalWeight * 100);
-
-  const phaseBreakdown = [1, 2, 3, 4].map((p) => {
-    const got = (parsed.phaseBreakdown || []).find((x) => Number(x.phase) === p) || {};
-    return { phase: p, name: PHASE_NAMES[p], summary: got.summary || "", didWell: got.didWell || "", toImprove: got.toImprove || "" };
-  });
-
-  const outcome = parsed.outcome === "Converted" ? "Converted" : "Not Converted";
+  const sessionMinutes = session.startedAt
+    ? Math.round((Date.now() - new Date(session.startedAt).getTime()) / 60000 * 10) / 10
+    : null;
 
   return {
-    overall: { percent, band: bandFor(percent), outcome, outcomeDetail: parsed.outcomeDetail || "" },
-    rubric,
-    phaseBreakdown,
-    strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
-    improvements: Array.isArray(parsed.improvements) ? parsed.improvements : [],
+    overall: {
+      percent, band: bandFor(percent),
+      outcome: raw.outcome === "Converted" ? "Converted" : "Not Converted",
+      outcomeDetail: typeof raw.outcomeDetail === "string" ? raw.outcomeDetail : "",
+    },
+    rubric, phaseBreakdown,
+    strengths: (raw.strengths || []).slice(0, 3),
+    improvements: (raw.improvements || []).slice(0, 3),
+    keyMoments: (raw.keyMoments || []).slice(0, 4).map((k) => ({
+      turn: clamp(k.turn ?? 0, 0, (session.transcript || []).length - 1),
+      type: k.type === "best" ? "best" : "miss",
+      note: typeof k.note === "string" ? k.note : "",
+    })),
+    drills: (raw.drills || []).slice(0, 3).map((d) => ({
+      title: typeof d.title === "string" ? d.title : "Practice drill",
+      focusCriterion: typeof d.focusCriterion === "string" ? d.focusCriterion : "",
+      objectionCategory: sanitizeObjectionCategory(d.objectionCategory),
+      instruction: typeof d.instruction === "string" ? d.instruction : "",
+    })),
+    benchmarks: {
+      sessionMinutes,
+      medianPaidMinutes: BENCHMARKS.text?.paidVsUnpaid?.durationMedianPaid ?? null,
+      paymentAskSeen: !!session.milestones?.paymentAsked,
+      paymentAskNormPct: STRUCTURE.paymentAskNorms?.presentInPaidPct ?? null,
+    },
     scoreArc: (session.scoreHistory || []).map((h) => ({ turn: h.turn, score: h.score })),
-    counsellorName: counsellorName || "",
-    personaName: session.personaSnapshot?.name || "",
-    scenarioTitle: session.scenarioSnapshot?.title || "",
   };
 }

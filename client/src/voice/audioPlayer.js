@@ -5,6 +5,7 @@
 export class StreamingAudioPlayer {
   constructor() {
     this.ctx = null;
+    this.analyser = null;
     this.sources = new Set();
     this.nextStartTime = 0;
     this.pending = 0;
@@ -20,9 +21,19 @@ export class StreamingAudioPlayer {
     if (!this.ctx || this.ctx.state === "closed") {
       const AC = window.AudioContext || window.webkitAudioContext;
       this.ctx = new AC();
+      // Create the analyser once per AudioContext; all sources route through it.
+      this.analyser = this.ctx.createAnalyser();
+      this.analyser.fftSize = 256;
+      this.analyser.connect(this.ctx.destination);
     }
     if (this.ctx.state === "suspended") this.ctx.resume();
     return this.ctx;
+  }
+
+  // Returns the AnalyserNode for level-metering, or null before the context
+  // has been initialised (i.e. before the first enqueue/speak call).
+  getAnalyser() {
+    return this.analyser;
   }
 
   get playing() {
@@ -37,7 +48,7 @@ export class StreamingAudioPlayer {
 
     const src = ctx.createBufferSource();
     src.buffer = buffer;
-    src.connect(ctx.destination);
+    src.connect(this.analyser);
 
     const startAt = Math.max(ctx.currentTime, this.nextStartTime);
     src.start(startAt);

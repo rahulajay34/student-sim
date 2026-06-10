@@ -1,4 +1,4 @@
-export const COURSE_CONTEXT = `
+export const LEGACY_COURSE_CONTEXT = `
 PROGRAMME: Executive Certification Programme in Business Analytics and AI for Aspiring Managers
 INSTITUTION: IIM Ranchi, in partnership with Masai School
 IIM RANCHI RANKING: 18th nationally in NIRF 2025
@@ -30,3 +30,31 @@ FACULTY:
 COUNSELLOR'S OBJECTIVE ON THIS CALL:
 The counsellor is trying to get you to pay ₹4,000 to block your seat. You have already paid ₹99 and cleared the qualifier test, which means you have some baseline interest in the programme — but you have not made any financial commitment beyond that initial ₹99.
 `;
+
+export const fmtINR = (n) => (typeof n === "number" ? `₹${n.toLocaleString("en-IN")}` : null);
+
+export function buildCourseContext(course) {
+  if (!course) return LEGACY_COURSE_CONTEXT;
+  const fee = fmtINR(course.feeTotal);
+  const booking = fmtINR(course.feeBooking) || "₹4,000";
+  return `
+PROGRAMME: ${course.name}
+INSTITUTION: ${course.institute}, in partnership with ${course.partner || "Masai School"}
+DURATION: ${course.duration || "n/a"} | MODE: ${course.format || "Online"}
+${course.batchInfo ? `BATCH: ${course.batchInfo}` : ""}
+
+FEE STRUCTURE:
+- Seat blocking fee (what the counsellor is asking for on this call): ${booking}
+${fee ? `- Total programme fee: ${fee}${course.feeNote ? ` (${course.feeNote})` : ""}` : `- Total programme fee: ${course.feeNote || "shared on the call by the counsellor"}`}
+${course.emiNote ? `- EMI: ${course.emiNote}` : ""}
+
+CURRICULUM (${(course.curriculum || []).length} modules):
+${(course.curriculum || []).map((m, i) => `${i + 1}. ${m}`).join("\n")}
+${course.eligibility ? `\nELIGIBILITY: ${course.eligibility}` : ""}
+${course.usps?.length ? `\nPROGRAMME HIGHLIGHTS:\n${course.usps.map((u) => `- ${u}`).join("\n")}` : ""}
+
+COUNSELLOR'S OBJECTIVE ON THIS CALL:
+The counsellor is trying to get you to pay ${booking} to block your seat in this programme. You have shown
+baseline interest (you booked this counselling call yourself) but have made no financial commitment yet.
+`;
+}

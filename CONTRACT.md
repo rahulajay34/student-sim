@@ -42,27 +42,65 @@ existing patterns and keep it minimal.
 User      { id, name, email, password, role: "admin"|"counsellor", avatarColor }
 Persona   { id, name, category, label, coreAnxiety, behaviourPrompt, description, createdAt, updatedAt }
 Scenario  { title, difficulty: "easy"|"medium"|"hard", situation, contextNotes }   // embedded in assignment/session
+Course    { id: "course-<8hex>", slug: "<institute>/<course>", name, category,    // one of the 9 domain keys
+            institute,                       // "IIM Ranchi", "IIT Patna", ...
+            partner: "Masai School",
+            duration, format,                // "6 months", "Online" / "Online + campus immersion"
+            feeTotal: number|null,           // ₹ total programme fee
+            feeBooking: number|null,         // ₹ seat-block / booking amount
+            feeNote: string,                 // free text: GST, upfront-vs-EMI nuance
+            emiNote: string,
+            curriculum: [string],            // module titles
+            outcomes: [string], eligibility: string, usps: [string],
+            batchInfo: string, sourceUrl, scrapedAt, active: true }
+RubricTemplate { id, name, description,
+            criteria: [{key, label, weight, anchors: {"1".."5": string}}],
+            isDefault: boolean, createdAt, updatedAt }
+            // weights must sum to 100 (±1e-6); at least 3 criteria required.
+            // Seeded default: "Grounded v2" (id: rt-grounded-v2), 8 criteria:
+            //   rapport (10), discovery (15), presentation (15), objections (20),
+            //   knowledge (15), closing (10), communication (10), voice_delivery (5).
+            // voice_delivery is graded only in voice sessions (has deliveryMetrics);
+            //   weights are renormalized to 100 when it is excluded (text sessions → 7 graded criteria).
 Assignment{ id, counsellorId, personaId, personaPromptOverride|null, scenario:Scenario,
+            courseId,                        // required; references Course.id
+            rubricTemplateId: string|null,   // null ⇒ use the default template at session start
+            revealPersona: boolean,          // default true; false = "blind call" (GreenRoom hides persona card)
             status: "assigned"|"in_progress"|"completed", createdBy, createdAt, sessionId|null, reportId|null }
 Session   { id, assignmentId|null, counsellorId, mode:"assigned"|"practice",
             personaSnapshot:{name,category,label,coreAnxiety,behaviourPrompt},
-            scenarioSnapshot:Scenario, currentPhase:1..4, satisfactionScore:0..100,
+            scenarioSnapshot:Scenario,
+            courseSnapshot:Course|null,      // full Course record snapshotted at session start
+            rubricSnapshot:{templateId,name,criteria}|null,  // snapshotted at session start from assignment or default
+            milestones:{ discoveryDone:bool, presentationDone:bool, paymentAsked:bool, objectionsRaised:number },
+            currentPhase:1..5, satisfactionScore:0..100,
             scoreHistory:[{turn,score,adjustment,reason}],
             transcript:[{role:"counsellor"|"student", text, phase, scoreAfter, ts}],
             status:"active"|"ended", startedAt, endedAt|null }
 Report    { id, sessionId, assignmentId|null, counsellorId, counsellorName, personaName, scenarioTitle,
             overall:{ percent:0..100, band:"Needs Work"|"Good"|"Excellent", outcome:"Converted"|"Not Converted", outcomeDetail },
             rubric:[{key,label,weight,score:1..5,level,justification}],
-            phaseBreakdown:[{phase:1..4,name,summary,didWell,toImprove}],
+            // rubric length = number of graded criteria (voice_delivery excluded in text sessions);
+            // weights are renormalized so they always sum to ~100.
+            phaseBreakdown:[{phase:1..5,name,summary,didWell,toImprove}],
+            // exactly 5 entries: Opening, Discovery, Presentation, Objections & Negotiation, Close.
             strengths:[{point,quote}], improvements:[{point,quote,suggestion}],
+            keyMoments:[{turn:number, type:"best"|"miss", note:string}],
+            drills:[{title, focusCriterion, objectionCategory, instruction}],
+            benchmarks:{ sessionMinutes:number|null, medianPaidMinutes:number|null,
+                         paymentAskSeen:boolean, paymentAskNormPct:number|null },
             scoreArc:[{turn,score}], generatedAt }
+            // Legacy reports (pre-v2, no rubricSnapshot) use the fixed 6-criterion rubric:
+            //   rapport(15), discovery(20), objections(25), knowledge(15), closing(15), communication(10).
 ```
 
-**Rubric criteria (fixed):** keys/labels/weights —
-`rapport` Rapport & Opening (15), `discovery` Needs Discovery (20), `objections` Objection Handling (25),
-`knowledge` Product Knowledge & Accuracy (15), `closing` Closing & Next Steps (15), `communication` Communication & Empathy (10).
-Level labels by score: 1 Poor · 2 Developing · 3 Competent · 4 Proficient · 5 Excellent.
+**Rubric criteria:** Rubrics are now template-driven. The seeded default template "Grounded v2"
+(`rt-grounded-v2`) has 8 criteria mined from 216 real counselling calls, each with
+behaviour-anchored scoring levels (1 Poor · 2 Developing · 3 Competent · 4 Proficient · 5 Excellent):
+`rapport` (10), `discovery` (15), `presentation` (15), `objections` (20), `knowledge` (15),
+`closing` (10), `communication` (10), `voice_delivery` (5 — voice sessions only).
 Band by percent: `<50` Needs Work · `50–74` Good · `≥75` Excellent.
+Legacy reports without a `rubricSnapshot` use the fixed 6-criterion list noted above.
 
 ---
 
@@ -76,28 +114,76 @@ Band by percent: `<50` Needs Work · `50–74` Good · `≥75` Excellent.
 | POST | `/personas` | `{name,category,label,coreAnxiety,behaviourPrompt,description}` | `Persona` |
 | PUT | `/personas/:id` | partial Persona | `Persona` |
 | DELETE | `/personas/:id` | — | `{ok:true}` |
+| GET | `/courses` | — | `[Course]` (supports `?active=1` to filter active only) |
+| POST | `/courses` | `{name,institute,category?,duration?,format?,feeTotal?,feeBooking?,feeNote?,emiNote?,curriculum?,outcomes?,eligibility?,usps?,batchInfo?,sourceUrl?,active?}` | `Course` |
+| PUT | `/courses/:id` | partial Course (name/category/institute/duration/format/feeTotal/feeBooking/feeNote/emiNote/curriculum/outcomes/eligibility/usps/batchInfo/active) | `Course` |
+| DELETE | `/courses/:id` | — | `{ok:true}` |
+| GET | `/rubric-templates` | — | `[RubricTemplate]` |
+| POST | `/rubric-templates` | `{name,description,criteria}` (weights must sum to 100; ≥3 criteria; `isDefault` always false for created templates) | `RubricTemplate` |
+| PUT | `/rubric-templates/:id` | partial RubricTemplate (name/description/criteria; `isDefault` changes ignored) | `RubricTemplate` |
+| DELETE | `/rubric-templates/:id` | — | `{ok:true}` or 400 `{error:"Cannot delete the default template"}` if `isDefault` |
 | GET | `/assignments?counsellorId=` | — | `[Assignment + {personaName,counsellorName,hasReport}]` (omit query ⇒ all) |
-| POST | `/assignments` | `{counsellorId,personaId,personaPromptOverride?,scenario}` | `Assignment` |
+| POST | `/assignments` | `{counsellorId,personaId,courseId,rubricTemplateId?,personaPromptOverride?,scenario,revealPersona?}` (`courseId` required; `rubricTemplateId` optional, must exist if provided; `revealPersona` boolean, default true) | `Assignment` |
 | GET | `/assignments/:id` | — | enriched `Assignment` |
 | DELETE | `/assignments/:id` | — | `{ok:true}` |
-| POST | `/sessions/start` | `{mode,counsellorId,assignmentId?,personaId?,scenario?}` | `{sessionId,firstMessage,currentPhase,satisfactionScore}` |
-| POST | `/sessions/:id/message` | `{message}` | `{reply,currentPhase,satisfactionScore,scoreReason}` |
+| POST | `/sessions/start` | `{mode,counsellorId,assignmentId?,personaId?,scenario?,courseId?}` (`courseId` optional; assigned sessions inherit from assignment; fallback to IIM Ranchi BA course) | `{sessionId,firstMessage,emotion,currentPhase,satisfactionScore,milestones}` |
+| POST | `/sessions/:id/message` | `{message,deliveryMetrics?}` | `{reply,emotion,currentPhase,satisfactionScore,scoreReason,milestones}` |
 | POST | `/sessions/:id/end` | — | `{reportId}` |
 | GET | `/sessions/:id` | — | `Session` |
+| DELETE | `/sessions/:id` | — | `{ok:true}` (test/admin cleanup) |
 | GET | `/reports?counsellorId=` | — | `[Report]` (summaries ok; omit query ⇒ all) |
 | GET | `/reports/:id` | — | `Report` |
+| DELETE | `/reports/:id` | — | `{ok:true}` (test/admin cleanup) |
 
 Server owns the transcript: `/sessions/:id/message` appends to the stored session; the client
 does NOT send history. `start` for `mode:"assigned"` derives persona+scenario from the assignment
 and flips assignment status to `in_progress`; `end` generates the report and sets `reportId` +
 status `completed`.
 
+### Analytics (addendum to §3)
+
+| Method | Path | Returns |
+|---|---|---|
+| GET | `/analytics/admin` | Admin analytics payload (see shape below) |
+| GET | `/analytics/counsellor/:id` | Counsellor analytics payload (see shape below); 404 for unknown user id |
+
+```
+GET /api/analytics/admin ->
+{ kpis: { mocksCompleted, avgScore, completionRatePct, trendDelta },
+  // trendDelta: delta of the trailing window vs the preceding equal-size window (window = min(5, floor(n/2))); null when fewer than 2 reports
+  teamHeatmap: { criteria: [{key,label}], rows: [{ counsellorId, counsellorName, cells: {<critKey>: avgScore1to5|null}, reportCount }] },
+  // cell null when counsellor has 0 reports containing that rubric key
+  weeklyTrend: [{ weekStart: "YYYY-MM-DD", avgPercent, count }],
+  // ISO weeks (Monday start) from report.generatedAt; last 8 buckets that have data only
+  counsellors: [{ counsellorId, name, mocks, avgPercent, lastFiveDelta, weakestCriterion: {key,label,avg}|null }],
+  // lastFiveDelta: delta of the trailing window vs the preceding equal-size window (window = min(5, floor(n/2))); null when fewer than 2 reports
+  objectionPerformance: [{ category, label, drillCount }],
+  // frequency of drills[].objectionCategory across all reports (descending); label is humanized
+  recentReports: [{ id, counsellorName, personaName, percent, band, outcome, generatedAt }] }
+  // last 6 by generatedAt
+
+GET /api/analytics/counsellor/:id ->
+{ trend: [{ turn: n, percent, generatedAt, reportId }],       // chronological, all own reports
+  radar: { criteria: [{key,label}], mine: {<key>: avg1to5|null}, team: {<key>: avg1to5|null} },
+  // team = all counsellors avg (anonymous); keys union legacy (6) + v2 (7/8) rubrics
+  pendingMocks: n, completedMocks: n, avgPercent,
+  recommendedDrill: { title, focusCriterion, objectionCategory, instruction, fromReportId } | null }
+  // from the latest report with drills (drills[0]); null if none
+```
+
+Computed entirely in-memory from `reports`/`assignments`/`users` stores. No NaN or Infinity in output;
+empty store → zeros/nulls/[] per field. Criterion averaging unions rubric keys across all template
+versions by key.
+
 **Client API client:** `src/lib/api.js` exports a flat object `api` with one async method per
 endpoint, e.g. `api.login(email,password)`, `api.getPersonas()`, `api.createPersona(data)`,
 `api.updatePersona(id,data)`, `api.deletePersona(id)`, `api.getCounsellors()`,
+`api.getCourses(activeOnly?)`, `api.createCourse(data)`, `api.updateCourse(id,data)`, `api.deleteCourse(id)`,
+`api.getRubricTemplates()`, `api.createRubricTemplate(data)`, `api.updateRubricTemplate(id,data)`, `api.deleteRubricTemplate(id)`,
 `api.getAssignments(counsellorId?)`, `api.createAssignment(data)`, `api.getAssignment(id)`,
 `api.deleteAssignment(id)`, `api.startSession(payload)`, `api.sendMessage(id,message)`,
-`api.endSession(id)`, `api.getSession(id)`, `api.getReports(counsellorId?)`, `api.getReport(id)`.
+`api.endSession(id)`, `api.getSession(id)`, `api.getReports(counsellorId?)`, `api.getReport(id)`,
+`api.getAdminAnalytics()`, `api.getCounsellorAnalytics(id)`.
 Each throws `Error(data.error)` on non-2xx.
 
 ---
@@ -106,9 +192,9 @@ Each throws `Error(data.error)` on non-2xx.
 
 Public: `/login`.
 Admin (role `admin`, `AdminLayout`): `/admin` dashboard, `/admin/counsellors`, `/admin/personas`,
-`/admin/assignments`, `/admin/assignments/new`, `/admin/reports`, `/admin/reports/:id`.
+`/admin/courses`, `/admin/rubrics`, `/admin/assignments`, `/admin/assignments/new`, `/admin/reports`, `/admin/reports/:id`.
 Counsellor (role `counsellor`, `CounsellorLayout`): `/app` dashboard, `/app/mocks`, `/app/practice`,
-`/app/session/:sessionId`, `/app/reports`, `/app/reports/:id`.
+`/app/session/new` (green room — expects router state `{mode,assignmentId?,...}`), `/app/session/:sessionId`, `/app/reports`, `/app/reports/:id`.
 `/` redirects by role. Unauthenticated ⇒ `/login`. `ProtectedRoute` + `useAuth()` live in `src/lib/auth.jsx`.
 
 ---
@@ -172,3 +258,64 @@ Voice pipeline (`src/voice/*`) is unchanged and reused by `Session.jsx`.
 Returns `{enabled,status,loadPct,error,enable,disable,speak,stopSpeaking,startListening,stopListening}`.
 Push-to-talk = hold Space (interrupt while speaking). Speak the student's reply when voice is enabled.
 Keep this behaviour; just restyle the chat to the new design and add a Monexa-style waveform/visual when recording/speaking.
+
+---
+
+## 9. Voice sidecar (port 3002)
+
+Local FastAPI server (`voice-server/`, Python 3.11 via uv). The browser voice pipeline is the automatic
+fallback; the sidecar is probed once per session and each capability is used independently.
+
+### Endpoints
+
+| Method | Path | Body / params | Returns |
+|---|---|---|---|
+| GET | `/health` | — | `{ok:true, capabilities:{tts,stt,analyze}, ttsEngine}` |
+| POST | `/tts` | JSON `{text, emotion?, intensity?}` | `audio/wav` bytes |
+| POST | `/stt` | multipart `audio` (wav) | `{text, words:[{word,start,end}], durationSec}` |
+| POST | `/analyze` | multipart `audio` (wav) + form field `transcript` (optional) | prosody metrics + verdicts |
+
+**`/health` capability status values:** `"ready" | "loading" | "unloaded" | "off" | "error:<msg>"`
+
+**`/health` `ttsEngine`:** `"chatterbox" | "kokoro" | null`
+
+**`/tts` emotion enum:** `"neutral" | "happy" | "hesitant" | "worried" | "frustrated" | "excited"`
+
+**`/tts` intensity:** `0.0..1.0` (default `0.5`). Scales Chatterbox exaggeration ±0.15 around the
+emotion base. Kokoro ignores intensity but uses speed: neutral 1.0 · happy 1.05 · excited 1.12 ·
+hesitant 0.88 · worried 0.94 · frustrated 1.06.
+
+**`/analyze` response shape:**
+```
+{
+  tone: "warm" | "neutral" | "flat" | "tense",
+  energy: "low" | "medium" | "high",
+  wpm: number | null,
+  pitchVarSemitones: number,
+  pauseRatio: number,
+  energyCv: number,
+  verdicts: {
+    pace: "slow" | "good" | "fast" | null,
+    energy: "flat" | "good" | "hot",
+    pitchVariation: "monotone" | "good"
+  }
+}
+```
+
+### REST API changes (addendum to §3)
+
+- `POST /api/sessions/:id/message` body gains optional `deliveryMetrics?` (the `/analyze` response
+  object; validated strictly — numeric fields must be finite, string fields capped at 32 chars,
+  verdicts must be a `{pace, energy, pitchVariation}` object with string values ≤16 chars).
+  Stored on the counsellor transcript entry.
+- `POST /api/sessions/start` response gains `emotion: string` (default `"neutral"`).
+- `POST /api/sessions/:id/message` response gains `emotion: string` (the student's current emotion).
+
+### Transcript entry fields (addendum to §2 Session shape)
+
+- Student entries: `{ role:"student", text, phase, scoreAfter, ts, emotion?: string }`
+- Counsellor entries: `{ role:"counsellor", text, phase, scoreAfter, ts, deliveryMetrics?: object }`
+
+The `emotion` field on student entries drives the sidecar TTS call for that reply.
+The `deliveryMetrics` field on counsellor entries is used by `report.js` to grade the
+`voice_delivery` rubric criterion (criterion is excluded and weights renormalized for text sessions).

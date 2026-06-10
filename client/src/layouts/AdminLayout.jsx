@@ -9,6 +9,8 @@ const NAV = [
   { to: "/admin", label: "Dashboard", icon: "dashboard", end: true },
   { to: "/admin/counsellors", label: "Counsellors", icon: "counsellors" },
   { to: "/admin/personas", label: "Personas", icon: "personas" },
+  { to: "/admin/courses", label: "Courses", icon: "courses" },
+  { to: "/admin/rubrics", label: "Rubrics", icon: "rubrics" },
   { to: "/admin/assignments", label: "Assignments", icon: "assignments" },
   { to: "/admin/reports", label: "Reports", icon: "reports" },
 ];
@@ -16,6 +18,8 @@ const NAV = [
 function titleFor(path) {
   if (path.startsWith("/admin/counsellors")) return "Counsellors";
   if (path.startsWith("/admin/personas")) return "Personas";
+  if (path.startsWith("/admin/courses")) return "Courses";
+  if (path.startsWith("/admin/rubrics")) return "Rubrics";
   if (path.startsWith("/admin/assignments/new")) return "New Assignment";
   if (path.startsWith("/admin/assignments")) return "Assignments";
   if (path.startsWith("/admin/reports")) return "Reports";
@@ -45,7 +49,7 @@ export default function AdminLayout() {
   );
 
   return (
-    <div className="flex min-h-screen bg-canvas">
+    <div className="flex h-screen overflow-hidden bg-canvas">
       <Sidebar brand="Masai" subtitle="Admin Console" items={NAV} footer={footer} open={open} onClose={() => setOpen(false)} />
       <div className="flex min-w-0 flex-1 flex-col lg:pl-0">
         <Topbar title={titleFor(pathname)} onMenu={() => setOpen(true)} />

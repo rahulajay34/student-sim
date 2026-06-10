@@ -1,0 +1,5 @@
+Email,Slot Date,Slot Time,Duration,slot_over,paid,Counselor,Amount,transcript,Recording
+a@x.com,01/05/2026,10:00:00,12.5,1,PAID,alpha,,"Hello, am I audible? Yes sir.
+Line two, with comma.",https://example.com/a.m3u8
+b@x.com,02/05/2026,11:00:00,7.07,1,,beta,,"Short call.",https://example.com/b.m3u8
+c@x.com,03/05/2026,12:00:00,30,1,,alpha,,"Another call transcript.",https://example.com/c.m3u8

@@ -1,0 +1,46 @@
+{
+  "text": {
+    "durationMin": {
+      "min": 0,
+      "p25": 5.73,
+      "median": 17.39,
+      "p75": 28.56,
+      "max": 78.43
+    },
+    "transcriptChars": {
+      "min": 21,
+      "median": 12675,
+      "max": 48305
+    },
+    "conversionRate": 0.181,
+    "paidVsUnpaid": {
+      "durationMedianPaid": 25.1,
+      "durationMedianUnpaid": 14.8,
+      "presentationStartPctMedian": 35,
+      "paymentAskPctMedian": 78,
+      "paymentAskPctMedianPaid": 78,
+      "paymentAskPresentPct": 65,
+      "paymentAskPresentPctPaid": 87
+    }
+  },
+  "prosody": {
+    "paid": {
+      "calls": 5,
+      "counsellorWpm": 208.8,
+      "counsellorTalkRatio": 0.63,
+      "counsellorPauseRatio": 0.37,
+      "counsellorPitchVarSemitones": 4.25,
+      "counsellorEnergyCv": 0.765,
+      "studentTalkRatio": 0.061
+    },
+    "unpaid": {
+      "calls": 6,
+      "counsellorWpm": 197.35,
+      "counsellorTalkRatio": 0.494,
+      "counsellorPauseRatio": 0.506,
+      "counsellorPitchVarSemitones": 3.775,
+      "counsellorEnergyCv": 0.796,
+      "studentTalkRatio": 0.21
+    }
+  }
+}

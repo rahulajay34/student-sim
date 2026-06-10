@@ -18,9 +18,8 @@ export default function MyMocks() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // The mock currently being started, plus any per-card start error.
+  // Track which card was tapped (visual feedback only — navigates away immediately).
   const [startingId, setStartingId] = useState(null);
-  const [startError, setStartError] = useState("");
 
   const load = useCallback(async () => {
     if (!user?.id) return;
@@ -28,7 +27,15 @@ export default function MyMocks() {
     setError("");
     try {
       const data = await api.getAssignments(user.id);
-      setAssignments(Array.isArray(data) ? data : []);
+      const raw = Array.isArray(data) ? data : [];
+      const ORDER = { assigned: 0, in_progress: 1, completed: 2 };
+      raw.sort((a, b) => {
+        const statusDiff = (ORDER[a.status] ?? 9) - (ORDER[b.status] ?? 9);
+        if (statusDiff !== 0) return statusDiff;
+        // Within group: newest first
+        return (b.createdAt || "").localeCompare(a.createdAt || "");
+      });
+      setAssignments(raw);
     } catch (err) {
       setError(err.message || "Couldn't load your mocks.");
     } finally {
@@ -40,19 +47,15 @@ export default function MyMocks() {
     load();
   }, [load]);
 
-  async function handleStart(assignment) {
-    setStartError("");
+  function handleStart(assignment) {
     setStartingId(assignment.id);
-    try {
-      const { sessionId } = await api.startSession({
-        mode: "assigned",
-        assignmentId: assignment.id,
-        counsellorId: user.id,
+    // Resume in-progress sessions directly; start new ones via the green room.
+    if (assignment.status === "in_progress" && assignment.sessionId) {
+      navigate(`/app/session/${assignment.sessionId}`);
+    } else {
+      navigate("/app/session/new", {
+        state: { mode: "assigned", assignmentId: assignment.id },
       });
-      navigate(`/app/session/${sessionId}`);
-    } catch (err) {
-      setStartError(err.message || "Couldn't start this session.");
-      setStartingId(null);
     }
   }
 
@@ -78,12 +81,6 @@ export default function MyMocks() {
           <Button variant="secondary" size="sm" onClick={load}>
             Retry
           </Button>
-        </Card>
-      )}
-
-      {startError && (
-        <Card className="border-danger-soft p-4">
-          <p className="text-sm text-danger">{startError}</p>
         </Card>
       )}
 

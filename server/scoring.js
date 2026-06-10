@@ -2,8 +2,8 @@
 // Runs as a separate LLM call; the result drives the live satisfaction meter.
 import { chat, extractJson } from "./ollama.js";
 
-export async function scoreMessage(counsellorMessage, lastStudentMessage) {
-  const prompt = `You are evaluating a counsellor's message in a sales conversation for an IIM Ranchi programme.
+export async function scoreMessage(counsellorMessage, lastStudentMessage, courseName) {
+  const prompt = `You are evaluating a counsellor's message in a sales conversation for ${courseName || "the programme"}.
 The student's current concern was: ${lastStudentMessage || "(no prior student message yet)"}
 The counsellor responded with: ${counsellorMessage}
 
@@ -13,6 +13,7 @@ Score the counsellor's response on a scale of -10 to +10 based on:
 - Did they use pressure tactics or dismiss the concern? (-4 if yes)
 - Did they mention relevant course benefits tied to the student's specific situation? (+2 if yes)
 - Did they offer a concrete next step or solution? (+3 if yes)
+- Counter-moves that worked in real converting calls (reward these): decomposing the fee (seat-block today, balance later/EMI), quoting concrete EMI tenures, getting the parent on the call, recordings-count-for-attendance answer, live screen-share proof. Penalize: fake urgency/deadlines, scarcity pressure on trust objections, ignoring the stated objection.
 
 Return only a JSON object with "adjustment" (integer between -10 and +10) and "reason" (one sentence).`;
 

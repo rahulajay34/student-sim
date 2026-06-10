@@ -95,6 +95,9 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
     phaseBreakdown = [],
     strengths = [],
     improvements = [],
+    keyMoments,
+    benchmarks,
+    drills,
     scoreArc = [],
     transcript = [],
     counsellorName,
@@ -105,7 +108,7 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
 
   const converted = overall.outcome === "Converted";
   const finalScore = scoreArc.length ? scoreArc[scoreArc.length - 1].score : null;
-  const reachedPhase = phaseBreakdown.length ? phaseBreakdown[phaseBreakdown.length - 1].phase : 0;
+  const reachedPhase = Math.max(1, ...(report.transcript || []).map((t) => t.phase || 1));
 
   const meta = [counsellorName, personaName, scenarioTitle, formatDate(generatedAt)].filter(Boolean);
 
@@ -173,7 +176,7 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
         {phaseBreakdown.length ? (
           <>
             <div className="mb-5">
-              <PhaseStepper current={reachedPhase} phases={phaseBreakdown} />
+              <PhaseStepper current={reachedPhase} />
             </div>
             <div className="space-y-5">
               {phaseBreakdown.map((p) => (
@@ -267,6 +270,122 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
           )}
         </Card>
       </div>
+
+      {/* KEY MOMENTS */}
+      {Array.isArray(keyMoments) && keyMoments.length > 0 && (
+        <Card className="p-6">
+          <CardHeader
+            title="Key moments"
+            subtitle="Highlight and missed opportunity turns from this call"
+          />
+          <ul className="space-y-3">
+            {keyMoments.map((km, i) => (
+              <li
+                key={i}
+                className="flex items-start gap-3 rounded-xl border border-line bg-canvas/60 px-4 py-3"
+              >
+                <Badge color="slate" className="shrink-0 mt-0.5">
+                  Turn {km.turn}
+                </Badge>
+                <Badge
+                  color={km.type === "best" ? "success" : "danger"}
+                  className="shrink-0 mt-0.5"
+                >
+                  {km.type === "best" ? "Highlight" : "Missed"}
+                </Badge>
+                <p className="text-sm text-ink/80">{km.note}</p>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      {/* BENCHMARKS VS REAL CALLS */}
+      {benchmarks && (
+        <Card className="p-6">
+          <CardHeader
+            title="Vs. real calls"
+            subtitle="How this session compares to converting counselling calls"
+          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {/* Call length */}
+            <div className="rounded-xl border border-line bg-canvas/60 p-4">
+              <div className="text-xs font-medium uppercase tracking-wide text-muted">
+                Call length
+              </div>
+              <div className="mt-1 text-2xl font-bold text-ink">
+                {benchmarks.sessionMinutes != null ? `${benchmarks.sessionMinutes} min` : "—"}
+              </div>
+              {benchmarks.medianPaidMinutes != null && (
+                <div className="mt-1 text-xs text-muted">
+                  Converting calls median: {benchmarks.medianPaidMinutes} min
+                </div>
+              )}
+            </div>
+
+            {/* Payment ask */}
+            <div className="rounded-xl border border-line bg-canvas/60 p-4">
+              <div className="text-xs font-medium uppercase tracking-wide text-muted">
+                Payment ask
+              </div>
+              <div className={`mt-1 text-2xl font-bold ${benchmarks.paymentAskSeen ? "text-success" : "text-danger"}`}>
+                {benchmarks.paymentAskSeen ? "Made" : "Not made"}
+              </div>
+              {benchmarks.paymentAskNormPct != null && (
+                <div className="mt-1 text-xs text-muted">
+                  Present in {benchmarks.paymentAskNormPct}% of converting calls
+                </div>
+              )}
+            </div>
+
+            {/* Outcome */}
+            <div className="rounded-xl border border-line bg-canvas/60 p-4">
+              <div className="text-xs font-medium uppercase tracking-wide text-muted">
+                Outcome
+              </div>
+              <div className={`mt-1 text-2xl font-bold ${overall.outcome === "Converted" ? "text-success" : "text-ink"}`}>
+                {overall.outcome || "—"}
+              </div>
+              {overall.outcomeDetail && (
+                <div className="mt-1 text-xs text-muted line-clamp-2">
+                  {overall.outcomeDetail}
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* PRACTICE DRILLS */}
+      {Array.isArray(drills) && drills.length > 0 && (
+        <Card className="p-6">
+          <CardHeader
+            title="Practice drills"
+            subtitle="Targeted exercises to improve weak areas from this call"
+          />
+          <div className="space-y-4">
+            {drills.map((drill, i) => (
+              <div
+                key={i}
+                className="rounded-xl border border-line bg-canvas/60 p-4"
+              >
+                <p className="font-semibold text-ink">{drill.title}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {drill.focusCriterion && (
+                    <Badge color="brand">{drill.focusCriterion}</Badge>
+                  )}
+                  {drill.objectionCategory && (
+                    <Badge color="slate">{drill.objectionCategory}</Badge>
+                  )}
+                </div>
+                {drill.instruction && (
+                  <p className="mt-3 text-sm text-ink/80">{drill.instruction}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* SCORE ARC */}
       <Card className="p-6">

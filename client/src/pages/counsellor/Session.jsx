@@ -1,73 +1,332 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useNavigate, useParams, useLocation, Link } from "react-router-dom";
 import { api } from "../../lib/api";
+import { useAuth } from "../../lib/auth.jsx";
 import { useVoiceConversation } from "../../voice/useVoiceConversation";
 import Button from "../../ui/Button";
 import Spinner from "../../ui/Spinner";
 import EmptyState from "../../ui/EmptyState";
-import Avatar from "../../ui/Avatar";
-import ScoreMeter from "../../ui/ScoreMeter";
-import PhaseStepper from "../shared/PhaseStepper";
+import Modal from "../../ui/Modal";
+import GreenRoom from "./session/GreenRoom";
+import CallStage from "./session/CallStage";
+import CallSidebar from "./session/CallSidebar";
 
-// Human-readable labels + color tokens for the voice pipeline status.
-const VOICE_STATUS = {
-  loading: { label: "Loading model", tone: "warn" },
-  idle: { label: "Listening ready", tone: "brand" },
-  recording: { label: "Recording", tone: "danger" },
-  transcribing: { label: "Transcribing", tone: "warn" },
-  speaking: { label: "Speaking", tone: "success" },
-};
-
-// A small Monexa-style animated waveform. Bars animate when active.
-function Waveform({ active }) {
-  const bars = [0, 1, 2, 3, 4, 5, 6];
+// ── Connecting overlay ────────────────────────────────────────────────────────
+function ConnectingScreen() {
   return (
-    <div className="flex h-5 items-center gap-[3px]" aria-hidden="true">
-      {bars.map((i) => (
-        <span
-          key={i}
-          className="w-[3px] rounded-full bg-current"
-          style={{
-            height: active ? undefined : "5px",
-            animation: active
-              ? `mct-wave 900ms ease-in-out ${i * 90}ms infinite`
-              : "none",
-          }}
-        />
-      ))}
+    <div className="flex h-screen flex-col items-center justify-center gap-6 bg-stage">
+      <div
+        style={{
+          width: 80,
+          height: 80,
+          borderRadius: "50%",
+          background: "radial-gradient(circle, #6366f1 0%, #4338ca 60%, transparent 100%)",
+          animation: "orb-pulse 2s ease-in-out infinite",
+        }}
+      />
+      <p className="text-base font-medium text-stage-muted">
+        Connecting you to the student…
+      </p>
     </div>
   );
 }
 
+// ── Ended session screen ──────────────────────────────────────────────────────
+function EndedScreen({ onViewReports, onBack }) {
+  return (
+    <div className="flex h-screen flex-col items-center justify-center gap-6 bg-stage px-6">
+      <div className="w-full max-w-sm rounded-2xl border border-stage-line bg-stage-raised p-8 text-center shadow-xl">
+        <p className="text-base font-semibold text-stage-text">This call has ended.</p>
+        <p className="mt-2 text-sm text-stage-muted">
+          The session is complete. You can view your coaching report or return to your mocks.
+        </p>
+        <div className="mt-6 flex flex-col gap-3">
+          <button
+            onClick={onViewReports}
+            className="w-full rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+          >
+            View reports
+          </button>
+          <button
+            onClick={onBack}
+            className="w-full rounded-xl border border-stage-line bg-transparent px-4 py-2.5 text-sm font-medium text-stage-muted hover:text-stage-text transition-colors"
+          >
+            Back to My Mocks
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Wrapping overlay ──────────────────────────────────────────────────────────
+function WrappingScreen({ error, onRetry, onBackToCall }) {
+  if (error) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-6 bg-stage px-6">
+        <div className="w-full max-w-sm rounded-2xl border border-stage-line bg-stage-raised p-8 text-center shadow-xl">
+          <p className="text-base font-semibold text-stage-text">
+            Report generation hit a snag.
+          </p>
+          <p className="mt-2 text-sm text-stage-muted">
+            Your call is safe — try again.
+          </p>
+          <p className="mt-3 text-xs text-danger opacity-80">{error}</p>
+          <div className="mt-6 flex flex-col gap-3">
+            <button
+              onClick={onRetry}
+              className="w-full rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+            >
+              Try again
+            </button>
+            <button
+              onClick={onBackToCall}
+              className="w-full rounded-xl border border-stage-line bg-transparent px-4 py-2.5 text-sm font-medium text-stage-muted hover:text-stage-text transition-colors"
+            >
+              Back to call
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen flex-col items-center justify-center gap-6 bg-stage">
+      {/* Dimmed / pulsing orb */}
+      <div
+        style={{
+          width: 80,
+          height: 80,
+          borderRadius: "50%",
+          background: "radial-gradient(circle, #6366f1 0%, #4338ca 60%, transparent 100%)",
+          opacity: 0.45,
+          animation: "orb-pulse 2s ease-in-out infinite",
+        }}
+      />
+      {/* Skeleton shimmer blocks */}
+      <div className="flex flex-col items-center gap-3">
+        <div
+          style={{ width: 200, height: 12, borderRadius: 6 }}
+          className="animate-pulse bg-stage-raised"
+        />
+        <div
+          style={{ width: 140, height: 10, borderRadius: 6 }}
+          className="animate-pulse bg-stage-raised opacity-60"
+        />
+      </div>
+      <div className="text-center">
+        <p className="text-base font-semibold text-stage-text">Wrapping up the call…</p>
+        <p className="mt-1 text-sm text-stage-muted">
+          Generating your coaching report — usually takes ~20 seconds.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── Main Session component ────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
 export default function Session() {
   const { sessionId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
 
-  const [loading, setLoading] = useState(true);
+  // ── State machine ──────────────────────────────────────────────────────────
+  // "greenroom" → "connecting" → "live"
+  const isNewRoute = !sessionId;
+  const [uiState, setUiState] = useState(isNewRoute ? "greenroom" : "live");
+
+  // ── Green room data ────────────────────────────────────────────────────────
+  const [grAssignment, setGrAssignment] = useState(null);
+  const [grPersona, setGrPersona] = useState(null);
+  const [grCourse, setGrCourse] = useState(null);
+  const [grScenario, setGrScenario] = useState(null);
+  const [grMode, setGrMode] = useState(null);
+  const [grPayload, setGrPayload] = useState(null);
+  const [grLoading, setGrLoading] = useState(isNewRoute);
+  const [grError, setGrError] = useState(null);
+  const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState(null);
+
+  // ── Live session data ──────────────────────────────────────────────────────
+  const [loading, setLoading] = useState(!isNewRoute);
   const [error, setError] = useState(null);
   const [persona, setPersona] = useState(null);
-  const [scenario, setScenario] = useState(null);
   const [messages, setMessages] = useState([]);
   const [phase, setPhase] = useState(1);
   const [score, setScore] = useState(0);
+  const [emotion, setEmotion] = useState("neutral");
+  const [activeSessionId, setActiveSessionId] = useState(sessionId || null);
+  const [timerStart, setTimerStart] = useState(null);
 
-  const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [ending, setEnding] = useState(false);
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
+  const [wrappingError, setWrappingError] = useState(null);
 
-  const scrollRef = useRef(null);
-  const textareaRef = useRef(null);
+  // ── UI state ───────────────────────────────────────────────────────────────
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarTab, setSidebarTab] = useState("transcript");
+  const [showSat, setShowSat] = useState(true);
+  const [micLatched, setMicLatched] = useState(false);
+  const [pttHeld, setPttHeld] = useState(false);
+
+  // ── Coach data ─────────────────────────────────────────────────────────────
+  const [scoreHistory, setScoreHistory] = useState([]);
+  const [milestones, setMilestones] = useState(null);
+  const [lastDeliveryMetrics, setLastDeliveryMetrics] = useState(null);
+
   const sendingRef = useRef(false);
   const submitRef = useRef(null);
   const spaceDownRef = useRef(false);
+  const sidebarInputRef = useRef(null);
 
-  // Voice pipeline: utterances are routed straight into the latest submit fn.
+  // ── Voice pipeline ─────────────────────────────────────────────────────────
   const voice = useVoiceConversation({
-    onUserUtterance: (t) => submitRef.current?.(t),
+    onUserUtterance: (t, meta) => submitRef.current?.(t, meta),
   });
 
-  // --- Load the session on mount -------------------------------------------
+  // ── Derived orbState ───────────────────────────────────────────────────────
+  // awaitingReply (sending=true) → "thinking"
+  // voice speaking  → "speaking"
+  // PTT held / mic latched + recording  → "listening"
+  // else → "idle"
+  const awaitingReply = sending;
+  let orbState = "idle";
+  if (awaitingReply) {
+    orbState = "thinking";
+  } else if (voice.status === "speaking") {
+    orbState = "speaking";
+  } else if (pttHeld || (micLatched && voice.status === "recording")) {
+    orbState = "listening";
+  }
+
+  // Subtitle: last student message text.
+  const lastStudentMsg = [...messages].reverse().find((m) => m.role === "student");
+  const subtitle = lastStudentMsg?.text || "";
+
+  // ── Green room: resolve data from router state ─────────────────────────────
   useEffect(() => {
+    if (!isNewRoute) return;
+
+    const state = location.state;
+    if (!state) {
+      navigate("/app/mocks", { replace: true });
+      return;
+    }
+
+    const mode = state.mode || "practice";
+    setGrMode(mode);
+
+    let alive = true;
+    setGrLoading(true);
+    setGrError(null);
+
+    async function resolve() {
+      if (mode === "assigned") {
+        const { assignmentId } = state;
+        if (!assignmentId) throw new Error("No assignment specified.");
+
+        const assignment = await api.getAssignment(assignmentId);
+        if (!alive) return;
+        setGrAssignment(assignment);
+
+        let resolvedPersona = null;
+        if (assignment.personaId) {
+          const personas = await api.getPersonas();
+          if (!alive) return;
+          resolvedPersona = personas.find((p) => p.id === assignment.personaId) || null;
+        }
+        setGrPersona(resolvedPersona);
+
+        let resolvedCourse = null;
+        if (assignment.courseId) {
+          const courses = await api.getCourses();
+          if (!alive) return;
+          resolvedCourse = courses.find((c) => c.id === assignment.courseId) || null;
+        }
+        setGrCourse(resolvedCourse);
+
+        setGrScenario(assignment.scenario || null);
+
+        setGrPayload({
+          mode: "assigned",
+          assignmentId,
+          counsellorId: user?.id,
+        });
+      } else {
+        const { personaId, courseId, scenario: sc } = state;
+
+        let resolvedPersona = null;
+        if (personaId) {
+          const personas = await api.getPersonas();
+          if (!alive) return;
+          resolvedPersona = personas.find((p) => p.id === personaId) || null;
+        }
+        setGrPersona(resolvedPersona);
+
+        let resolvedCourse = null;
+        if (courseId) {
+          const courses = await api.getCourses();
+          if (!alive) return;
+          resolvedCourse = courses.find((c) => c.id === courseId) || null;
+        }
+        setGrCourse(resolvedCourse);
+
+        setGrScenario(sc || null);
+
+        setGrPayload({
+          mode: "practice",
+          counsellorId: user?.id,
+          personaId: personaId || undefined,
+          courseId: courseId || undefined,
+          scenario: sc || undefined,
+        });
+      }
+    }
+
+    resolve()
+      .catch((err) => {
+        if (alive) setGrError(err?.message || "Could not load session brief.");
+      })
+      .finally(() => {
+        if (alive) setGrLoading(false);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [isNewRoute]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Green room join handler ────────────────────────────────────────────────
+  async function handleJoin(withVoice) {
+    if (!grPayload) return;
+    setJoinError(null);
+    setJoining(true);
+    setUiState("connecting");
+
+    try {
+      const res = await api.startSession(grPayload);
+      const newId = res.sessionId;
+      setActiveSessionId(newId);
+      navigate(`/app/session/${newId}`, {
+        replace: true,
+        state: { autoVoice: withVoice },
+      });
+    } catch (err) {
+      setJoinError(err?.message || "Could not start the session. Please try again.");
+      setJoining(false);
+      setUiState("greenroom");
+    }
+  }
+
+  // ── Live session: load on mount ────────────────────────────────────────────
+  useEffect(() => {
+    if (isNewRoute) return;
+
     let alive = true;
     setLoading(true);
     setError(null);
@@ -75,21 +334,59 @@ export default function Session() {
       .getSession(sessionId)
       .then((s) => {
         if (!alive) return;
-        setPersona(s.personaSnapshot || null);
-        setScenario(s.scenarioSnapshot || null);
+        // Ended session: render a dedicated "call has ended" screen instead of live UI.
+        if (s.status === "ended") {
+          setUiState("ended");
+          setLoading(false);
+          return;
+        }
+        // Resolve persona snapshot, masking name for blind assignments.
+        let resolvedPersona = s.personaSnapshot || null;
+        const assignmentFetch = s.assignmentId
+          ? api.getAssignment(s.assignmentId).catch(() => null)
+          : Promise.resolve(null);
+
+        assignmentFetch.then((asn) => {
+          if (!alive) return;
+          if (asn && asn.revealPersona === false && resolvedPersona) {
+            resolvedPersona = { ...resolvedPersona, name: "Prospective student" };
+          }
+          setPersona(resolvedPersona);
+        });
+
         setPhase(s.currentPhase || 1);
         setScore(s.satisfactionScore ?? 0);
+        setTimerStart(s.startedAt ? new Date(s.startedAt).getTime() : Date.now());
         const transcript = Array.isArray(s.transcript) ? s.transcript : [];
-        setMessages(
-          transcript.map((m, i) => ({
-            id: `t${i}`,
-            role: m.role,
-            text: m.text,
-          }))
-        );
+        const msgs = transcript.map((m, i) => ({
+          id: `t${i}`,
+          role: m.role,
+          text: m.text,
+          emotion: m.emotion ?? "neutral",
+        }));
+        setMessages(msgs);
+        // Seed scoreHistory from transcript scores if available.
+        if (Array.isArray(s.scoreHistory)) {
+          setScoreHistory(s.scoreHistory);
+        } else if (s.satisfactionScore != null) {
+          setScoreHistory([{ turn: 0, score: s.satisfactionScore }]);
+        }
+        // Seed milestones from session data.
+        if (s.milestones) setMilestones(s.milestones);
+        // Set initial emotion from last student message.
+        const lastStudent = [...msgs].reverse().find((m) => m.role === "student");
+        if (lastStudent?.emotion) setEmotion(lastStudent.emotion);
+        // The /new and /:sessionId routes share this component instance, so a
+        // join's "connecting" state survives the navigate — flip to live here.
+        setJoining(false);
+        setUiState("live");
       })
       .catch((e) => {
-        if (alive) setError(e?.message || "Could not load this session.");
+        if (alive) {
+          setError(e?.message || "Could not load this session.");
+          setJoining(false);
+          setUiState("live");
+        }
       })
       .finally(() => {
         if (alive) setLoading(false);
@@ -97,39 +394,66 @@ export default function Session() {
     return () => {
       alive = false;
     };
-  }, [sessionId]);
+  }, [sessionId, isNewRoute]);
 
-  // --- Autoscroll to bottom on new messages / typing -----------------------
+  // ── Auto-enable voice after join ───────────────────────────────────────────
+  const autoVoiceHandled = useRef(false);
   useEffect(() => {
-    const el = scrollRef.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [messages, sending]);
+    if (isNewRoute) return;
+    if (autoVoiceHandled.current) return;
+    const autoVoice = location.state?.autoVoice;
+    if (!autoVoice) return;
+    if (loading) return;
+    autoVoiceHandled.current = true;
+    setTimerStart((t) => t || Date.now());
+    voice.enable().catch(() => {});
+    // Clear the autoVoice flag so back-navigation doesn't re-trigger it.
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [isNewRoute, loading, location.state]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // --- Send a message ------------------------------------------------------
-  function submit(raw) {
+  // ── Send a message ─────────────────────────────────────────────────────────
+  async function submit(raw, meta) {
     const text = (raw ?? "").trim();
     if (!text || sendingRef.current || ending) return;
 
     sendingRef.current = true;
     setSending(true);
-    setDraft("");
     setMessages((prev) => [
       ...prev,
       { id: `c${Date.now()}`, role: "counsellor", text },
     ]);
 
+    let deliveryMetrics;
+    if (meta?.analyzePromise) {
+      deliveryMetrics = await Promise.race([
+        meta.analyzePromise,
+        new Promise((r) => setTimeout(() => r(null), 2500)),
+      ]);
+    }
+    // Capture delivery metrics for the Coach panel (only when voice was used).
+    if (deliveryMetrics) setLastDeliveryMetrics(deliveryMetrics);
+
+    const sid = activeSessionId || sessionId;
     api
-      .sendMessage(sessionId, text)
+      .sendMessage(sid, text, deliveryMetrics || undefined)
       .then((res) => {
         const reply = res?.reply ?? "";
+        const newEmotion = res?.emotion ?? "neutral";
         setMessages((prev) => [
           ...prev,
-          { id: `s${Date.now()}`, role: "student", text: reply },
+          { id: `s${Date.now()}`, role: "student", text: reply, emotion: newEmotion },
         ]);
         if (res?.currentPhase) setPhase(res.currentPhase);
-        if (typeof res?.satisfactionScore === "number")
+        if (typeof res?.satisfactionScore === "number") {
           setScore(res.satisfactionScore);
-        if (voice.enabled && reply) voice.speak(reply);
+          setScoreHistory((prev) => [
+            ...prev,
+            { turn: prev.length, score: res.satisfactionScore },
+          ]);
+        }
+        if (res?.milestones) setMilestones(res.milestones);
+        setEmotion(newEmotion);
+        if (voice.enabled && reply) voice.speak(reply, newEmotion);
       })
       .catch((e) => {
         setMessages((prev) => [
@@ -146,33 +470,36 @@ export default function Session() {
         setSending(false);
       });
   }
-  // Keep submitRef pointing at the latest closure for voice utterances.
   useEffect(() => {
     submitRef.current = submit;
   });
 
-  function onTextareaKeyDown(e) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      submit(draft);
-    }
-  }
-
-  // --- Voice mode toggle + speak last student line on first enable ---------
+  // ── Voice mode toggle ──────────────────────────────────────────────────────
   function toggleVoice() {
     if (voice.enabled) {
       voice.disable();
+      setMicLatched(false);
     } else {
       voice.enable().then(() => {
-        const lastStudent = [...messages]
-          .reverse()
-          .find((m) => m.role === "student");
-        if (lastStudent?.text) voice.speak(lastStudent.text);
+        const lastStudent = [...messages].reverse().find((m) => m.role === "student");
+        if (lastStudent?.text) voice.speak(lastStudent.text, lastStudent.emotion ?? "neutral");
       });
     }
   }
 
-  // --- Hold SPACE to talk (push-to-talk) -----------------------------------
+  // Mic button handler: toggle voice enable (latching); PTT is held-Space.
+  function handleToggleMic() {
+    if (!voice.enabled) {
+      // Enable voice first.
+      toggleVoice();
+      setMicLatched(true);
+    } else {
+      voice.disable();
+      setMicLatched(false);
+    }
+  }
+
+  // ── Hold SPACE to talk (push-to-talk) ─────────────────────────────────────
   useEffect(() => {
     if (!voice.enabled) return;
 
@@ -187,6 +514,7 @@ export default function Session() {
       e.preventDefault();
       if (spaceDownRef.current) return;
       spaceDownRef.current = true;
+      setPttHeld(true);
       voice.startListening();
     };
     const onKeyUp = (e) => {
@@ -194,6 +522,7 @@ export default function Session() {
       if (!spaceDownRef.current) return;
       e.preventDefault();
       spaceDownRef.current = false;
+      setPttHeld(false);
       voice.stopListening();
     };
 
@@ -203,35 +532,128 @@ export default function Session() {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       spaceDownRef.current = false;
+      setPttHeld(false);
     };
   }, [voice.enabled, voice.startListening, voice.stopListening]);
 
-  // --- End session ---------------------------------------------------------
-  function endSession() {
+  // ── End session ───────────────────────────────────────────────────────────
+  function confirmEnd() {
+    setShowEndConfirm(true);
+  }
+
+  function doEndSession() {
     if (ending) return;
+    setShowEndConfirm(false);
     setEnding(true);
+    setWrappingError(null);
+    // Disable voice before entering the wrapping screen.
     if (voice.enabled) voice.disable();
+    setUiState("wrapping");
+    const sid = activeSessionId || sessionId;
     api
-      .endSession(sessionId)
+      .endSession(sid)
       .then((res) => navigate("/app/reports/" + res.reportId))
       .catch((e) => {
-        setError(e?.message || "Could not end the session.");
+        setWrappingError(e?.message || "Could not generate the report.");
         setEnding(false);
       });
   }
 
-  // --- Loading / error states ----------------------------------------------
+  // ══════════════════════════════════════════════════════════════════════════
+  // ── Render: Green room ────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+  if (uiState === "greenroom") {
+    if (grLoading) {
+      return (
+        <div className="flex h-screen items-center justify-center bg-stage">
+          <Spinner size={28} />
+        </div>
+      );
+    }
+    if (grError && !grPayload) {
+      return (
+        <div className="flex h-screen items-center justify-center bg-stage px-6">
+          <div className="text-center">
+            <p className="text-lg font-semibold text-stage-text">Could not load session brief</p>
+            <p className="mt-2 text-sm text-stage-muted">{grError}</p>
+            <button
+              className="mt-6 rounded-xl border border-stage-line bg-stage-raised px-4 py-2 text-sm font-medium text-stage-text"
+              onClick={() => navigate("/app/mocks")}
+            >
+              Back to my mocks
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <GreenRoom
+        mode={grMode}
+        assignment={grAssignment}
+        persona={grPersona}
+        course={grCourse}
+        scenario={grScenario}
+        onJoin={handleJoin}
+        joining={joining}
+        error={joinError || grError}
+      />
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ── Render: Connecting screen ─────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+  if (uiState === "connecting") {
+    return <ConnectingScreen />;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ── Render: Ended session ─────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+  if (uiState === "ended") {
+    return (
+      <EndedScreen
+        onViewReports={() => navigate("/app/reports")}
+        onBack={() => navigate("/app/mocks")}
+      />
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ── Render: Wrapping screen ───────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+  if (uiState === "wrapping") {
+    return (
+      <WrappingScreen
+        error={wrappingError}
+        onRetry={() => {
+          setEnding(false);
+          doEndSession();
+        }}
+        onBackToCall={() => {
+          setWrappingError(null);
+          setEnding(false);
+          setUiState("live");
+        }}
+      />
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ── Render: Live session ──────────────────────────────────════════════════
+  // ══════════════════════════════════════════════════════════════════════════
+
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-canvas">
+      <div className="flex h-screen items-center justify-center bg-stage">
         <Spinner size={28} />
       </div>
     );
   }
 
-  if (error) {
+  if (error && !ending) {
     return (
-      <div className="flex h-screen items-center justify-center bg-canvas px-6">
+      <div className="flex h-screen items-center justify-center bg-stage px-6">
         <EmptyState
           title="Session unavailable"
           hint={error}
@@ -250,198 +672,74 @@ export default function Session() {
     );
   }
 
-  const voiceInfo = VOICE_STATUS[voice.status] || null;
-  const voiceActive = voice.status === "recording" || voice.status === "speaking";
-
   return (
-    <div className="flex h-screen flex-col bg-canvas">
-      {/* Inline keyframes for the waveform + typing dots (scoped, no extra files). */}
-      <style>{`@keyframes mct-wave{0%,100%{height:5px;transform:translateY(0)}50%{height:18px;transform:translateY(0)}}`}</style>
+    <div className="flex h-screen bg-stage">
+      {/* ── Call stage (takes remaining space) ── */}
+      <CallStage
+        personaName={persona?.name}
+        phase={phase}
+        emotion={emotion}
+        satisfaction={score}
+        getAnalyser={voice.getAnalyser}
+        orbState={orbState}
+        subtitle={subtitle}
+        awaitingReply={awaitingReply}
+        voice={voice}
+        onToggleMic={handleToggleMic}
+        micLatched={micLatched}
+        onToggleKeyboard={() => {
+          if (!sidebarOpen) {
+            setSidebarOpen(true);
+            setSidebarTab("transcript");
+            setTimeout(() => sidebarInputRef.current?.focus(), 80);
+          } else {
+            setSidebarOpen(false);
+          }
+        }}
+        sidebarOpen={sidebarOpen}
+        onEndCall={confirmEnd}
+        showSat={showSat}
+        onToggleSat={() => setShowSat((s) => !s)}
+        timerStart={timerStart}
+      />
 
-      {/* ---------------------------- HEADER ---------------------------- */}
-      <header className="border-b border-line bg-white px-4 py-3 sm:px-6">
-        <div className="flex items-center justify-between gap-4">
-          {/* Left: persona + scenario */}
-          <div className="flex min-w-0 items-center gap-3">
-            <Avatar name={persona?.name} size="md" />
-            <div className="min-w-0">
-              <div className="truncate text-sm font-semibold text-ink">
-                {persona?.name || "Student"}
-              </div>
-              <div className="truncate text-xs text-muted">
-                {scenario?.title || "Practice session"}
-              </div>
-            </div>
-          </div>
+      {/* ── Glass sidebar: Transcript + Coach tabs ── */}
+      <CallSidebar
+        open={sidebarOpen}
+        onToggle={() => setSidebarOpen((o) => !o)}
+        tab={sidebarTab}
+        onTab={setSidebarTab}
+        messages={messages}
+        awaitingReply={sending}
+        onSend={(text) => submit(text)}
+        satisfaction={score}
+        scoreHistory={scoreHistory}
+        deliveryMetrics={lastDeliveryMetrics}
+        milestones={milestones}
+        emotion={emotion}
+        inputRef={sidebarInputRef}
+      />
 
-          {/* Right: satisfaction meter + controls */}
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="hidden w-40 sm:block">
-              <div className="mb-0.5 flex items-center justify-between">
-                <span className="text-[11px] font-medium uppercase tracking-wide text-muted">
-                  Student satisfaction
-                </span>
-              </div>
-              <ScoreMeter score={score} />
-            </div>
-
-            <button
-              type="button"
-              onClick={toggleVoice}
-              className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-colors ${
-                voice.enabled
-                  ? "border-brand-600 bg-brand-50 text-brand-700"
-                  : "border-line bg-white text-muted hover:bg-canvas hover:text-ink"
-              }`}
-              aria-pressed={voice.enabled}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="h-4 w-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4" />
-              </svg>
-              Voice mode
-            </button>
-
-            <Button variant="danger" size="sm" onClick={endSession} disabled={ending}>
-              {ending ? "Ending…" : "End session"}
+      {/* ── End call confirm modal ── */}
+      <Modal
+        open={showEndConfirm}
+        onClose={() => setShowEndConfirm(false)}
+        title="End this call?"
+        footer={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setShowEndConfirm(false)}>
+              Cancel
             </Button>
-          </div>
-        </div>
-
-        {/* Phase stepper */}
-        <div className="mt-3">
-          <PhaseStepper current={phase} />
-        </div>
-
-        {/* Voice status row */}
-        {voice.enabled && (
-          <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-line pt-3">
-            <span
-              className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium ${
-                voiceInfo?.tone === "danger"
-                  ? "bg-danger-soft text-danger"
-                  : voiceInfo?.tone === "success"
-                  ? "bg-success-soft text-success"
-                  : voiceInfo?.tone === "warn"
-                  ? "bg-warn-soft text-warn"
-                  : "bg-brand-50 text-brand-700"
-              }`}
-            >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${voiceActive ? "animate-pulse" : ""}`}
-                style={{ background: "currentColor" }}
-              />
-              {voice.status === "loading"
-                ? `Loading model ${voice.loadPct}%`
-                : voiceInfo?.label || voice.status}
-            </span>
-
-            <span className={voiceActive ? "text-brand-600" : "text-muted/60"}>
-              <Waveform active={voiceActive} />
-            </span>
-
-            <span className="text-xs text-muted">
-              Hold{" "}
-              <kbd className="rounded border border-line bg-canvas px-1.5 py-0.5 font-sans text-[11px] text-ink">
-                Space
-              </kbd>{" "}
-              to talk
-            </span>
-
-            {voice.error && <span className="text-xs text-danger">{voice.error}</span>}
-          </div>
-        )}
-      </header>
-
-      {/* ---------------------------- MESSAGES ---------------------------- */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
-        <div className="mx-auto flex max-w-3xl flex-col gap-4">
-          {messages.length === 0 && (
-            <EmptyState
-              title="Start the conversation"
-              hint="Open with rapport, then guide the student through discovery, objections and a close."
-              icon={
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="h-6 w-6">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z" />
-                </svg>
-              }
-            />
-          )}
-
-          {messages.map((m) => {
-            if (m.role === "system") {
-              return (
-                <div key={m.id} className="flex justify-center">
-                  <span className="rounded-full bg-danger-soft px-3 py-1 text-xs font-medium text-danger">
-                    {m.text}
-                  </span>
-                </div>
-              );
-            }
-            const mine = m.role === "counsellor";
-            return (
-              <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-[75%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm ${
-                    mine
-                      ? "rounded-br-md bg-brand-600 text-white"
-                      : "rounded-bl-md border border-line bg-white text-ink"
-                  }`}
-                >
-                  {m.text}
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Typing indicator */}
-          {sending && (
-            <div className="flex justify-start">
-              <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-line bg-white px-4 py-3 shadow-sm">
-                {[0, 1, 2].map((i) => (
-                  <span
-                    key={i}
-                    className="h-1.5 w-1.5 rounded-full bg-muted"
-                    style={{ animation: `mct-wave 900ms ease-in-out ${i * 150}ms infinite` }}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ---------------------------- INPUT BAR ---------------------------- */}
-      <div className="border-t border-line bg-white p-3 sm:p-4">
-        <div className="mx-auto flex max-w-3xl items-end gap-3">
-          <textarea
-            ref={textareaRef}
-            rows={1}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={onTextareaKeyDown}
-            placeholder="Type your message…  (Enter to send · Shift+Enter for a new line)"
-            disabled={sending || ending}
-            className="max-h-40 min-h-[44px] flex-1 resize-none rounded-xl border border-line bg-canvas px-3.5 py-3 text-sm text-ink placeholder:text-muted focus:border-brand-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-600/20 disabled:opacity-60"
-          />
-          <Button
-            onClick={() => submit(draft)}
-            disabled={sending || ending || !draft.trim()}
-            className="h-[44px]"
-          >
-            {sending ? (
-              <Spinner size={18} className="text-white" />
-            ) : (
-              <>
-                <span>Send</span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m22 2-7 20-4-9-9-4Z M22 2 11 13" />
-                </svg>
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
+            <Button variant="danger" size="sm" onClick={doEndSession} disabled={ending}>
+              {ending ? "Ending…" : "End call & generate report"}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-muted">
+          Ending the call will stop the session and generate your coaching report. This cannot be undone.
+        </p>
+      </Modal>
     </div>
   );
 }

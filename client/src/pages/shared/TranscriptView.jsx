@@ -18,11 +18,20 @@ function formatTime(ts) {
 function Bubble({ turn }) {
   const isCounsellor = turn.role === "counsellor";
   const time = formatTime(turn.ts);
+  const emotion =
+    !isCounsellor && turn.emotion && turn.emotion !== "neutral"
+      ? turn.emotion
+      : null;
 
   return (
     <div className={`flex flex-col ${isCounsellor ? "items-end" : "items-start"}`}>
       <div className="mb-1 flex items-center gap-2 px-1 text-xs text-muted">
         <span className="font-medium">{isCounsellor ? "Counsellor" : "Student"}</span>
+        {emotion && (
+          <span className="rounded-full bg-canvas px-1.5 py-px text-xs text-muted/70 italic">
+            {emotion}
+          </span>
+        )}
         {time && <span className="text-muted/70">{time}</span>}
       </div>
 

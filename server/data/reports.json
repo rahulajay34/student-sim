@@ -1,1 +1,1462 @@
-[]
+[
+  {
+    "id": "rep-cbe370ab",
+    "sessionId": "ses-36e5c569",
+    "assignmentId": "asn-f50ec414",
+    "counsellorId": "counsellor-1",
+    "counsellorName": "Priya Sharma",
+    "personaName": "Working Professional — Same Field",
+    "scenarioTitle": "123",
+    "overall": {
+      "percent": 26,
+      "band": "Needs Work",
+      "outcome": "Not Converted",
+      "outcomeDetail": "The student did not agree to pay the 4000 rupee seat fee because the counsellor did not provide detailed module information or a clear next‑step invitation."
+    },
+    "rubric": [
+      {
+        "key": "rapport",
+        "label": "Rapport & Opening",
+        "weight": 15,
+        "score": 1,
+        "level": "Poor",
+        "justification": "Counsellor never greeted or built personal connection, only gave brief prompts."
+      },
+      {
+        "key": "discovery",
+        "label": "Needs Discovery",
+        "weight": 20,
+        "score": 2,
+        "level": "Developing",
+        "justification": "Asked a generic \"What are you looking for?\" but did not probe deeper into the student's goals or pain points."
+      },
+      {
+        "key": "objections",
+        "label": "Objection Handling",
+        "weight": 25,
+        "score": 1,
+        "level": "Poor",
+        "justification": "When the student requested specific module details, the counsellor gave a vague answer instead of addressing the concern."
+      },
+      {
+        "key": "knowledge",
+        "label": "Product Knowledge & Accuracy",
+        "weight": 15,
+        "score": 1,
+        "level": "Poor",
+        "justification": "Provided no concrete information about algorithms, tools, case studies or leadership frameworks; answers were ambiguous."
+      },
+      {
+        "key": "closing",
+        "label": "Closing & Next Steps",
+        "weight": 15,
+        "score": 1,
+        "level": "Poor",
+        "justification": "No attempt to secure commitment, set next steps, or discuss the seat fee."
+      },
+      {
+        "key": "communication",
+        "label": "Communication & Empathy",
+        "weight": 10,
+        "score": 2,
+        "level": "Developing",
+        "justification": "Responses were short and lacked empathy; the counsellor did not acknowledge the student's specific interests."
+      }
+    ],
+    "phaseBreakdown": [
+      {
+        "phase": 1,
+        "name": "Student Introduction",
+        "summary": "Opening – counsellor prompted the student to introduce themselves but did not greet or create a warm opening.",
+        "didWell": "Requested the student's introduction, giving a chance to speak.",
+        "toImprove": "Start with a friendly greeting, use the student's name, and share a brief personal intro to build rapport."
+      },
+      {
+        "phase": 2,
+        "name": "Course Information",
+        "summary": "Discovery – asked a single broad question about what the student is looking for, without deeper probing.",
+        "didWell": "Asked \"What are you looking for?\" which invited the student to state goals.",
+        "toImprove": "Follow up with targeted questions about current role challenges, skill gaps, and employer expectations."
+      },
+      {
+        "phase": 3,
+        "name": "Concerns and Objections",
+        "summary": "Presentation – gave a generic description of the program’s foundation‑first approach, no specifics on modules.",
+        "didWell": "Mentioned that the program starts from foundations and goes deeper.",
+        "toImprove": "Provide detailed curriculum points: algorithms covered, tools used, case studies, leadership frameworks, and real‑world projects."
+      },
+      {
+        "phase": 4,
+        "name": "Closing",
+        "summary": "Closing – no attempt to secure commitment, outline next steps, or discuss the 4000 ₹ seat fee.",
+        "didWell": "None evident.",
+        "toImprove": "Summarize benefits, ask for the student's decision, explain enrollment steps and the seat fee, and schedule the next call."
+      }
+    ],
+    "strengths": [
+      {
+        "point": "Attempted to ask the student’s goals",
+        "quote": "\"What are you looking for?\""
+      },
+      {
+        "point": "Polite acknowledgment",
+        "quote": "\"Thank you.\""
+      }
+    ],
+    "improvements": [
+      {
+        "point": "Provide concrete product knowledge",
+        "quote": "\"Yes, this program is designed for all we start from foundations…\"",
+        "suggestion": "List exact topics, algorithms, tools, case studies, and leadership models covered in each module."
+      },
+      {
+        "point": "Close the conversation with clear next steps",
+        "quote": "(no closing statement present)",
+        "suggestion": "After answering questions, recap benefits, ask for confirmation, explain the 4000 ₹ seat fee, and schedule enrollment or a follow‑up."
+      },
+      {
+        "point": "Build rapport and empathy",
+        "quote": "(minimal greeting and empathy)",
+        "suggestion": "Begin with a warm greeting, use the student's name, and mirror their enthusiasm before diving into details."
+      }
+    ],
+    "scoreArc": [
+      {
+        "turn": 0,
+        "score": 50
+      },
+      {
+        "turn": 1,
+        "score": 47
+      },
+      {
+        "turn": 2,
+        "score": 44
+      },
+      {
+        "turn": 3,
+        "score": 37
+      },
+      {
+        "turn": 4,
+        "score": 34
+      }
+    ],
+    "transcript": [
+      {
+        "role": "student",
+        "text": "I’m a data analyst with around three years of experience at a mid‑size firm. I took the qualifier test because I was curious whether the IIM Ranchi program could offer any fresh insights or help me progress further in my career.",
+        "phase": 1,
+        "scoreAfter": 50,
+        "ts": "2026-06-09T15:22:13.792Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "introduce yourself",
+        "phase": 1,
+        "scoreAfter": 47,
+        "ts": "2026-06-09T15:24:11.956Z"
+      },
+      {
+        "role": "student",
+        "text": "I’m a data analyst with about three years of experience in analytics at a mid‑size company. I cleared the qualifier test because I wanted to see if an IIM Ranchi certification could add real value to my current skill set and career growth.",
+        "phase": 1,
+        "scoreAfter": 47,
+        "ts": "2026-06-09T15:24:14.104Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "What are you looking for?",
+        "phase": 1,
+        "scoreAfter": 44,
+        "ts": "2026-06-09T15:24:24.752Z"
+      },
+      {
+        "role": "student",
+        "text": "I’m looking to deepen my expertise in applying machine‑learning and AI at a strategic level – essentially moving from execution to leadership on analytics projects. I’d like to know how the ML/AI modules are structured for someone already working in the field, and how employers typically view an IIM Ranchi certificate for an experienced analyst.",
+        "phase": 1,
+        "scoreAfter": 44,
+        "ts": "2026-06-09T15:24:27.383Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Thank you.",
+        "phase": 1,
+        "scoreAfter": 37,
+        "ts": "2026-06-09T15:25:08.790Z"
+      },
+      {
+        "role": "student",
+        "text": "That makes sense. Could you tell me exactly what topics the “Machine Learning for Business — Foundations” and “Advanced Analytics, AI Applications and Leadership” modules cover? Also, is the program geared more toward beginners, or is there flexibility for professionals like me who already have a solid analytics background?",
+        "phase": 1,
+        "scoreAfter": 37,
+        "ts": "2026-06-09T15:25:11.860Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Yes, this program is designed for all we start from foundations so that even if you are not having that round in that course, you will be able to understand it from the foundations only and then we will go deep into that when you are going through the course.",
+        "phase": 2,
+        "scoreAfter": 34,
+        "ts": "2026-06-09T15:26:01.327Z"
+      },
+      {
+        "role": "student",
+        "text": "Got it. Could you break down the specific topics covered in the “Machine Learning for Business — Foundations” module – for example, which algorithms, tools, or case studies are included? And similarly, what does the “Advanced Analytics, AI Applications and Leadership” module focus on – are there leadership frameworks, particular industry use‑cases, or hands‑on projects? Also, do employers generally view this certification as a differentiator for someone already working in analytics?",
+        "phase": 2,
+        "scoreAfter": 34,
+        "ts": "2026-06-09T15:26:03.475Z"
+      }
+    ],
+    "generatedAt": "2026-06-09T15:26:57.029Z"
+  },
+  {
+    "id": "rep-55cd6720",
+    "sessionId": "ses-9266aef2",
+    "assignmentId": "asn-49725954",
+    "counsellorId": "counsellor-2",
+    "counsellorName": "Rohan Verma",
+    "personaName": "Non-Working, Non-Studying (Career Gap)",
+    "scenarioTitle": "Huzzia",
+    "overall": {
+      "percent": 20,
+      "band": "Needs Work",
+      "outcome": "Not Converted",
+      "outcomeDetail": "Priya did not agree to pay the 4000‑rupee seat fee because her questions were left unanswered and she felt unheard."
+    },
+    "rubric": [
+      {
+        "key": "rapport",
+        "label": "Rapport & Opening",
+        "weight": 15,
+        "score": 1,
+        "level": "Poor",
+        "justification": "Counsellor responded with a dismissive remark and no greeting or empathy."
+      },
+      {
+        "key": "discovery",
+        "label": "Needs Discovery",
+        "weight": 20,
+        "score": 1,
+        "level": "Poor",
+        "justification": "No questions were asked to uncover Priya's needs or background."
+      },
+      {
+        "key": "objections",
+        "label": "Objection Handling",
+        "weight": 25,
+        "score": 1,
+        "level": "Poor",
+        "justification": "Counsellor did not address any of the student's concerns about structure or placement support."
+      },
+      {
+        "key": "knowledge",
+        "label": "Product Knowledge & Accuracy",
+        "weight": 15,
+        "score": 1,
+        "level": "Poor",
+        "justification": "No product details or accurate information were provided."
+      },
+      {
+        "key": "closing",
+        "label": "Closing & Next Steps",
+        "weight": 15,
+        "score": 1,
+        "level": "Poor",
+        "justification": "The call ended without any next‑step or commitment request."
+      },
+      {
+        "key": "communication",
+        "label": "Communication & Empathy",
+        "weight": 10,
+        "score": 1,
+        "level": "Poor",
+        "justification": "Language was confrontational and lacked clarity or empathy."
+      }
+    ],
+    "phaseBreakdown": [
+      {
+        "phase": 1,
+        "name": "Student Introduction",
+        "summary": "Opening – counsellor gave a brief welcome but immediately turned negative.",
+        "didWell": "Attempted a greeting.",
+        "toImprove": "Use a warm tone, acknowledge the student's situation, and build rapport."
+      },
+      {
+        "phase": 2,
+        "name": "Course Information",
+        "summary": "Discovery – no probing questions were asked.",
+        "didWell": "None.",
+        "toImprove": "Ask open‑ended questions to understand Priya’s career goals, gaps, and expectations."
+      },
+      {
+        "phase": 3,
+        "name": "Concerns and Objections",
+        "summary": "Objection handling – student asked about programme structure and placement support; counsellor gave an unrelated, hostile reply.",
+        "didWell": "None.",
+        "toImprove": "Provide clear, relevant answers and reassure the student about support services."
+      },
+      {
+        "phase": 4,
+        "name": "Closing",
+        "summary": "Closing – call ended without next steps or commitment.",
+        "didWell": "None.",
+        "toImprove": "Summarize benefits, propose a follow‑up, and ask for a small commitment (e.g., seat fee)."
+      }
+    ],
+    "strengths": [
+      {
+        "point": "Attempted a greeting",
+        "quote": "Yes, Priya, welcome to the counseling."
+      }
+    ],
+    "improvements": [
+      {
+        "point": "Lack of empathy",
+        "quote": "I don't know what do you want from me? I want to lower my score.",
+        "suggestion": "Begin with a genuine acknowledgment of the student's situation and express willingness to help."
+      },
+      {
+        "point": "No product knowledge shared",
+        "quote": "I don't know what do you want from me? I want to lower my score.",
+        "suggestion": "Prepare concise talking points about programme structure, beginner‑friendly design, and placement assistance."
+      },
+      {
+        "point": "Missing closing and next steps",
+        "quote": "I don't know what do you want from me? I want to lower my score.",
+        "suggestion": "End calls by summarizing key benefits, confirming interest, and requesting the seat fee or scheduling a follow‑up."
+      }
+    ],
+    "scoreArc": [
+      {
+        "turn": 0,
+        "score": 50
+      },
+      {
+        "turn": 1,
+        "score": 47
+      },
+      {
+        "turn": 2,
+        "score": 40
+      }
+    ],
+    "transcript": [
+      {
+        "role": "student",
+        "text": "Hi, I’m Priya, currently taking a break after a few months of focusing on family responsibilities. I cleared the qualifier test because I’m looking for a structured way to restart my career.",
+        "phase": 1,
+        "scoreAfter": 50,
+        "ts": "2026-06-09T15:34:15.325Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Yes, Priya, welcome to the counseling. I will be helping out with all the stuff you will be needing. And let's begin.",
+        "phase": 1,
+        "scoreAfter": 47,
+        "ts": "2026-06-09T15:35:01.933Z"
+      },
+      {
+        "role": "student",
+        "text": "Got it. Could you tell me how the programme is structured for someone like me who’s been out of a routine for a while? Is it beginner‑friendly and does it include any placement support or guidance for restarting a career?",
+        "phase": 1,
+        "scoreAfter": 47,
+        "ts": "2026-06-09T15:35:05.275Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "I don't know what do you want from me? I want to lower my score.",
+        "phase": 1,
+        "scoreAfter": 40,
+        "ts": "2026-06-09T15:36:23.191Z"
+      },
+      {
+        "role": "student",
+        "text": "I’m just trying to understand how the program works for someone re‑entering the workforce. Could you explain what kind of support is provided for building a routine, and whether there’s any placement assistance or employer networking included?",
+        "phase": 1,
+        "scoreAfter": 40,
+        "ts": "2026-06-09T15:36:25.483Z"
+      }
+    ],
+    "generatedAt": "2026-06-09T15:37:01.801Z"
+  },
+  {
+    "id": "rep-e0ebaf43",
+    "sessionId": "ses-4ff7e134",
+    "assignmentId": "asn-80276a8b",
+    "counsellorId": "counsellor-1",
+    "counsellorName": "Priya Sharma",
+    "personaName": "Working Professional — Different Field",
+    "scenarioTitle": "Worried career switcher — UI walkthrough",
+    "overall": {
+      "percent": 35,
+      "band": "Needs Work",
+      "outcome": "Not Converted",
+      "outcomeDetail": "The student did not agree to pay the ₹4,000 seat‑block nor commit to any next step."
+    },
+    "rubric": [
+      {
+        "key": "rapport",
+        "label": "Rapport & Opening",
+        "weight": 10.5,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Polite, professional opening – confirmed Rahul’s name and acknowledged his operations‑to‑data switch before moving to a question."
+      },
+      {
+        "key": "discovery",
+        "label": "Needs Discovery",
+        "weight": 15.8,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Covers basic qualification checklist by asking about current tools (Excel, PowerBI) but does not probe deeper motivations or goals."
+      },
+      {
+        "key": "presentation",
+        "label": "Programme Presentation",
+        "weight": 15.8,
+        "score": 1,
+        "level": "Poor",
+        "justification": "No curriculum or programme overview was given; the counsellor skipped straight to questioning without any programme presentation."
+      },
+      {
+        "key": "objections",
+        "label": "Objection Handling",
+        "weight": 21.1,
+        "score": 1,
+        "level": "Poor",
+        "justification": "No objection handling or pre‑emptive probing occurred at all."
+      },
+      {
+        "key": "knowledge",
+        "label": "Product Knowledge & Accuracy",
+        "weight": 15.8,
+        "score": 1,
+        "level": "Poor",
+        "justification": "The counsellor did not provide any factual product details, missing an opportunity to demonstrate accurate knowledge."
+      },
+      {
+        "key": "closing",
+        "label": "Closing & Payment Ask",
+        "weight": 10.5,
+        "score": 1,
+        "level": "Poor",
+        "justification": "No payment or next‑step ask was made; the call ended without a closing attempt."
+      },
+      {
+        "key": "communication",
+        "label": "Communication & Empathy",
+        "weight": 10.5,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Clear and polite questioning, but emotionally flat with no explicit validation of Rahul’s situation."
+      }
+    ],
+    "phaseBreakdown": [
+      {
+        "phase": 1,
+        "name": "Opening",
+        "summary": "Opening – counsellor greeted Rahul and referenced his qualifier test.",
+        "didWell": "Used Rahul’s name correctly and acknowledged the common switch from operations to data.",
+        "toImprove": "Create a personal connection (hobbies, hometown) before jumping into questions."
+      },
+      {
+        "phase": 2,
+        "name": "Discovery",
+        "summary": "Discovery – asked about current tools (Excel, PowerBI).",
+        "didWell": "Established baseline technical exposure.",
+        "toImprove": "Probe deeper into why Rahul wants to switch, salary expectations, and family considerations."
+      },
+      {
+        "phase": 3,
+        "name": "Presentation",
+        "summary": "Presentation – no curriculum overview delivered.",
+        "didWell": "N/A",
+        "toImprove": "Deliver a structured overview of the 6 modules, format, duration, and outcomes tailored to Rahul’s logistics background."
+      },
+      {
+        "phase": 4,
+        "name": "Objections & Negotiation",
+        "summary": "Objections & Negotiation – no objections raised or addressed.",
+        "didWell": "N/A",
+        "toImprove": "Anticipate typical concerns (fee, time commitment, parental support) and address them proactively."
+      },
+      {
+        "phase": 5,
+        "name": "Close",
+        "summary": "Close – no payment ask or next‑step commitment.",
+        "didWell": "N/A",
+        "toImprove": "Set a clear follow‑up action and payment timeline, anchoring the ask to a specific date."
+      }
+    ],
+    "strengths": [
+      {
+        "point": "Correct use of student’s name and acknowledgement of career switch.",
+        "quote": "Hi Rahul! Great to hear you cleared the qualifier. Operations to data is a very common switch..."
+      },
+      {
+        "point": "Basic discovery of current toolset.",
+        "quote": "could you tell me what tools you already use day to day, like Excel or any reporting dashboards?"
+      }
+    ],
+    "improvements": [
+      {
+        "point": "Lack of deep discovery into motivations and goals.",
+        "quote": "could you tell me what tools you already use day to day...",
+        "suggestion": "Add follow‑up questions about salary expectations, long‑term career vision, and family support to surface the true driver."
+      },
+      {
+        "point": "No programme presentation.",
+        "quote": "N/A (no curriculum mentioned)",
+        "suggestion": "Prepare a concise 60‑second pitch covering the 6 modules, AI‑driven security focus, duration, and online format."
+      },
+      {
+        "point": "Missing closing and payment ask.",
+        "quote": "N/A (no ask made)",
+        "suggestion": "After presenting value, transition to a soft close: “Based on what we discussed, would you like me to send the enrollment link now?” and set a concrete follow‑up time."
+      }
+    ],
+    "keyMoments": [
+      {
+        "turn": 1,
+        "type": "best",
+        "note": "Established rapport by using Rahul’s name and acknowledging his career switch."
+      },
+      {
+        "turn": 1,
+        "type": "miss",
+        "note": "Failed to dig deeper into why Rahul wants to move into analytics, missing a chance for high‑value discovery."
+      }
+    ],
+    "drills": [
+      {
+        "title": "Curriculum Pitch Drill",
+        "focusCriterion": "presentation",
+        "objectionCategory": "none",
+        "instruction": "Practice delivering a 30‑second overview of each module, linking the content to the prospect’s current job functions."
+      },
+      {
+        "title": "Objection Anticipation Drill",
+        "focusCriterion": "objections",
+        "objectionCategory": "fee|parents_family",
+        "instruction": "Role‑play common fee and parental concerns, pre‑empt them early by stating the seat‑block amount and GST details before the payment ask."
+      },
+      {
+        "title": "Deep Discovery Drill",
+        "focusCriterion": "discovery",
+        "objectionCategory": "none",
+        "instruction": "Use a ‘why‑why’ questioning framework to uncover the prospect’s salary target, family expectations, and timeline for transition."
+      }
+    ],
+    "benchmarks": {
+      "sessionMinutes": 4.6,
+      "medianPaidMinutes": 25.1,
+      "paymentAskSeen": false,
+      "paymentAskNormPct": 87
+    },
+    "scoreArc": [
+      {
+        "turn": 0,
+        "score": 50
+      },
+      {
+        "turn": 1,
+        "score": 51
+      }
+    ],
+    "transcript": [
+      {
+        "role": "student",
+        "text": "Hi, I’m Rahul, I’ve been working in operations for the past 5 years, handling logistics and inventory. I took the qualifier test because I’m curious if I can shift into a data/analytics role.",
+        "emotion": "neutral",
+        "phase": 1,
+        "scoreAfter": 50,
+        "ts": "2026-06-10T02:28:30.515Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Hi Rahul! Great to hear you cleared the qualifier. Operations to data is a very common switch — could you tell me what tools you already use day to day, like Excel or any reporting dashboards?",
+        "phase": 1,
+        "scoreAfter": 51,
+        "ts": "2026-06-10T02:31:01.691Z"
+      },
+      {
+        "role": "student",
+        "text": "I mainly use Excel for daily tracking and some basic PowerBI dashboards we get from the analytics team, but I haven’t built any reports myself. Other than that, most of my work is manual entry and inventory checks.",
+        "emotion": "neutral",
+        "phase": 1,
+        "scoreAfter": 51,
+        "ts": "2026-06-10T02:31:04.229Z"
+      }
+    ],
+    "generatedAt": "2026-06-10T02:33:04.866Z"
+  },
+  {
+    "id": "rep-79ad4bb0",
+    "sessionId": "ses-f2d55eb0",
+    "assignmentId": "asn-d85d5bd2",
+    "counsellorId": "counsellor-2",
+    "counsellorName": "Rohan Verma",
+    "personaName": "Recent Graduate (Not Working)",
+    "scenarioTitle": "",
+    "overall": {
+      "percent": 34,
+      "band": "Needs Work",
+      "outcome": "Not Converted",
+      "outcomeDetail": "The student did not agree to pay the ₹4,000 seat‑block because no payment ask or commitment was made during the call."
+    },
+    "rubric": [
+      {
+        "key": "rapport",
+        "label": "Rapport & Opening",
+        "weight": 10,
+        "score": 2,
+        "level": "Developing",
+        "justification": "Polite greeting ('Hi, Ananya') but no personal connection or wheel‑handing, falling short of the level‑3 anchor."
+      },
+      {
+        "key": "discovery",
+        "label": "Needs Discovery",
+        "weight": 15,
+        "score": 2,
+        "level": "Developing",
+        "justification": "Asked a generic question about why the call was joined but did not probe deeper into goals, current job hunt or family context—below the level‑3 standard checklist."
+      },
+      {
+        "key": "presentation",
+        "label": "Programme Presentation",
+        "weight": 15,
+        "score": 1,
+        "level": "Poor",
+        "justification": "No curriculum, fee, duration or format was presented; the counsellor jumped to vague placement claims, matching the level‑1 anchor."
+      },
+      {
+        "key": "objections",
+        "label": "Objection Handling",
+        "weight": 20,
+        "score": 1,
+        "level": "Poor",
+        "justification": "No objections were raised and the counsellor made no pre‑emptive handling, fitting the level‑1 anchor of steam‑rolling or ignoring concerns."
+      },
+      {
+        "key": "knowledge",
+        "label": "Product Knowledge & Accuracy",
+        "weight": 15,
+        "score": 2,
+        "level": "Developing",
+        "justification": "Provided only vague, unverified placement statements and did not share any factual course details; not false but also not the accurate, complete info of the level‑3 anchor."
+      },
+      {
+        "key": "closing",
+        "label": "Closing & Payment Ask",
+        "weight": 10,
+        "score": 1,
+        "level": "Poor",
+        "justification": "No payment or next‑step ask was made at any point, aligning with the level‑1 anchor of missing a closing ask."
+      },
+      {
+        "key": "communication",
+        "label": "Communication & Empathy",
+        "weight": 10,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Language was polite and clear but emotionally flat, matching the level‑3 anchor."
+      },
+      {
+        "key": "voice_delivery",
+        "label": "Voice Delivery",
+        "weight": 5,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Delivery was steady and intelligible (197 wpm then 137 wpm) without major disfluencies, consistent with the level‑3 anchor."
+      }
+    ],
+    "phaseBreakdown": [
+      {
+        "phase": 1,
+        "name": "Opening",
+        "summary": "Greeting and basic acknowledgement of the student’s name.",
+        "didWell": "Confirmed name quickly and opened warmly.",
+        "toImprove": "Build a personal connection and state the session’s purpose before moving forward."
+      },
+      {
+        "phase": 2,
+        "name": "Discovery",
+        "summary": "Attempted discovery with a generic question about why the call was joined.",
+        "didWell": "Asked an open‑ended question to let the student speak.",
+        "toImprove": "Probe deeper into placement goals, current job‑search status, family expectations, and financial considerations."
+      },
+      {
+        "phase": 3,
+        "name": "Presentation",
+        "summary": "No structured programme overview was delivered.",
+        "didWell": "None – the counsellor jumped to vague placement talk.",
+        "toImprove": "Provide a concise curriculum breakdown, duration, format, fee structure, and placement support details."
+      },
+      {
+        "phase": 4,
+        "name": "Objections & Negotiation",
+        "summary": "Student asked about placement support and campus immersion; counsellor did not respond.",
+        "didWell": "None.",
+        "toImprove": "Anticipate placement‑related objections and explain recruiter partnerships, alumni network, and IIM Ranchi immersion."
+      },
+      {
+        "phase": 5,
+        "name": "Close",
+        "summary": "Call ended without a payment or next‑step ask.",
+        "didWell": "None.",
+        "toImprove": "Make a clear, time‑bound payment ask and schedule the follow‑up action."
+      }
+    ],
+    "strengths": [
+      {
+        "point": "Prompt acknowledgement of the student’s name",
+        "quote": "Hi, Ananya."
+      },
+      {
+        "point": "Asked an open‑ended discovery question early",
+        "quote": "Can you describe clearly what do you really want and why you have joined this call?"
+      }
+    ],
+    "improvements": [
+      {
+        "point": "Lack of a concrete programme presentation",
+        "quote": "our aluminized are placed in very recognized fields for example in Google Microsoft",
+        "suggestion": "Deliver a structured 6‑module curriculum overview, fee (₹35,000 + GST), duration (4 months online) and placement support before answering alumni questions."
+      },
+      {
+        "point": "No payment or next‑step ask",
+        "quote": "(none – payment never mentioned)",
+        "suggestion": "After presenting the course, ask for the ₹4,000 seat‑block deposit and set a specific follow‑up time (e.g., “Can I send the payment link now and confirm your enrolment by 6 pm today?”)."
+      }
+    ],
+    "keyMoments": [
+      {
+        "turn": 3,
+        "type": "best",
+        "note": "Counsellor asked an open‑ended question to surface the student’s motivation, opening a discovery window."
+      },
+      {
+        "turn": 7,
+        "type": "miss",
+        "note": "Provided vague alumni placement claim without data, missing an opportunity to build credibility and answer the student’s specific placement question."
+      }
+    ],
+    "drills": [
+      {
+        "title": "Closing with a Clear Payment Ask",
+        "focusCriterion": "closing",
+        "objectionCategory": "fee",
+        "instruction": "Practice transitioning from curriculum overview to a concise payment request: state the ₹4,000 seat‑block, explain GST‑inclusive amount, and lock a specific follow‑up time, while confirming the student’s comfort with the fee."
+      },
+      {
+        "title": "Structured Programme Presentation",
+        "focusCriterion": "presentation",
+        "objectionCategory": "course_fit_relevance",
+        "instruction": "Rehearse a 60‑second pitch covering all six modules, duration, format, and placement support, using the exact wording from the product facts sheet."
+      },
+      {
+        "title": "Deep Discovery Probing",
+        "focusCriterion": "discovery",
+        "objectionCategory": "parents_family",
+        "instruction": "Follow up the initial ‘why’ question with probes about current salary expectations, family financial involvement, and timeline for placement to surface hidden objections early."
+      }
+    ],
+    "benchmarks": {
+      "sessionMinutes": 4,
+      "medianPaidMinutes": 25.1,
+      "paymentAskSeen": false,
+      "paymentAskNormPct": 87
+    },
+    "scoreArc": [
+      {
+        "turn": 0,
+        "score": 50
+      },
+      {
+        "turn": 1,
+        "score": 47
+      },
+      {
+        "turn": 2,
+        "score": 44
+      },
+      {
+        "turn": 3,
+        "score": 45
+      },
+      {
+        "turn": 4,
+        "score": 48
+      }
+    ],
+    "transcript": [
+      {
+        "role": "student",
+        "text": "Hi, I’m Ananya Sharma, I graduated in Computer Science from NIT a couple of months ago. I took the qualifier test because I’m looking for something that could boost my chances of getting a good placement.",
+        "emotion": "neutral",
+        "phase": 1,
+        "scoreAfter": 50,
+        "ts": "2026-06-10T06:01:19.433Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Hi, Ananya.",
+        "phase": 1,
+        "scoreAfter": 47,
+        "ts": "2026-06-10T06:02:10.437Z"
+      },
+      {
+        "role": "student",
+        "text": "Hello! I can hear you clearly. Looking forward to hearing more.",
+        "emotion": "neutral",
+        "phase": 1,
+        "scoreAfter": 47,
+        "ts": "2026-06-10T06:02:13.082Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Can you describe clearly what do you really want and why you have joined this call?",
+        "phase": 1,
+        "scoreAfter": 44,
+        "ts": "2026-06-10T06:02:34.786Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 197.4,
+          "pitchVarSemitones": 2.85,
+          "pauseRatio": 0.089,
+          "energyCv": 0.74,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        }
+      },
+      {
+        "role": "student",
+        "text": "I’ve just finished my B.Tech in Computer Science and have been applying for entry‑level roles. I joined the call hoping this programme could give me an edge—maybe practical projects or a recognized certification that improves my placement prospects.",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 44,
+        "ts": "2026-06-10T06:02:36.602Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "You are at the correct place Ananya, as you have said you are graduated in computer science from NIT and it's been a month only and you are already looking for some courses and we are definitely providing you good courses especially in cyber security field because as you know this field is growing very much.",
+        "phase": 2,
+        "scoreAfter": 45,
+        "ts": "2026-06-10T06:03:32.542Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 137.4,
+          "pitchVarSemitones": 3.01,
+          "pauseRatio": 0.057,
+          "energyCv": 0.893,
+          "verdicts": {
+            "pace": "good",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        }
+      },
+      {
+        "role": "student",
+        "text": "I’m exploring options that can give me hands‑on experience and a credential that employers recognize. Could you tell me what typical roles or positions alumni of this cybersecurity program end up in?",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 45,
+        "ts": "2026-06-10T06:03:34.895Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "it's a very good question Ananya so basically our aluminized are placed in very recognized fields for example in Google Microsoft and all are securing our future as a cybersecurity roles and they are having good packages as well",
+        "phase": 2,
+        "scoreAfter": 48,
+        "ts": "2026-06-10T06:04:23.103Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 115.3,
+          "pitchVarSemitones": 3.1,
+          "pauseRatio": 0.14,
+          "energyCv": 0.853,
+          "verdicts": {
+            "pace": "good",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        }
+      },
+      {
+        "role": "student",
+        "text": "That sounds promising. Could you share how the placement support works—do you have dedicated recruiters or partnerships? Also, what does the campus immersion at IIM Ranchi involve for students in this program?",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 48,
+        "ts": "2026-06-10T06:04:25.733Z"
+      }
+    ],
+    "generatedAt": "2026-06-10T06:05:17.618Z"
+  },
+  {
+    "id": "rep-988adeab",
+    "sessionId": "ses-73e1e81a",
+    "assignmentId": null,
+    "counsellorId": "counsellor-1",
+    "counsellorName": "Priya Sharma",
+    "personaName": "Working Professional — Same Field",
+    "scenarioTitle": "Free practice",
+    "overall": {
+      "percent": 33,
+      "band": "Needs Work",
+      "outcome": "Not Converted",
+      "outcomeDetail": "The student did not agree to pay the ₹4,000 seat‑block and simply indicated limited time without committing."
+    },
+    "rubric": [
+      {
+        "key": "rapport",
+        "label": "Rapport & Opening",
+        "weight": 10,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Polite, professional opening – used the student's name correctly and greeted warmly but did not create a personal connection."
+      },
+      {
+        "key": "discovery",
+        "label": "Needs Discovery",
+        "weight": 15,
+        "score": 1,
+        "level": "Poor",
+        "justification": "Never establishes what the student actually needs – no questions about goals, current role or motivations."
+      },
+      {
+        "key": "presentation",
+        "label": "Programme Presentation",
+        "weight": 15,
+        "score": 1,
+        "level": "Poor",
+        "justification": "Jumps straight to logistics (offering to meet later) with no curriculum overview or value framing."
+      },
+      {
+        "key": "objections",
+        "label": "Objection Handling",
+        "weight": 20,
+        "score": 1,
+        "level": "Poor",
+        "justification": "No objection handling shown; the counsellor neither anticipates nor responds to any concerns."
+      },
+      {
+        "key": "knowledge",
+        "label": "Product Knowledge & Accuracy",
+        "weight": 15,
+        "score": 2,
+        "level": "Developing",
+        "justification": "No factual course information was given, but also no false statements were made."
+      },
+      {
+        "key": "closing",
+        "label": "Closing & Payment Ask",
+        "weight": 10,
+        "score": 1,
+        "level": "Poor",
+        "justification": "No payment or next‑step ask was made; the call ended without any closing action."
+      },
+      {
+        "key": "communication",
+        "label": "Communication & Empathy",
+        "weight": 10,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Polite and clear throughout, though emotionally flat and only offered a generic schedule adjustment."
+      },
+      {
+        "key": "voice_delivery",
+        "label": "Voice Delivery",
+        "weight": 5,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Clear and steady speech with appropriate pace; tone remained neutral without engaging inflection."
+      }
+    ],
+    "phaseBreakdown": [
+      {
+        "phase": 1,
+        "name": "Opening",
+        "summary": "Opening – greeting and name confirmation.",
+        "didWell": "Used Arjun’s name correctly and asked a friendly 'how are you?'.",
+        "toImprove": "Set the agenda early and ask permission to proceed given limited time."
+      },
+      {
+        "phase": 2,
+        "name": "Discovery",
+        "summary": "Discovery – probing student’s needs.",
+        "didWell": "None observed.",
+        "toImprove": "Ask about current analytics role, why cybersecurity/AI interests him, and the career jump he envisions."
+      },
+      {
+        "phase": 3,
+        "name": "Presentation",
+        "summary": "Presentation – programme overview.",
+        "didWell": "None observed.",
+        "toImprove": "Deliver a concise, tailored curriculum snapshot (e.g., modules on threat modeling relevant to data pipelines)."
+      },
+      {
+        "phase": 4,
+        "name": "Objections & Negotiation",
+        "summary": "Objections & Negotiation – handling concerns.",
+        "didWell": "None observed.",
+        "toImprove": "Pre‑empt likely worries about time commitment and relevance for a working professional."
+      },
+      {
+        "phase": 5,
+        "name": "Close",
+        "summary": "Close – payment ask and next steps.",
+        "didWell": "None observed.",
+        "toImprove": "Make a clear seat‑block ask (₹4,000) and schedule a concrete follow‑up time."
+      }
+    ],
+    "strengths": [
+      {
+        "point": "Correct name usage and warm greeting.",
+        "quote": "Hi Arjun, how are you?"
+      },
+      {
+        "point": "Offered flexibility to reschedule.",
+        "quote": "Are you busy as of now because we can meet after an hour also if you are free after that."
+      }
+    ],
+    "improvements": [
+      {
+        "point": "Missing discovery questions.",
+        "quote": "No probing of Arjun’s goals or current challenges.",
+        "suggestion": "Start with open‑ended questions like 'What prompted you to explore cybersecurity and AI?' and capture his salary/role aspirations."
+      },
+      {
+        "point": "No programme presentation.",
+        "quote": "No curriculum details were shared.",
+        "suggestion": "Prepare a 60‑second elevator pitch covering the 6 modules and the AI‑driven security focus, linking each to a data‑analyst’s daily work."
+      },
+      {
+        "point": "No closing or payment ask.",
+        "quote": "Call ended without any next‑step.",
+        "suggestion": "After the brief pitch, say 'Would you like to secure your seat today with a ₹4,000 reservation? I can send the link right now.'"
+      }
+    ],
+    "keyMoments": [
+      {
+        "turn": 1,
+        "type": "best",
+        "note": "Friendly greeting and correct name usage set a respectful tone."
+      },
+      {
+        "turn": 3,
+        "type": "miss",
+        "note": "Offered to meet later instead of using the limited time to qualify the lead."
+      },
+      {
+        "turn": 4,
+        "type": "miss",
+        "note": "Student cited time pressure but counsellor did not pivot to a rapid discovery or concise pitch."
+      }
+    ],
+    "drills": [
+      {
+        "title": "Rapid Discovery for Time‑Pressed Professionals",
+        "focusCriterion": "discovery",
+        "objectionCategory": "time_commitment",
+        "instruction": "Practice asking 3 targeted questions in under 30 seconds: current role, specific career gap, and desired salary increase."
+      },
+      {
+        "title": "Curriculum Snapshot Pitch",
+        "focusCriterion": "presentation",
+        "objectionCategory": "course_fit_relevance",
+        "instruction": "Deliver a 45‑second overview that maps each of the 6 modules to a data‑analyst’s daily tasks, using quantifiable outcomes."
+      },
+      {
+        "title": "Seat‑Block Close",
+        "focusCriterion": "closing",
+        "objectionCategory": "fee",
+        "instruction": "Role‑play a scenario where after a brief pitch you ask for the ₹4,000 reservation, confirm payment method, and set a follow‑up deadline."
+      }
+    ],
+    "benchmarks": {
+      "sessionMinutes": 2.1,
+      "medianPaidMinutes": 25.1,
+      "paymentAskSeen": false,
+      "paymentAskNormPct": 87
+    },
+    "scoreArc": [
+      {
+        "turn": 0,
+        "score": 50
+      },
+      {
+        "turn": 1,
+        "score": 47
+      },
+      {
+        "turn": 2,
+        "score": 47
+      }
+    ],
+    "transcript": [
+      {
+        "role": "student",
+        "text": "Hi, I’m Arjun Mehta, a data analyst with about five years of experience working on reporting and dashboard automation. I took the qualifier test because I’m curious if adding cybersecurity and AI to my skill set could give me a next‑level edge.",
+        "emotion": "neutral",
+        "phase": 1,
+        "scoreAfter": 50,
+        "ts": "2026-06-10T07:48:34.364Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Hi Arjun, how are you?",
+        "phase": 1,
+        "scoreAfter": 47,
+        "ts": "2026-06-10T07:49:26.321Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 151.2,
+          "pitchVarSemitones": 3.83,
+          "pauseRatio": 0,
+          "energyCv": 1.049,
+          "verdicts": {
+            "pace": "good",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        }
+      },
+      {
+        "role": "student",
+        "text": "I’m good, thanks. I can hear you clearly, but I only have a few minutes before my next meeting.",
+        "emotion": "neutral",
+        "phase": 1,
+        "scoreAfter": 47,
+        "ts": "2026-06-10T07:49:28.163Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Are you busy as of now because we can meet after an hour also if you are free after that.",
+        "phase": 1,
+        "scoreAfter": 47,
+        "ts": "2026-06-10T07:49:55.377Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 193.3,
+          "pitchVarSemitones": 4.56,
+          "pauseRatio": 0.005,
+          "energyCv": 0.858,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        }
+      },
+      {
+        "role": "student",
+        "text": "I’m a bit pressed for time right now, so let’s keep it brief.",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 47,
+        "ts": "2026-06-10T07:49:58.786Z"
+      }
+    ],
+    "generatedAt": "2026-06-10T07:50:38.546Z"
+  },
+  {
+    "id": "rep-1b67053b",
+    "sessionId": "ses-e8eaeb21",
+    "assignmentId": "asn-8d8d00ba",
+    "counsellorId": "counsellor-1",
+    "counsellorName": "Priya Sharma",
+    "personaName": "Studying Student",
+    "scenarioTitle": "RUDE RAMESH",
+    "overall": {
+      "percent": 30,
+      "band": "Needs Work",
+      "outcome": "Not Converted",
+      "outcomeDetail": "The student never agreed to pay the ₹4,000 seat‑block; the call ended without a payment commitment."
+    },
+    "rubric": [
+      {
+        "key": "rapport",
+        "label": "Rapport & Opening",
+        "weight": 10,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Counsellor addressed the student by name and gave a polite welcome, but did not create a personal connection beyond the scripted intro."
+      },
+      {
+        "key": "discovery",
+        "label": "Needs Discovery",
+        "weight": 15,
+        "score": 1,
+        "level": "Poor",
+        "justification": "No probing questions about Ramesh's goals, current skills, or motivations were asked."
+      },
+      {
+        "key": "presentation",
+        "label": "Programme Presentation",
+        "weight": 15,
+        "score": 1,
+        "level": "Poor",
+        "justification": "The curriculum, duration, and fee details were never presented despite the student asking about weekly hour split."
+      },
+      {
+        "key": "objections",
+        "label": "Objection Handling",
+        "weight": 20,
+        "score": 1,
+        "level": "Poor",
+        "justification": "No objection was raised and the counsellor did not demonstrate any handling or pre‑emptive addressing of concerns."
+      },
+      {
+        "key": "knowledge",
+        "label": "Product Knowledge & Accuracy",
+        "weight": 15,
+        "score": 1,
+        "level": "Poor",
+        "justification": "The counsellor has not provided any factual information yet; no correct product details were given to evaluate."
+      },
+      {
+        "key": "closing",
+        "label": "Closing & Payment Ask",
+        "weight": 10,
+        "score": 1,
+        "level": "Poor",
+        "justification": "There was no payment ask or next‑step commitment; the call ended without any closing attempt."
+      },
+      {
+        "key": "communication",
+        "label": "Communication & Empathy",
+        "weight": 10,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Speech was clear, warm and professional, but lacked empathy or deeper validation of the student's context."
+      },
+      {
+        "key": "voice_delivery",
+        "label": "Voice Delivery",
+        "weight": 5,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Delivery was steady and intelligible (188 wpm, short pauses), matching the 'clear and steady' anchor."
+      }
+    ],
+    "phaseBreakdown": [
+      {
+        "phase": 1,
+        "name": "Opening",
+        "summary": "Opening – counsellor greeted Ramesh and asked for a quick intro.",
+        "didWell": "Used the correct name and a warm tone.",
+        "toImprove": "Should have built a stronger personal rapport before moving to business."
+      },
+      {
+        "phase": 2,
+        "name": "Discovery",
+        "summary": "Discovery – no probing questions about goals, current skill level, or motivations.",
+        "didWell": "None evident.",
+        "toImprove": "Ask qualification questions to uncover why the student is interested in AI/ML."
+      },
+      {
+        "phase": 3,
+        "name": "Presentation",
+        "summary": "Presentation – curriculum, duration, fee, and format were never explained.",
+        "didWell": "None.",
+        "toImprove": "Provide a structured overview of modules, schedule, and fees as soon as the student asks about weekly commitment."
+      },
+      {
+        "phase": 4,
+        "name": "Objections & Negotiation",
+        "summary": "Objections & Negotiation – no objections were raised or addressed.",
+        "didWell": "None.",
+        "toImprove": "Anticipate common concerns (fees, time commitment, parental approval) and address them proactively."
+      },
+      {
+        "phase": 5,
+        "name": "Close",
+        "summary": "Close – no payment ask or next‑step agreement.",
+        "didWell": "None.",
+        "toImprove": "Make a clear, timely payment ask and set a concrete follow‑up action."
+      }
+    ],
+    "strengths": [
+      {
+        "point": "Correct name usage and warm greeting",
+        "quote": "hi Ramesh welcome to this course this is Amman"
+      },
+      {
+        "point": "Clear, steady voice delivery",
+        "quote": "tone=warm, 188wpm, pauses=0.061"
+      }
+    ],
+    "improvements": [
+      {
+        "point": "Lack of discovery questions",
+        "quote": "can we start off with a quick introduction of yours",
+        "suggestion": "Immediately ask about current knowledge, career goals, and why AI/ML matters to the student."
+      },
+      {
+        "point": "No programme presentation",
+        "quote": "Okay, let me know if you have any question, any doubts about this course.",
+        "suggestion": "Deliver a concise curriculum overview (modules, duration, online format) before the student asks for details."
+      },
+      {
+        "point": "Missing closing ask",
+        "quote": "Okay, great. What about this course excited you the most?",
+        "suggestion": "After presenting the programme, transition to a payment ask with a specific next step (e.g., 'Can I send you the ₹4,000 seat‑block link now?')."
+      }
+    ],
+    "keyMoments": [
+      {
+        "turn": 1,
+        "type": "best",
+        "note": "Warm greeting and correct name usage set a professional tone."
+      },
+      {
+        "turn": 5,
+        "type": "miss",
+        "note": "Counsellor offered to answer questions but failed to provide any information, losing momentum."
+      }
+    ],
+    "drills": [
+      {
+        "title": "Discovery Deep‑Dive Drill",
+        "focusCriterion": "discovery",
+        "objectionCategory": "course_fit_relevance",
+        "instruction": "Practice asking three layered questions: the student’s current skill gap, the specific role they envision after the course, and any external pressure (parents, job market) driving the decision."
+      },
+      {
+        "title": "Closing with Commitment Drill",
+        "focusCriterion": "closing",
+        "objectionCategory": "fee",
+        "instruction": "After the programme overview, immediately propose the ₹4,000 seat‑block, state the deadline, and confirm the student’s preferred payment method."
+      }
+    ],
+    "benchmarks": {
+      "sessionMinutes": 5.1,
+      "medianPaidMinutes": 25.1,
+      "paymentAskSeen": false,
+      "paymentAskNormPct": 87
+    },
+    "scoreArc": [
+      {
+        "turn": 0,
+        "score": 50
+      },
+      {
+        "turn": 1,
+        "score": 47
+      },
+      {
+        "turn": 2,
+        "score": 48
+      },
+      {
+        "turn": 3,
+        "score": 45
+      }
+    ],
+    "transcript": [
+      {
+        "role": "student",
+        "text": "Hi, I’m Ramesh, final‑year CSE student. I saw the AI/ML qualifier ad and took the test just to see what it’s about.",
+        "emotion": "neutral",
+        "phase": 1,
+        "scoreAfter": 50,
+        "ts": "2026-06-10T08:13:04.130Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "hi Ramesh welcome to this course this is Amman and today I'll walk you through the details of the program which you might be interested in but to start off can we start off with a quick introduction of yours",
+        "phase": 1,
+        "scoreAfter": 47,
+        "ts": "2026-06-10T08:14:18.692Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 188.4,
+          "pitchVarSemitones": 2.54,
+          "pauseRatio": 0.061,
+          "energyCv": 0.871,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        }
+      },
+      {
+        "role": "student",
+        "text": "Sure, I can hear you fine. I’m Ramesh, doing my final year in Computer Science, and I took the qualifier after seeing it on Instagram.",
+        "emotion": "neutral",
+        "phase": 1,
+        "scoreAfter": 47,
+        "ts": "2026-06-10T08:14:21.089Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Okay, great. What about this course excited you the most?",
+        "phase": 1,
+        "scoreAfter": 48,
+        "ts": "2026-06-10T08:14:52.316Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 197.4,
+          "pitchVarSemitones": 5.66,
+          "pauseRatio": 0.062,
+          "energyCv": 0.8,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        }
+      },
+      {
+        "role": "student",
+        "text": "I’m mainly curious because AI’s being talked about everywhere, and I thought it might add some useful skills to my resume before I graduate. I don’t have any solid plan yet, just want to see what it involves.",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 48,
+        "ts": "2026-06-10T08:14:54.676Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Okay, let me know if you have any question, any doubts about this course.",
+        "phase": 2,
+        "scoreAfter": 45,
+        "ts": "2026-06-10T08:15:41.087Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 193,
+          "pitchVarSemitones": 4.71,
+          "pauseRatio": 0.093,
+          "energyCv": 0.715,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        }
+      },
+      {
+        "role": "student",
+        "text": "Can you explain how the 8–10 hours per week are split—are they live sessions, recorded modules, or a mix?",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 45,
+        "ts": "2026-06-10T08:15:43.614Z"
+      }
+    ],
+    "generatedAt": "2026-06-10T08:18:07.594Z"
+  }
+]

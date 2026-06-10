@@ -1,1 +1,96 @@
-[]
+[
+  {
+    "id": "asn-f50ec414",
+    "counsellorId": "counsellor-1",
+    "personaId": "persona-same-field",
+    "personaPromptOverride": null,
+    "scenario": {
+      "title": "123",
+      "difficulty": "medium",
+      "situation": "",
+      "contextNotes": ""
+    },
+    "status": "completed",
+    "createdBy": "admin-1",
+    "createdAt": "2026-06-09T15:22:01.259Z",
+    "sessionId": "ses-36e5c569",
+    "reportId": "rep-cbe370ab"
+  },
+  {
+    "id": "asn-49725954",
+    "counsellorId": "counsellor-2",
+    "personaId": "persona-non-working",
+    "personaPromptOverride": null,
+    "scenario": {
+      "title": "Huzzia",
+      "difficulty": "easy",
+      "situation": "",
+      "contextNotes": ""
+    },
+    "status": "completed",
+    "createdBy": "admin-1",
+    "createdAt": "2026-06-09T15:33:32.333Z",
+    "sessionId": "ses-9266aef2",
+    "reportId": "rep-55cd6720"
+  },
+  {
+    "id": "asn-80276a8b",
+    "counsellorId": "counsellor-1",
+    "personaId": "persona-diff-field",
+    "courseId": "course-115a61c6",
+    "personaPromptOverride": null,
+    "scenario": {
+      "title": "Worried career switcher — UI walkthrough",
+      "difficulty": "medium",
+      "situation": "Filled the lead form after seeing an Instagram ad; nervous about coding.",
+      "contextNotes": ""
+    },
+    "rubricTemplateId": "rt-grounded-v2",
+    "revealPersona": true,
+    "status": "completed",
+    "createdBy": "admin-1",
+    "createdAt": "2026-06-10T02:20:28.900Z",
+    "sessionId": "ses-4ff7e134",
+    "reportId": "rep-e0ebaf43"
+  },
+  {
+    "id": "asn-d85d5bd2",
+    "counsellorId": "counsellor-2",
+    "personaId": "persona-graduate",
+    "courseId": "course-115a61c6",
+    "personaPromptOverride": null,
+    "scenario": {
+      "title": "",
+      "difficulty": "medium",
+      "situation": "",
+      "contextNotes": ""
+    },
+    "rubricTemplateId": "rt-grounded-v2",
+    "revealPersona": true,
+    "status": "completed",
+    "createdBy": "admin-1",
+    "createdAt": "2026-06-10T06:00:56.694Z",
+    "sessionId": "ses-f2d55eb0",
+    "reportId": "rep-79ad4bb0"
+  },
+  {
+    "id": "asn-8d8d00ba",
+    "counsellorId": "counsellor-1",
+    "personaId": "persona-studying",
+    "courseId": "course-06d95663",
+    "personaPromptOverride": null,
+    "scenario": {
+      "title": "RUDE RAMESH",
+      "difficulty": "hard",
+      "situation": "Rude, arrogant, overconfident person in final year of college who believes he knows everything but that's not the actual reality. He is just overconfident and thinks everyone else is a loser, particualrly the counsellor as per him does not know anything",
+      "contextNotes": ""
+    },
+    "rubricTemplateId": "rt-grounded-v2",
+    "revealPersona": true,
+    "status": "completed",
+    "createdBy": "admin-1",
+    "createdAt": "2026-06-10T08:12:39.327Z",
+    "sessionId": "ses-e8eaeb21",
+    "reportId": "rep-1b67053b"
+  }
+]

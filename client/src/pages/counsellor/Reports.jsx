@@ -7,7 +7,6 @@ import Card from "../../ui/Card";
 import Table from "../../ui/Table";
 import Badge from "../../ui/Badge";
 import Button from "../../ui/Button";
-import Spinner from "../../ui/Spinner";
 import EmptyState from "../../ui/EmptyState";
 
 function outcomeColor(outcome) {
@@ -112,11 +111,16 @@ export default function Reports() {
       </div>
 
       {loading ? (
-        <Card className="p-6">
-          <div className="flex items-center justify-center gap-3 py-16 text-sm text-muted">
-            <Spinner />
-            Loading your reports…
-          </div>
+        <Card className="divide-y divide-line p-1.5">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="flex animate-pulse items-center gap-4 px-4 py-3.5">
+              <div className="h-4 w-28 rounded-md bg-line" />
+              <div className="h-4 flex-1 rounded-md bg-line" />
+              <div className="h-4 w-14 rounded-md bg-line" />
+              <div className="h-5 w-16 rounded-full bg-line" />
+              <div className="h-4 w-20 rounded-md bg-line" />
+            </div>
+          ))}
         </Card>
       ) : error ? (
         <Card className="p-6">

@@ -11,9 +11,11 @@ import Login from "./pages/Login.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 import Counsellors from "./pages/admin/Counsellors.jsx";
 import Personas from "./pages/admin/Personas.jsx";
+import Courses from "./pages/admin/Courses.jsx";
 import Assignments from "./pages/admin/Assignments.jsx";
 import AssignmentCreate from "./pages/admin/AssignmentCreate.jsx";
 import AdminReports from "./pages/admin/AdminReports.jsx";
+import Rubrics from "./pages/admin/Rubrics.jsx";
 
 import Dashboard from "./pages/counsellor/Dashboard.jsx";
 import MyMocks from "./pages/counsellor/MyMocks.jsx";
@@ -46,8 +48,10 @@ function App() {
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/counsellors" element={<Counsellors />} />
           <Route path="/admin/personas" element={<Personas />} />
+          <Route path="/admin/courses" element={<Courses />} />
           <Route path="/admin/assignments" element={<Assignments />} />
           <Route path="/admin/assignments/new" element={<AssignmentCreate />} />
+          <Route path="/admin/rubrics" element={<Rubrics />} />
           <Route path="/admin/reports" element={<AdminReports />} />
           <Route path="/admin/reports/:id" element={<ReportDetail backTo="/admin/reports" />} />
         </Route>
@@ -67,7 +71,16 @@ function App() {
           <Route path="/app/reports/:id" element={<ReportDetail backTo="/app/reports" />} />
         </Route>
 
-        {/* Session runs full-bleed (its own chrome), still counsellor-guarded */}
+        {/* Session routes run full-bleed (their own chrome), still counsellor-guarded */}
+        {/* /app/session/new → green room → start → redirect to :sessionId */}
+        <Route
+          path="/app/session/new"
+          element={
+            <ProtectedRoute role="counsellor">
+              <Session />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/app/session/:sessionId"
           element={

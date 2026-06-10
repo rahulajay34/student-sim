@@ -13,3 +13,12 @@ verify-*.png
 client/.playwright-mcp/
 client/dist/
 voice-smoke.wav
+.DS_Store
+scripts/mine/work/
+scripts/scrape-work/
+counselling_ba_courses - Sheet1.csv
+
+# python artifacts
+__pycache__/
+*.pyc
+*.egg-info/

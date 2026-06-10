@@ -21,7 +21,8 @@ export default function Assignments() {
     setError("");
     try {
       const data = await api.getAssignments();
-      setRows(Array.isArray(data) ? data : []);
+      const raw = Array.isArray(data) ? data : [];
+      setRows([...raw].sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || "")));
     } catch (err) {
       setError(err.message || "Failed to load assignments.");
     } finally {

@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Card, { CardHeader } from "../../ui/Card";
 import StatCard from "../../ui/StatCard";
 import Button from "../../ui/Button";
 import Badge from "../../ui/Badge";
-import Avatar from "../../ui/Avatar";
-import Spinner from "../../ui/Spinner";
 import EmptyState from "../../ui/EmptyState";
+import Table from "../../ui/Table";
 import { api } from "../../lib/api";
-import { bandColor, statusColor, STATUS_LABEL, relativeDate } from "../../lib/format";
+import { bandColor, rubricColor, TOKEN_HEX, relativeDate } from "../../lib/format";
 
-// Inline stroke icons for the stat tiles (no icon library per house rules).
+// ---------------------------------------------------------------------------
+// Inline SVG icons
+// ---------------------------------------------------------------------------
 function Icon({ d, className = "h-5 w-5" }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -18,21 +19,261 @@ function Icon({ d, className = "h-5 w-5" }) {
     </svg>
   );
 }
-
 const ICON = {
-  counsellors: "M17 20h5v-1a4 4 0 00-3-3.87M9 20H4v-1a4 4 0 013-3.87m6-1a4 4 0 10-4-4 4 4 0 004 4z",
-  personas: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM4 21v-1a6 6 0 0112 0v1",
-  assignments: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4",
+  mocks: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4",
   score: "M3 3v18h18M7 14l3-3 3 3 5-5",
+  rate: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
 };
 
+// ---------------------------------------------------------------------------
+// Outcome color helper (maps outcome string to badge color)
+// ---------------------------------------------------------------------------
+function outcomeColor(outcome) {
+  if (!outcome) return "slate";
+  const o = outcome.toLowerCase();
+  if (o.includes("enrolled") || o.includes("committed")) return "success";
+  if (o.includes("maybe") || o.includes("follow")) return "warn";
+  return "danger";
+}
+
+// ---------------------------------------------------------------------------
+// Format a week-start ISO date as "dd MMM"
+// ---------------------------------------------------------------------------
+function fmtWeekLabel(iso) {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  } catch {
+    return iso;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Skeleton loader
+// ---------------------------------------------------------------------------
+function Skeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      {/* KPI row */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="bg-white rounded-2xl border border-line shadow-sm p-5">
+            <div className="flex items-center gap-4">
+              <div className="h-11 w-11 rounded-xl bg-canvas" />
+              <div className="space-y-2 flex-1">
+                <div className="h-7 w-16 rounded bg-canvas" />
+                <div className="h-3 w-24 rounded bg-canvas" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Heatmap card */}
+      <div className="bg-white rounded-2xl border border-line shadow-sm p-6">
+        <div className="h-4 w-40 rounded bg-canvas mb-6" />
+        <div className="space-y-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex gap-3">
+              <div className="h-8 w-28 rounded bg-canvas" />
+              {[0, 1, 2, 3, 4, 5].map((j) => (
+                <div key={j} className="h-8 flex-1 rounded bg-canvas" />
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Two-col */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="bg-white rounded-2xl border border-line shadow-sm p-6">
+          <div className="h-4 w-28 rounded bg-canvas mb-4" />
+          <div className="h-40 rounded bg-canvas" />
+        </div>
+        <div className="bg-white rounded-2xl border border-line shadow-sm p-6">
+          <div className="h-4 w-36 rounded bg-canvas mb-4" />
+          <div className="space-y-3">
+            {[0, 1, 2].map((i) => <div key={i} className="h-8 rounded bg-canvas" />)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Score trend SVG line chart
+// ---------------------------------------------------------------------------
+function TrendChart({ data }) {
+  if (!data || data.length === 0) {
+    return (
+      <EmptyState
+        title="No trend data yet"
+        hint="Trend appears once counsellors complete mocks."
+      />
+    );
+  }
+
+  const W = 480;
+  const H = 160;
+  const PAD = { top: 16, right: 16, bottom: 36, left: 36 };
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
+
+  const xs = data.map((_, i) => PAD.left + (data.length === 1 ? innerW / 2 : (i / (data.length - 1)) * innerW));
+  const yOf = (pct) => PAD.top + innerH - (pct / 100) * innerH;
+
+  const polyline = data.map((d, i) => `${xs[i]},${yOf(d.avgPercent)}`).join(" ");
+
+  // gridlines at 50 and 75
+  const grids = [
+    { y: yOf(50), label: "50" },
+    { y: yOf(75), label: "75" },
+  ];
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" aria-label="Score trend chart">
+      {/* dashed gridlines */}
+      {grids.map(({ y, label }) => (
+        <g key={label}>
+          <line x1={PAD.left} y1={y} x2={W - PAD.right} y2={y} stroke="#e2e8f0" strokeDasharray="4 3" strokeWidth="1" />
+          <text x={PAD.left - 4} y={y + 4} textAnchor="end" fontSize="9" fill="#94a3b8">{label}</text>
+        </g>
+      ))}
+      {/* bottom axis */}
+      <line x1={PAD.left} y1={PAD.top + innerH} x2={W - PAD.right} y2={PAD.top + innerH} stroke="#e2e8f0" strokeWidth="1" />
+
+      {/* polyline */}
+      <polyline
+        points={polyline}
+        fill="none"
+        stroke={TOKEN_HEX.brand}
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+
+      {/* dots */}
+      {data.map((d, i) => (
+        <circle key={i} cx={xs[i]} cy={yOf(d.avgPercent)} r="3.5" fill={TOKEN_HEX.brand} />
+      ))}
+
+      {/* x-axis labels */}
+      {data.map((d, i) => (
+        <text
+          key={i}
+          x={xs[i]}
+          y={H - 4}
+          textAnchor="middle"
+          fontSize="9"
+          fill="#94a3b8"
+        >
+          {fmtWeekLabel(d.weekStart)}
+        </text>
+      ))}
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Objection hot-spots
+// ---------------------------------------------------------------------------
+function HotSpots({ data }) {
+  if (!data || data.length === 0) {
+    return (
+      <EmptyState
+        title="No objection data yet"
+        hint="Hot-spots appear once reports include drill data."
+      />
+    );
+  }
+  const max = Math.max(...data.map((d) => d.drillCount), 1);
+  return (
+    <ul className="space-y-2">
+      {data.map((item) => (
+        <li key={item.category} className="flex items-center gap-3">
+          <span className="w-36 shrink-0 truncate text-sm text-ink" title={item.label}>{item.label}</span>
+          <div className="flex-1 h-2 rounded-full bg-canvas overflow-hidden">
+            <div
+              className="h-2 rounded-full"
+              style={{ width: `${Math.round((item.drillCount / max) * 100)}%`, backgroundColor: TOKEN_HEX.brand }}
+            />
+          </div>
+          <Badge color="slate">{item.drillCount}</Badge>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Team rubric heatmap
+// ---------------------------------------------------------------------------
+function HeatmapTable({ criteria, rows }) {
+  if (!rows || rows.length === 0) {
+    return (
+      <EmptyState
+        title="No heatmap data yet"
+        hint="Heatmap populates once team reports are generated."
+      />
+    );
+  }
+  // abbreviate criterion label to first word
+  const abbrev = (label) => label?.split(/[\s/]/)[0] ?? label;
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-sm">
+        <thead>
+          <tr>
+            <th className="py-2 pl-1 pr-3 text-left text-xs font-medium uppercase tracking-wide text-muted whitespace-nowrap">
+              Counsellor
+            </th>
+            {criteria.map((c) => (
+              <th key={c.key} className="py-2 px-2 text-center text-xs font-medium uppercase tracking-wide text-muted whitespace-nowrap" title={c.label}>
+                {abbrev(c.label)}
+              </th>
+            ))}
+            <th className="py-2 px-2 text-center text-xs font-medium uppercase tracking-wide text-muted whitespace-nowrap">
+              Reports
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.counsellorId} className="border-t border-line">
+              <td className="py-2 pl-1 pr-3 font-medium text-ink whitespace-nowrap">{row.counsellorName}</td>
+              {criteria.map((c) => {
+                const val = row.cells?.[c.key];
+                const color = val != null ? TOKEN_HEX[rubricColor(val)] + "1A" : undefined;
+                return (
+                  <td
+                    key={c.key}
+                    className="py-2 px-2 text-center tabular-nums"
+                    style={color ? { backgroundColor: color } : undefined}
+                  >
+                    {val != null ? (
+                      <span className="text-ink">{Number(val).toFixed(1)}</span>
+                    ) : (
+                      <span className="text-muted">—</span>
+                    )}
+                  </td>
+                );
+              })}
+              <td className="py-2 px-2 text-center text-muted tabular-nums">{row.reportCount}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [counsellors, setCounsellors] = useState([]);
-  const [personas, setPersonas] = useState([]);
-  const [assignments, setAssignments] = useState([]);
-  const [reports, setReports] = useState([]);
+  const [data, setData] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let alive = true;
@@ -40,47 +281,81 @@ export default function AdminDashboard() {
       setLoading(true);
       setError("");
       try {
-        const [c, p, a, r] = await Promise.all([
-          api.getCounsellors(),
-          api.getPersonas(),
-          api.getAssignments(),
-          api.getReports(),
-        ]);
-        if (!alive) return;
-        setCounsellors(c || []);
-        setPersonas(p || []);
-        setAssignments(a || []);
-        setReports(r || []);
+        const d = await api.getAdminAnalytics();
+        if (alive) setData(d);
       } catch (e) {
         if (alive) setError(e.message || "Failed to load dashboard.");
       } finally {
         if (alive) setLoading(false);
       }
     })();
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, []);
 
-  const avgScore = reports.length
-    ? Math.round(reports.reduce((sum, r) => sum + (r?.overall?.percent || 0), 0) / reports.length)
-    : null;
+  if (loading) return <Skeleton />;
 
-  const recentReports = [...reports]
-    .sort((a, b) => new Date(b.generatedAt) - new Date(a.generatedAt))
-    .slice(0, 5);
+  const kpis = data?.kpis ?? {};
+  const heatmap = data?.teamHeatmap ?? { criteria: [], rows: [] };
+  const weeklyTrend = data?.weeklyTrend ?? [];
+  const objections = data?.objectionPerformance ?? [];
+  const counsellors = data?.counsellors ?? [];
+  const recentReports = data?.recentReports ?? [];
 
-  const recentAssignments = [...assignments]
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, 5);
+  // Counsellors table columns
+  const counsellorColumns = [
+    {
+      key: "name",
+      header: "Counsellor",
+      render: (row) => <span className="font-medium text-ink">{row.name}</span>,
+    },
+    {
+      key: "mocks",
+      header: "Mocks",
+      render: (row) => <span className="tabular-nums">{row.mocks}</span>,
+    },
+    {
+      key: "avgPercent",
+      header: "Avg %",
+      render: (row) =>
+        row.avgPercent != null ? (
+          <span className="tabular-nums font-semibold">{Math.round(row.avgPercent)}%</span>
+        ) : (
+          <span className="text-muted">—</span>
+        ),
+    },
+    {
+      key: "lastFiveDelta",
+      header: "Last-5 trend",
+      render: (row) => {
+        const d = row.lastFiveDelta;
+        if (d == null || Math.abs(d) < 0.05) return <span className="text-muted">—</span>;
+        const positive = d >= 0;
+        return (
+          <span className={`font-semibold ${positive ? "text-success" : "text-danger"}`}>
+            {positive ? "↑" : "↓"} {Math.abs(d).toFixed(1)}pp
+          </span>
+        );
+      },
+    },
+    {
+      key: "weakestCriterion",
+      header: "Weakest",
+      render: (row) =>
+        row.weakestCriterion ? (
+          <Badge color="danger">{row.weakestCriterion.label}</Badge>
+        ) : (
+          <span className="text-muted">—</span>
+        ),
+    },
+  ];
 
-  if (loading) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Spinner size={28} />
-      </div>
-    );
-  }
+  const trendDelta = kpis.trendDelta;
+  const trendLabel =
+    trendDelta == null || Math.abs(trendDelta) < 0.05
+      ? null
+      : trendDelta >= 0
+      ? `↑ ${Math.abs(trendDelta).toFixed(1)}pp vs prev window`
+      : `↓ ${Math.abs(trendDelta).toFixed(1)}pp vs prev window`;
 
   return (
     <div className="space-y-6">
@@ -89,7 +364,7 @@ export default function AdminDashboard() {
         <div>
           <h2 className="text-xl font-bold text-ink">Overview</h2>
           <p className="mt-0.5 text-sm text-muted">
-            A snapshot of your team, personas and the latest counselling activity.
+            Team performance, trends, and coaching insights at a glance.
           </p>
         </div>
         <Button as={Link} to="/admin/assignments/new">
@@ -106,102 +381,121 @@ export default function AdminDashboard() {
         </Card>
       )}
 
-      {/* Stat row */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Counsellors" value={counsellors.length} icon={<Icon d={ICON.counsellors} />} />
-        <StatCard label="Personas" value={personas.length} icon={<Icon d={ICON.personas} />} />
-        <StatCard label="Assignments" value={assignments.length} icon={<Icon d={ICON.assignments} />} />
+      {/* KPI stat row */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard
+          label="Mocks completed"
+          value={kpis.mocksCompleted ?? 0}
+          icon={<Icon d={ICON.mocks} />}
+        />
         <StatCard
           label="Avg score"
-          value={avgScore == null ? "—" : `${avgScore}%`}
-          hint={reports.length ? `Across ${reports.length} report${reports.length === 1 ? "" : "s"}` : "No reports yet"}
+          value={kpis.avgScore != null ? `${Math.round(kpis.avgScore)}%` : "—"}
+          hint={trendLabel}
           icon={<Icon d={ICON.score} />}
+        />
+        <StatCard
+          label="Completion rate"
+          value={kpis.completionRatePct != null ? `${Math.round(kpis.completionRatePct)}%` : "—"}
+          hint="Assignments completed"
+          icon={<Icon d={ICON.rate} />}
         />
       </div>
 
-      {/* Two columns */}
+      {/* Team rubric heatmap */}
+      <Card className="p-6">
+        <CardHeader
+          title="Team rubric heatmap"
+          subtitle="Average criterion scores per counsellor (1–5 scale)"
+        />
+        <HeatmapTable criteria={heatmap.criteria} rows={heatmap.rows} />
+      </Card>
+
+      {/* Score trend + Objection hot-spots */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Recent reports */}
         <Card className="p-6">
           <CardHeader
-            title="Recent reports"
-            subtitle="Latest completed mock sessions"
-            action={
-              <Button as={Link} to="/admin/reports" variant="ghost" size="sm">
-                View all
-              </Button>
-            }
+            title="Score trend"
+            subtitle="Weekly average score across the team"
           />
-          {recentReports.length === 0 ? (
-            <EmptyState
-              title="No reports yet"
-              hint="Reports appear here once counsellors complete their assigned mocks."
-            />
-          ) : (
-            <ul className="divide-y divide-line">
-              {recentReports.map((r) => (
-                <li key={r.id}>
-                  <Link
-                    to={`/admin/reports/${r.id}`}
-                    className="group -mx-2 flex items-center gap-3 rounded-xl px-2 py-3 transition-colors hover:bg-canvas"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-ink">{r.counsellorName}</p>
-                      <p className="truncate text-xs text-muted">
-                        {r.personaName} · {relativeDate(r.generatedAt)}
-                      </p>
-                    </div>
-                    <span className="text-sm font-semibold tabular-nums text-ink">
-                      {r.overall?.percent}%
-                    </span>
-                    <Badge color={bandColor(r.overall?.band)}>{r.overall?.band}</Badge>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5">
-                      <path d="M9 18l6-6-6-6" />
-                    </svg>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
+          <TrendChart data={weeklyTrend} />
         </Card>
 
-        {/* Recent assignments */}
         <Card className="p-6">
           <CardHeader
-            title="Recent assignments"
-            subtitle="Mocks assigned to your counsellors"
-            action={
-              <Button as={Link} to="/admin/assignments" variant="ghost" size="sm">
-                View all
-              </Button>
-            }
+            title="Objection hot-spots"
+            subtitle="Most-drilled objection categories"
           />
-          {recentAssignments.length === 0 ? (
-            <EmptyState
-              title="No assignments yet"
-              hint="Create a mock assignment to get your counsellors practising."
-              action={
-                <Button as={Link} to="/admin/assignments/new" size="sm">
-                  New assignment
-                </Button>
-              }
-            />
-          ) : (
-            <ul className="divide-y divide-line">
-              {recentAssignments.map((a) => (
-                <li key={a.id} className="flex items-center gap-3 py-3">
-                  <Avatar name={a.counsellorName} size="sm" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-ink">{a.counsellorName}</p>
-                    <p className="truncate text-xs text-muted">{a.personaName}</p>
-                  </div>
-                  <Badge color={statusColor(a.status)}>{STATUS_LABEL[a.status] || a.status}</Badge>
-                </li>
-              ))}
-            </ul>
-          )}
+          <HotSpots data={objections} />
         </Card>
       </div>
+
+      {/* Counsellors table */}
+      <Card className="p-6">
+        <CardHeader
+          title="Counsellors"
+          subtitle="Performance summary per team member"
+          action={
+            <Button as={Link} to="/admin/counsellors" variant="ghost" size="sm">
+              Manage
+            </Button>
+          }
+        />
+        {counsellors.length === 0 ? (
+          <EmptyState
+            title="No data yet"
+            hint="Not enough data yet — completed mocks will appear here."
+          />
+        ) : (
+          <Table columns={counsellorColumns} rows={counsellors} />
+        )}
+      </Card>
+
+      {/* Recent reports */}
+      <Card className="p-6">
+        <CardHeader
+          title="Recent reports"
+          subtitle="Latest completed mock sessions"
+          action={
+            <Button as={Link} to="/admin/reports" variant="ghost" size="sm">
+              View all
+            </Button>
+          }
+        />
+        {recentReports.length === 0 ? (
+          <EmptyState
+            title="No reports yet"
+            hint="Not enough data yet — completed mocks will appear here."
+          />
+        ) : (
+          <ul className="divide-y divide-line">
+            {recentReports.map((r) => (
+              <li key={r.id}>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/admin/reports/${r.id}`)}
+                  className="group -mx-2 flex w-full items-center gap-3 rounded-xl px-2 py-3 text-left transition-colors hover:bg-canvas"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-ink">{r.counsellorName}</p>
+                    <p className="truncate text-xs text-muted">
+                      {r.personaName} · {relativeDate(r.generatedAt)}
+                    </p>
+                  </div>
+                  <span className="tabular-nums text-sm font-semibold text-ink">
+                    {r.percent != null ? `${r.percent}%` : "—"}
+                  </span>
+                  {r.band && <Badge color={bandColor(r.band)}>{r.band}</Badge>}
+                  {r.outcome && <Badge color={outcomeColor(r.outcome)}>{r.outcome}</Badge>}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5">
+                    <path d="M9 18l6-6-6-6" />
+                  </svg>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
     </div>
   );
 }

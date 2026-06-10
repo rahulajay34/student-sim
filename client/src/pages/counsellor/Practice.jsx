@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
-import { useAuth } from "../../lib/auth.jsx";
 import Card, { CardHeader } from "../../ui/Card";
 import Button from "../../ui/Button";
 import Input from "../../ui/Input";
@@ -19,36 +18,40 @@ const DIFFICULTY_OPTIONS = [
 ];
 
 export default function Practice() {
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [personas, setPersonas] = useState([]);
+  const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
   const [personaId, setPersonaId] = useState("");
+  const [courseId, setCourseId] = useState("");
   const [title, setTitle] = useState("Free practice");
   const [difficulty, setDifficulty] = useState("medium");
   const [situation, setSituation] = useState("");
   const [contextNotes, setContextNotes] = useState("");
 
   const [touched, setTouched] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState("");
 
   useEffect(() => {
     let active = true;
     setLoading(true);
     setLoadError("");
-    api
-      .getPersonas()
-      .then((data) => {
+    Promise.all([api.getPersonas(), api.getCourses(true)])
+      .then(([personaData, courseData]) => {
         if (!active) return;
-        setPersonas(Array.isArray(data) ? data : []);
+        setPersonas(Array.isArray(personaData) ? personaData : []);
+        const crs = Array.isArray(courseData) ? courseData : [];
+        setCourses(crs);
+        // Default to IIM Ranchi BA course if present, else first course
+        const defaultCourse =
+          crs.find((c) => c.slug === "iim-ranchi/business-analytics-ai-sop") || crs[0] || null;
+        if (defaultCourse) setCourseId(defaultCourse.id);
       })
       .catch((err) => {
         if (!active) return;
-        setLoadError(err.message || "Could not load personas.");
+        setLoadError(err.message || "Could not load data.");
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -70,30 +73,24 @@ export default function Practice() {
 
   const personaMissing = touched && !personaId;
 
-  async function handleSubmit(e) {
+  function handleSubmit(e) {
     e.preventDefault();
     setTouched(true);
-    setSubmitError("");
     if (!personaId) return;
 
-    setSubmitting(true);
-    try {
-      const res = await api.startSession({
+    navigate("/app/session/new", {
+      state: {
         mode: "practice",
-        counsellorId: user.id,
         personaId,
+        courseId: courseId || undefined,
         scenario: {
           title: title.trim() || "Free practice",
           difficulty,
           situation: situation.trim(),
           contextNotes: contextNotes.trim(),
         },
-      });
-      navigate("/app/session/" + res.sessionId);
-    } catch (err) {
-      setSubmitError(err.message || "Could not start the session. Please try again.");
-      setSubmitting(false);
-    }
+      },
+    });
   }
 
   return (
@@ -143,6 +140,20 @@ export default function Practice() {
               title="Set up your call"
               subtitle="These details shape how the AI student behaves and responds."
             />
+
+            {/* Course */}
+            {courses.length > 0 && (
+              <div className="space-y-3">
+                <Select
+                  label="Course"
+                  value={courseId}
+                  onChange={(e) => setCourseId(e.target.value)}
+                  options={courses.map((c) => ({ value: c.id, label: `${c.name} — ${c.institute}` }))}
+                />
+              </div>
+            )}
+
+            {courses.length > 0 && <div className="h-px bg-line" />}
 
             {/* Persona */}
             <div className="space-y-3">
@@ -208,30 +219,13 @@ export default function Practice() {
               />
             </div>
 
-            {submitError && (
-              <div className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-2.5 text-sm text-danger">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 h-4 w-4 shrink-0">
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M12 8v4m0 4h.01" />
-                </svg>
-                <span>{submitError}</span>
-              </div>
-            )}
-
             <div className="flex flex-col-reverse items-stretch gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
               <p className="flex items-center gap-2 text-xs text-muted">
                 <span>Self-directed practice — a full report is saved when you finish.</span>
                 {selectedPersona && <DifficultyBadge level={difficulty} />}
               </p>
-              <Button type="submit" disabled={submitting} className="sm:min-w-[10rem]">
-                {submitting ? (
-                  <>
-                    <Spinner size={16} className="text-white" />
-                    Starting…
-                  </>
-                ) : (
-                  "Start practice"
-                )}
+              <Button type="submit" className="sm:min-w-[10rem]">
+                Start practice
               </Button>
             </div>
           </form>

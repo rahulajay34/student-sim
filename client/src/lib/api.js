@@ -27,6 +27,12 @@ export const api = {
   updatePersona: (id, data) => req(`/personas/${id}`, { method: "PUT", body: data }),
   deletePersona: (id) => req(`/personas/${id}`, { method: "DELETE" }),
 
+  // courses
+  getCourses: (activeOnly) => req(`/courses${activeOnly ? "?active=1" : ""}`),
+  createCourse: (data) => req("/courses", { method: "POST", body: data }),
+  updateCourse: (id, data) => req(`/courses/${id}`, { method: "PUT", body: data }),
+  deleteCourse: (id) => req(`/courses/${id}`, { method: "DELETE" }),
+
   // assignments
   getAssignments: (counsellorId) => req(`/assignments${qs(counsellorId)}`),
   createAssignment: (data) => req("/assignments", { method: "POST", body: data }),
@@ -35,11 +41,21 @@ export const api = {
 
   // sessions
   startSession: (payload) => req("/sessions/start", { method: "POST", body: payload }),
-  sendMessage: (id, message) => req(`/sessions/${id}/message`, { method: "POST", body: { message } }),
+  sendMessage: (id, message, deliveryMetrics) => req(`/sessions/${id}/message`, { method: "POST", body: deliveryMetrics ? { message, deliveryMetrics } : { message } }),
   endSession: (id) => req(`/sessions/${id}/end`, { method: "POST" }),
   getSession: (id) => req(`/sessions/${id}`),
 
   // reports
   getReports: (counsellorId) => req(`/reports${qs(counsellorId)}`),
   getReport: (id) => req(`/reports/${id}`),
+
+  // rubric templates
+  getRubricTemplates: () => req("/rubric-templates"),
+  createRubricTemplate: (data) => req("/rubric-templates", { method: "POST", body: data }),
+  updateRubricTemplate: (id, data) => req(`/rubric-templates/${id}`, { method: "PUT", body: data }),
+  deleteRubricTemplate: (id) => req(`/rubric-templates/${id}`, { method: "DELETE" }),
+
+  // analytics
+  getAdminAnalytics: () => req("/analytics/admin"),
+  getCounsellorAnalytics: (id) => req(`/analytics/counsellor/${id}`),
 };

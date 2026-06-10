@@ -44,7 +44,12 @@ export default function AssignmentCreate() {
   const [loadError, setLoadError] = useState("");
   const [counsellors, setCounsellors] = useState([]);
   const [personas, setPersonas] = useState([]);
+  const [courses, setCourses] = useState([]);
 
+  const [rubricTemplates, setRubricTemplates] = useState([]);
+  const [rubricTemplateId, setRubricTemplateId] = useState("");
+
+  const [courseId, setCourseId] = useState("");
   const [counsellorId, setCounsellorId] = useState("");
   const [personaId, setPersonaId] = useState("");
   const [personaPrompt, setPersonaPrompt] = useState("");
@@ -63,10 +68,21 @@ export default function AssignmentCreate() {
       try {
         setLoading(true);
         setLoadError("");
-        const [cs, ps] = await Promise.all([api.getCounsellors(), api.getPersonas()]);
+        const [cs, ps, crs, rts] = await Promise.all([
+          api.getCounsellors(),
+          api.getPersonas(),
+          api.getCourses(true),
+          api.getRubricTemplates().catch(() => []),
+        ]);
         if (!active) return;
         setCounsellors(cs || []);
         setPersonas(ps || []);
+        setCourses(crs || []);
+        const rtList = Array.isArray(rts) ? rts : [];
+        setRubricTemplates(rtList);
+        // Default-select the isDefault template
+        const defaultTpl = rtList.find((t) => t.isDefault);
+        if (defaultTpl) setRubricTemplateId(defaultTpl.id);
       } catch (e) {
         if (active) setLoadError(e.message || "Failed to load data.");
       } finally {
@@ -100,6 +116,7 @@ export default function AssignmentCreate() {
     setSubmitError("");
 
     const nextErrors = {};
+    if (!courseId) nextErrors.courseId = "Course is required.";
     if (!counsellorId) nextErrors.counsellorId = "Select a counsellor.";
     if (!personaId) nextErrors.personaId = "Select a persona.";
     setErrors(nextErrors);
@@ -112,9 +129,11 @@ export default function AssignmentCreate() {
     try {
       setSubmitting(true);
       await api.createAssignment({
+        courseId,
         counsellorId,
         personaId,
         personaPromptOverride,
+        rubricTemplateId: rubricTemplateId || null,
         scenario: {
           title: title.trim(),
           difficulty,
@@ -139,7 +158,7 @@ export default function AssignmentCreate() {
     );
   }
 
-  const noData = counsellors.length === 0 || personas.length === 0;
+  const noData = counsellors.length === 0 || personas.length === 0 || courses.length === 0;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -178,15 +197,27 @@ export default function AssignmentCreate() {
             hint={
               counsellors.length === 0
                 ? "There are no counsellors yet. Add a counsellor before assigning a mock."
-                : "There are no personas yet. Create a persona before assigning a mock."
+                : personas.length === 0
+                ? "There are no personas yet. Create a persona before assigning a mock."
+                : "There are no active courses in the catalog. Add a course before assigning a mock."
             }
             action={
               <Button
                 as={Link}
-                to={counsellors.length === 0 ? "/admin/counsellors" : "/admin/personas"}
+                to={
+                  counsellors.length === 0
+                    ? "/admin/counsellors"
+                    : personas.length === 0
+                    ? "/admin/personas"
+                    : "/admin/courses"
+                }
                 variant="primary"
               >
-                {counsellors.length === 0 ? "Go to counsellors" : "Go to personas"}
+                {counsellors.length === 0
+                  ? "Go to counsellors"
+                  : personas.length === 0
+                  ? "Go to personas"
+                  : "Go to courses"}
               </Button>
             }
           />
@@ -194,9 +225,30 @@ export default function AssignmentCreate() {
       ) : (
         <Card className="p-6">
           <form onSubmit={handleSubmit} className="space-y-8" noValidate>
-            {/* 1. Counsellor */}
+            {/* 1. Course */}
             <Section
               step="1"
+              title="Course"
+              hint="Which programme will the counsellor be selling on this call?"
+            >
+              <Select
+                label="Course"
+                placeholder="Select a course…"
+                value={courseId}
+                error={errors.courseId}
+                onChange={(e) => {
+                  setCourseId(e.target.value);
+                  setErrors((prev) => ({ ...prev, courseId: undefined }));
+                }}
+                options={courses.map((c) => ({ value: c.id, label: `${c.name} — ${c.institute}` }))}
+              />
+            </Section>
+
+            <div className="border-t border-line" />
+
+            {/* 2. Counsellor */}
+            <Section
+              step="2"
               title="Counsellor"
               hint="Who will be running this practice call?"
             >
@@ -226,9 +278,9 @@ export default function AssignmentCreate() {
 
             <div className="border-t border-line" />
 
-            {/* 2. Persona */}
+            {/* 3. Persona */}
             <Section
-              step="2"
+              step="3"
               title="Student persona"
               hint="The roleplayed student. You can tweak the behaviour prompt just for this mock."
             >
@@ -268,9 +320,9 @@ export default function AssignmentCreate() {
 
             <div className="border-t border-line" />
 
-            {/* 3. Scenario */}
+            {/* 4. Scenario */}
             <Section
-              step="3"
+              step="4"
               title="Scenario"
               hint="The situation the counsellor walks into when the call begins."
             >
@@ -305,6 +357,29 @@ export default function AssignmentCreate() {
                 placeholder="Optional — any background that should inform the roleplay."
               />
             </Section>
+
+            {rubricTemplates.length > 0 && (
+              <>
+                <div className="border-t border-line" />
+
+                {/* 5. Rubric */}
+                <Section
+                  step="5"
+                  title="Rubric"
+                  hint="The evaluation template used to score this mock session."
+                >
+                  <Select
+                    label="Rubric template"
+                    value={rubricTemplateId}
+                    onChange={(e) => setRubricTemplateId(e.target.value)}
+                    options={rubricTemplates.map((t) => ({
+                      value: t.id,
+                      label: t.isDefault ? `${t.name} (default)` : t.name,
+                    }))}
+                  />
+                </Section>
+              </>
+            )}
 
             {submitError && (
               <div className="rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-3 text-sm text-danger">

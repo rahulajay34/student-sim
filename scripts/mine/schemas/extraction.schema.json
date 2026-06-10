@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BatchExtraction",
+  "type": "object",
+  "required": ["extractions"],
+  "properties": {
+    "extractions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["callId", "paid", "archetypeHint", "objections", "structure", "bestMoves", "worstMoves", "notableQuotes"],
+        "properties": {
+          "callId": {"type": "string"},
+          "paid": {"type": "boolean"},
+          "archetypeHint": {
+            "type": "object",
+            "required": ["background", "goal", "anxiety", "decisionDynamics", "languageTexture"],
+            "properties": {
+              "background": {"type": "string"},
+              "goal": {"type": "string"},
+              "anxiety": {"type": "string"},
+              "decisionDynamics": {"type": "string"},
+              "languageTexture": {"type": "string"}
+            }
+          },
+          "objections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["category", "phrasing", "counsellorMove", "moveOutcome"],
+              "properties": {
+                "category": {"enum": ["fee", "emi_affordability", "parents_family", "time_commitment", "competing_priorities", "trust_legitimacy", "job_guarantee_placement", "course_fit_relevance", "language_english", "tech_access", "other"]},
+                "phrasing": {"type": "string"},
+                "counsellorMove": {"type": "string"},
+                "moveOutcome": {"enum": ["defused", "escalated", "unresolved"]}
+              }
+            }
+          },
+          "structure": {
+            "type": "object",
+            "required": ["opening", "presentationStartsAtPct", "paymentAskAtPct", "closeType"],
+            "properties": {
+              "opening": {"type": "string"},
+              "presentationStartsAtPct": {"type": ["number", "null"]},
+              "paymentAskAtPct": {"type": ["number", "null"]},
+              "closeType": {"type": "string"}
+            }
+          },
+          "bestMoves": {"type": "array", "items": {"type": "string"}},
+          "worstMoves": {"type": "array", "items": {"type": "string"}},
+          "notableQuotes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["speaker", "quote", "why"],
+              "properties": {
+                "speaker": {"enum": ["student", "counsellor"]},
+                "quote": {"type": "string"},
+                "why": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

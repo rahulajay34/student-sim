@@ -1,11 +1,12 @@
-// Horizontal 4-step indicator for the counselling call phases.
+// Horizontal 5-step indicator for the counselling call phases.
 // Purely presentational: highlights completed + current phases in brand color.
 
 const STEPS = [
-  { n: 1, label: "Intro" },
-  { n: 2, label: "Course Info" },
-  { n: 3, label: "Concerns" },
-  { n: 4, label: "Closing" },
+  { n: 1, label: "Opening" },
+  { n: 2, label: "Discovery" },
+  { n: 3, label: "Presentation" },
+  { n: 4, label: "Objections" },
+  { n: 5, label: "Close" },
 ];
 
 export default function PhaseStepper({ current = 1 }) {

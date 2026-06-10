@@ -42,7 +42,7 @@ export default function CounsellorLayout() {
   );
 
   return (
-    <div className="flex min-h-screen bg-canvas">
+    <div className="flex h-screen overflow-hidden bg-canvas">
       <Sidebar brand="Masai" subtitle="Counselling Trainer" items={NAV} footer={footer} open={open} onClose={() => setOpen(false)} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar title={titleFor(pathname)} onMenu={() => setOpen(true)} />
