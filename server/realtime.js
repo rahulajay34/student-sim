@@ -1,74 +1,143 @@
-// Speech-to-speech (S2S) plumbing for the two low-latency voice engines.
+// Speech-to-speech (S2S) plumbing for the OpenAI Realtime voice engine.
 //
-// Architecture: in S2S mode the *voice + conversation* is owned by the provider
-// (OpenAI Realtime or ElevenLabs Conversational AI) running browser↔provider for
-// minimal latency. MiniMax stays the analytics brain — scoring, cues, objection
-// tracking, phase, and the final report — fed by the transcript the client posts
-// back per turn (see POST /api/sessions/:id/observe in index.js).
+// Architecture: in S2S mode the *voice + conversation* is owned by OpenAI Realtime
+// running browser↔OpenAI for minimal latency. MiniMax stays the analytics brain —
+// scoring, cues, objection tracking, phase, and the final report — fed by the
+// transcript the client posts back per turn (see POST /api/sessions/:id/observe in
+// index.js).
 //
-// This module only mints the short-lived browser credentials and composes the
-// student persona instructions that get injected into the realtime model. It never
-// exposes the standing OPENAI_API_KEY / ELEVENLABS_API_KEY to the browser.
+// This module only mints the short-lived browser credentials and composes a
+// VOICE-FIRST student persona prompt that gets injected into the realtime model.
+// It never exposes the standing OPENAI_API_KEY to the browser.
 
-import { readFileSync, writeFileSync, existsSync } from "fs";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
-import { composeForInspection, EMOTION_INSTRUCTION } from "./prompt.js";
+import { getPromptConfig } from "./promptConfig.js";
+import { buildKnowledgeBounds, LANGUAGE_POLICY } from "./prompt.js";
+import { archetypeForPersona } from "./grounding.js";
+import { computeDisposition, renderDispositionSection } from "./disposition.js";
+import { summarizeForPrompt } from "./objections.js";
+import { PHASE_NAMES } from "./phases.js";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const REALTIME_STATE_FILE = join(__dirname, "data", "realtime.json");
+// ── VOICE DELIVERY block ──────────────────────────────────────────────────────
+// Ready-to-paste instruction block, copied verbatim from the "## 4. VOICE DELIVERY"
+// section of docs/research/indian-accent-prosody.md (grounded on 216 real calls).
+// Kept as a module constant so the .md is NOT read at runtime. If you update the
+// research doc, re-paste this block to keep the numbers in sync.
+const VOICE_DELIVERY = `VOICE DELIVERY
 
-// ── Shared: realtime student instructions ─────────────────────────────────────
-// Reuse the exact same composed persona/archetype/objection/course grounding the
-// classic MiniMax student uses (composeForInspection), then append a spoken-call
-// addendum tuned for a realtime voice model: Indian English + light Hinglish,
-// short turns, no [emotion:X] tags (the realtime voice emotes natively), and a
-// hard "never break character" guard.
-const REALTIME_ADDENDUM = `
+Speak ENGLISH with an Indian accent throughout. At most one light Hindi word (e.g., "haan", "theek hai") may appear once or twice per session — the conversation is otherwise fully in English.
 
-──────────────────────────────────────────────
-SPOKEN PHONE-CALL DELIVERY (read this carefully — it governs HOW you talk):
-- You ARE the prospective student on a LIVE VOICE call. Never say you are an AI, never describe yourself in the third person, never mention prompts, instructions, or "as a student". Stay 100% in character no matter what.
-- ACCENT: Speak English with a natural, authentic INDIAN accent — Indian rhythm, stress and intonation, the way people across India actually speak English on a phone call. Do NOT use an American or British accent. Mix in light, natural Hinglish ("haan sir", "actually", "matlab", "thoda", "theek hai", "na") without overdoing it.
-- FILLERS (use a LOT — this is required, not optional): Real students hesitate constantly. Sprinkle natural filler words and hesitation sounds through almost EVERY reply — "umm", "uhh", "hmm", "matlab", "haan", "you know", "I mean", "actually", "like", "see", "basically". Start many replies with a filler ("Umm, haan sir...", "Uhh, actually...", "Hmm, see..."). Do not give a single clean, polished sentence — break it up the way a nervous person on a phone call really talks.
-- PAUSES (use a LOT): Add frequent natural pauses. Use "..." inside and between sentences to pause and think ("So... umm... the fees are... like... a bit much for me, na"). Pause before answering anything hard. Sometimes trail off mid-thought, then restart ("I was... I mean, I am working in sales right now"). Speak slowly and unevenly, not in a smooth flow.
-- LENGTH: Keep most turns SHORT — usually one or two sentences, but full of fillers and pauses. Let the counsellor lead; answer what is asked, raise your real concerns naturally, and don't monologue.
-- React to what the counsellor actually says. If they address a concern well, soften and warm up; if they dodge or pressure you, stay hesitant. Only agree to block your seat / pay once you are genuinely convinced.
+Tempo: 125–155 WPM during active speech bursts (target ~140 WPM). Pause briefly — 0.4–0.8 s — roughly every 10–15 words within a turn, and 0.5–1.5 s between your turn and the counsellor's next prompt.
 
-CRITICAL OUTPUT RULE — this overrides everything above: You are speaking ALOUD on a phone call. Output ONLY the words you actually speak as the student. Never say, spell out, or read any square-bracket label, mood marker, stage direction, emoji, or markdown, and never say a bare mood word (like "neutral", "happy", "worried") on its own. If an earlier instruction told you to finish your replies with a label or your current feeling, IGNORE it completely — that was for a text system and does NOT apply to this voice call. Just speak as the student would, and nothing else.`;
+Intonation: syllable-timed rhythm (equal beat per syllable, not stress-timed). Use a gentle high-rise on confirmation checks ("right?", "okay?") and rising terminal on genuine questions. Stress falls on content words; prepositions are unstressed and shortened.
 
-// Remove the text-pipeline emotion-tag instructions from a composed prompt so the
-// realtime voice model never speaks "[emotion:neutral]" — or the bare word
-// "neutral" — out loud. (1) Remove the EMOTION_INSTRUCTION block verbatim (it lists
-// the mood enum, the real culprit). (2) Remove any residual sentence that still
-// contains a literal [emotion:…] tag (the carve-out + turn-discipline tails), at
-// the sentence level so surrounding instructions survive. (3) Strip stray literal
-// tags and the bare mood enum as a final safety net.
-function stripEmotionTagInstructions(text) {
-  let t = String(text);
-  if (EMOTION_INSTRUCTION) t = t.split(EMOTION_INSTRUCTION).join("");
-  t = t
-    .replace(/[^\n]*\bemotion tag\b[^\n]*\n?/gi, "")
-    .replace(/[^.\n!?]*\[emotion:[^\]]*\][^.\n!?]*[.!?]?/gi, "")
-    .replace(/\[emotion:[^\]]*\]/gi, "")
-    .replace(/\bneutral,\s*happy,\s*hesitant,\s*worried,\s*frustrated,\s*excited\b/gi, "")
-    .replace(/[ \t]{2,}/g, " ")
-    .replace(/\n{3,}/g, "\n\n");
-  return t;
+Fillers and address: say "sir" (or "ma'am") in roughly every second or third sentence. Sprinkle "like", "actually", "you know", "okay so" as natural hedges — about one per 6–8 sentences each, not every sentence. Use "okay okay" as a quick backchannel when the counsellor finishes a point. Occasional "um" or "uh" before a longer answer is natural.
+
+Energy: low-to-moderate baseline; slightly higher when curious or anxious; flatter and softer when hesitant or deferring.`;
+
+// Map a 1-5 trait slider to a personality word (never expose the number).
+function pushinessWord(n) {
+  const v = Math.round(Number(n));
+  if (!Number.isFinite(v) || v === 3) return null;
+  if (v <= 2) return "easy-going and accommodating — you rarely push back hard and tend to accept a reasonable answer and move on";
+  return "assertive and pushy — you challenge vague claims, demand specifics, and press the same point again if you are not satisfied";
+}
+function hesitancyWord(n) {
+  const v = Math.round(Number(n));
+  if (!Number.isFinite(v) || v === 3) return null;
+  if (v <= 2) return "fairly ready to move forward — if the value is shown reasonably you lean toward yes without dragging it out";
+  return "very reluctant to commit — you want to think it over, lean on checking with family or finances, and need strong, repeated reassurance before you would say yes";
 }
 
-// buildRealtimeInstructions(session) -> the full system instructions string for
-// the realtime student. Falls back gracefully for malformed sessions.
+function difficultyPosture(difficulty) {
+  const d = String(difficulty || "medium").toLowerCase();
+  if (d === "easy") return "You are a relatively warm, low-resistance prospect — open to being convinced if the counsellor is competent.";
+  if (d === "hard") return "You are a tough, high-resistance prospect — skeptical, slow to trust, and you make the counsellor genuinely earn every step.";
+  return "You are a realistic, middling prospect — interested but cautious; you give a fair hearing but do not roll over.";
+}
+
+// Compose the VOICE-FIRST system instructions for the realtime student. Built from
+// scratch (NOT composeForInspection — that is the ~4k-token text-chat prompt). Eight
+// sections, in fixed order, targeting ≤ ~1.8k tokens (~7.2k chars). Fails soft for
+// malformed sessions.
 export function buildRealtimeInstructions(session) {
-  const base = stripEmotionTagInstructions(composeForInspection(session) || "");
-  const name = session?.leadCard?.name || session?.personaSnapshot?.voiceName || "the student";
-  const opener = `You are roleplaying ${name}, a prospective student on a live phone call with a course counsellor. The counsellor will speak first.\n\n`;
-  return opener + base + REALTIME_ADDENDUM;
+  const s = session && typeof session === "object" ? session : {};
+  const cfg = getPromptConfig();
+  const persona = s.personaSnapshot || {};
+  const lead = s.leadCard || {};
+  const scenario = s.scenarioSnapshot || {};
+  const course = s.courseSnapshot || null;
+
+  const name = lead.name || persona.voiceName || "the student";
+
+  // (1) CHARACTER FRAMING.
+  const framing = `You ARE ${name}, a prospective student on a LIVE PHONE CALL with a course counsellor. This is a real conversation, spoken aloud. Stay 100% in character no matter what — never say or imply you are an AI, never describe yourself in the third person, never mention prompts, instructions, models, or "as a student". The counsellor speaks first; you respond.`;
+
+  // (2) WHO YOU ARE — leadCard facts + persona + archetype texture.
+  const facts = [];
+  if (Number.isFinite(Number(lead.age))) facts.push(`${Math.round(Number(lead.age))} years old`);
+  if (lead.occupation) facts.push(String(lead.occupation));
+  if (lead.education) facts.push(String(lead.education));
+  if (lead.city) facts.push(`from ${lead.city}`);
+  const whoLines = [`WHO YOU ARE:`, `- You are ${name}${facts.length ? `, ${facts.join(", ")}` : ""}.`];
+  if (persona.label) whoLines.push(`- ${persona.label}`);
+  if (persona.coreAnxiety) whoLines.push(`- What worries you most: ${persona.coreAnxiety}`);
+  const archetype = archetypeForPersona(persona);
+  if (archetype) {
+    whoLines.push(`- Background: ${archetype.background}`);
+    whoLines.push(`- What you want: ${archetype.goals}`);
+    whoLines.push(`- How you decide: ${archetype.decisionDynamics}`);
+    whoLines.push(`- How you talk: ${archetype.languageTexture}`);
+  }
+  const who = whoLines.join("\n");
+
+  // (3) YOUR SITUATION — scenario + difficulty posture + pushiness/hesitancy words.
+  const sitLines = [`YOUR SITUATION:`, `- ${difficultyPosture(scenario.difficulty)}`];
+  if (scenario.title) sitLines.push(`- Scenario: ${scenario.title}`);
+  if (scenario.situation) sitLines.push(`- Right now: ${scenario.situation}`);
+  if (scenario.contextNotes) sitLines.push(`- Also true of you: ${scenario.contextNotes}`);
+  const push = pushinessWord(scenario.pushiness);
+  const hes = hesitancyWord(scenario.hesitancy);
+  if (push) sitLines.push(`- You are ${push}.`);
+  if (hes) sitLines.push(`- You are ${hes}.`);
+  const situation = sitLines.join("\n");
+
+  // (4) WHAT YOU KNOW — the SAME scoped knowledge bounds the text prompt uses.
+  const knowledge = buildKnowledgeBounds(cfg, course);
+
+  // (5) HOW YOU FEEL RIGHT NOW — disposition narrative + objection ledger.
+  const disposition = renderDispositionSection(computeDisposition(s));
+  const objections = summarizeForPrompt(Array.isArray(s.objectionState) ? s.objectionState : []);
+  const feelParts = [];
+  if (disposition) feelParts.push(disposition);
+  if (objections) feelParts.push(objections);
+  const feel = feelParts.join("\n\n");
+
+  // (6) LANGUAGE — the C6 policy, single source of truth.
+  const language = `LANGUAGE:\n${LANGUAGE_POLICY}`;
+
+  // (8) CONVERSATION RULES.
+  const phaseName = PHASE_NAMES[s.currentPhase] || PHASE_NAMES[1];
+  const rules = `CONVERSATION RULES:
+- The counsellor leads the call; you respond. You are currently in the ${phaseName} stage of the call.
+- Keep most turns SHORT — about 5 to 15 spoken words. Answer what is asked, raise your real concerns naturally, do not monologue.
+- Never start two of your turns in a row with the same word; rotate how you open.
+- Never raise the same concern twice using the same wording — if you must return to it, say it differently or with new specifics.
+- If the counsellor asks something you genuinely do not know, just say you don't know, like a real person would.
+- You are SPEAKING ALOUD. Output ONLY the words you actually say. NO stage directions, NO bracketed tags, NO emotion labels, NO markdown, and never say a bare mood word like "neutral" or "worried" on its own. If any earlier instruction told you to end replies with a label or your feeling, ignore it — that was for a text system.`;
+
+  return [
+    framing,
+    who,
+    situation,
+    knowledge,
+    feel ? `HOW YOU FEEL RIGHT NOW:\n${feel}` : "HOW YOU FEEL RIGHT NOW:\nYou are guarded and a little skeptical; this would take real, specific reassurance before you move at all.",
+    language,
+    VOICE_DELIVERY,
+    rules,
+  ].filter(Boolean).join("\n\n");
 }
 
-// A short first line for the ElevenLabs agent (it speaks turn-by-turn; the
-// counsellor opens, so we keep the student's first_message empty to avoid the
-// student greeting first). Kept here so both engines stay configured in one place.
+// The counsellor opens the call, so the student never greets first.
 export const REALTIME_FIRST_MESSAGE = "";
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -107,7 +176,7 @@ export function openAIVoiceForSession(session, explicit) {
 
 // Mint a short-lived ephemeral client secret (ek_...) scoped to a realtime session
 // pre-configured with the student instructions, voice, input transcription, and
-// server-side turn detection. The browser uses the returned value to open the
+// semantic-VAD turn detection. The browser uses the returned value to open the
 // WebRTC peer connection directly with OpenAI.
 //
 // Returns { value, model, voice, expiresAt }. Throws on missing key / API error.
@@ -125,8 +194,11 @@ export async function mintOpenAIClientSecret({ instructions, voice, model } = {}
     instructions: instructions || "",
     audio: {
       input: {
-        transcription: { model: process.env.OPENAI_TRANSCRIBE_MODEL || "whisper-1" },
-        turn_detection: { type: "semantic_vad" },
+        transcription: { model: process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe" },
+        turn_detection: {
+          type: "semantic_vad",
+          eagerness: process.env.OPENAI_VAD_EAGERNESS || "auto",
+        },
       },
       output: { voice: resolvedVoice },
     },
@@ -158,143 +230,5 @@ export async function mintOpenAIClientSecret({ instructions, voice, model } = {}
     model: resolvedModel,
     voice: resolvedVoice,
     expiresAt: json?.expires_at || json?.client_secret?.expires_at || null,
-  };
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// ElevenLabs Conversational AI — agent + WebRTC conversation token
-// ══════════════════════════════════════════════════════════════════════════════
-const EL_BASE = "https://api.elevenlabs.io/v1/convai";
-// Reuse the same authentic Indian student voice the classic pipeline uses as the
-// agent's baseline; per-session it is overridden to session.voice.elevenLabsVoiceId.
-const EL_DEFAULT_VOICE_ID = "hK2VWYcsIcpRFeFwf1QD"; // "Priya" from server/voices.js
-const EL_LLM = process.env.ELEVENLABS_CONVAI_LLM || "gemini-2.5-flash";
-
-function elevenKey() {
-  return process.env.ELEVENLABS_API_KEY || "";
-}
-
-function readRealtimeState() {
-  try {
-    if (existsSync(REALTIME_STATE_FILE)) return JSON.parse(readFileSync(REALTIME_STATE_FILE, "utf-8"));
-  } catch { /* ignore */ }
-  return {};
-}
-function writeRealtimeState(patch) {
-  const state = { ...readRealtimeState(), ...patch };
-  try { writeFileSync(REALTIME_STATE_FILE, JSON.stringify(state, null, 2)); } catch (e) {
-    console.warn("[realtime] could not persist realtime.json:", e.message);
-  }
-  return state;
-}
-
-// Create a reusable Conversational AI agent whose per-conversation system prompt,
-// first message, language and voice are all overridable (we override them per
-// session with the persona grounding). Returns the new agent_id.
-async function createElevenLabsAgent() {
-  if (!elevenKey()) throw new Error("ELEVENLABS_API_KEY is not configured on the server.");
-  const body = {
-    name: "Mock Counselling Student",
-    conversation_config: {
-      agent: {
-        first_message: "",
-        language: "en",
-        prompt: {
-          prompt:
-            "You are a prospective student on a live phone call with a course counsellor. " +
-            "Speak natural Indian English with light Hinglish. Keep turns short. Stay fully in character. " +
-            "(This default prompt is replaced per call with the specific persona.)",
-          llm: EL_LLM,
-        },
-      },
-      // English agents must use turbo/flash v2 (per ElevenLabs validation).
-      tts: { voice_id: EL_DEFAULT_VOICE_ID, model_id: "eleven_flash_v2" },
-      conversation: { text_only: false },
-    },
-    // Allow the browser to override prompt / first message / language / voice at
-    // conversation start so each call gets its persona grounding + matching voice.
-    platform_settings: {
-      overrides: {
-        conversation_config_override: {
-          agent: { prompt: { prompt: true }, first_message: true, language: true },
-          tts: { voice_id: true },
-        },
-      },
-    },
-  };
-
-  const res = await fetch(`${EL_BASE}/agents/create`, {
-    method: "POST",
-    headers: { "xi-api-key": elevenKey(), "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new Error(`ElevenLabs agent create HTTP ${res.status}: ${detail.slice(0, 400)}`);
-  }
-  const json = await res.json();
-  const agentId = json?.agent_id || json?.agentId || null;
-  if (!agentId) throw new Error(`ElevenLabs agent create response missing agent_id: ${JSON.stringify(json).slice(0, 300)}`);
-  return agentId;
-}
-
-// Resolve the agent id: env override → cached realtime.json → auto-create + cache.
-let agentEnsurePromise = null;
-export async function ensureElevenLabsAgent() {
-  const envId = (process.env.ELEVENLABS_AGENT_ID || "").trim();
-  if (envId) return envId;
-  const cached = readRealtimeState().elevenLabsAgentId;
-  if (cached) return cached;
-  // Single-flight so concurrent first-calls don't create duplicate agents.
-  if (!agentEnsurePromise) {
-    agentEnsurePromise = (async () => {
-      const id = await createElevenLabsAgent();
-      writeRealtimeState({ elevenLabsAgentId: id });
-      console.log("[realtime] created ElevenLabs Conversational AI agent:", id);
-      return id;
-    })().catch((e) => {
-      agentEnsurePromise = null; // allow retry on next request
-      throw e;
-    });
-  }
-  return agentEnsurePromise;
-}
-
-// Mint a WebRTC conversation token for a private agent. Returns the raw token
-// string the browser SDK passes to startSession({ conversationToken, connectionType:'webrtc' }).
-export async function getElevenLabsConversationToken(agentId) {
-  if (!elevenKey()) throw new Error("ELEVENLABS_API_KEY is not configured on the server.");
-  const url = `${EL_BASE}/conversation/token?agent_id=${encodeURIComponent(agentId)}`;
-  const res = await fetch(url, { method: "GET", headers: { "xi-api-key": elevenKey() } });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new Error(`ElevenLabs token HTTP ${res.status}: ${detail.slice(0, 300)}`);
-  }
-  const json = await res.json();
-  const token = json?.token || null;
-  if (!token) throw new Error(`ElevenLabs token response missing token: ${JSON.stringify(json).slice(0, 200)}`);
-  return token;
-}
-
-// Resolve the ElevenLabs voice for a session: an explicit (green-room or live-picked)
-// voice id wins; "auto"/absent falls back to the session's gender-matched catalog
-// voice (Prashant ♂ / Priya ♀ / Vikram ♂). Validates the id shape loosely.
-export function elevenLabsVoiceForSession(session, explicit) {
-  const v = explicit ?? session?.elevenVoiceId ?? "auto";
-  if (v && v !== "auto" && /^[A-Za-z0-9]{15,}$/.test(String(v))) return String(v);
-  return session?.voice?.elevenLabsVoiceId || EL_DEFAULT_VOICE_ID;
-}
-
-// Per-session ElevenLabs overrides: inject the persona instructions + the chosen (or
-// gender-matched) authentic Indian student voice. Shape matches the @elevenlabs/react
-// startSession overrides. `explicitVoiceId` is the live in-call override (if any).
-export function elevenLabsOverridesFor(session, explicitVoiceId) {
-  return {
-    agent: {
-      prompt: { prompt: buildRealtimeInstructions(session) },
-      firstMessage: REALTIME_FIRST_MESSAGE,
-      language: "en",
-    },
-    tts: { voiceId: elevenLabsVoiceForSession(session, explicitVoiceId) },
   };
 }

@@ -1,13 +1,16 @@
-// Student voice catalog: the ElevenLabs cloned voices the simulated student can
-// speak with. Assigned per session at start (snapshotted as session.voice) so the
-// voice — and the student's name/gender in the prompt — stay stable for the whole
-// call and across resumes. The sidecar falls back to its env default when a
-// session predates this field.
+// Student voice catalog: the named identities the simulated student can take on.
+// Assigned per session at start (snapshotted as session.voice) so the student's
+// name and gender in the prompt — and the gender-matched OpenAI realtime voice
+// (marin/cedar) — stay stable for the whole call and across resumes.
+//
+// (The per-voice provider id was dropped when the classic/ElevenLabs voice engines
+// were removed; only name + gender + key are still consumed — by pickStudentVoice,
+// the leadCard name/gender fallback, and the OpenAI voice gender mapping.)
 
 export const STUDENT_VOICES = [
-  { key: "prashant", name: "Prashant", gender: "male", elevenLabsVoiceId: "khNT67c7kgWhlbNQynFY" },
-  { key: "priya", name: "Priya", gender: "female", elevenLabsVoiceId: "hK2VWYcsIcpRFeFwf1QD" },
-  { key: "vikram", name: "Vikram", gender: "male", elevenLabsVoiceId: "hczKB0VbXLcBTn17ShYS" },
+  { key: "prashant", name: "Prashant", gender: "male" },
+  { key: "priya", name: "Priya", gender: "female" },
+  { key: "vikram", name: "Vikram", gender: "male" },
 ];
 
 // Curated first-name → gender lookup. We resolve gender primarily from the lead

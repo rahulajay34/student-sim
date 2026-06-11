@@ -22,16 +22,19 @@ import { pickStudentVoice } from "./voices.js";
 import { rollSessionFlavour, DEFAULT_PERSONALITY } from "./personality.js";
 import {
   mintOpenAIClientSecret, buildRealtimeInstructions, normalizeOpenAIVoice, openAIVoiceForSession, OPENAI_REALTIME_MODEL,
-  ensureElevenLabsAgent, getElevenLabsConversationToken, elevenLabsOverridesFor,
 } from "./realtime.js";
+import { computeDisposition } from "./disposition.js";
+import { steeringSummary } from "./objections.js";
 import { writeFileSync, readFileSync } from "fs";
 
-// Voice engine for a session: "classic" (STT -> MiniMax -> TTS, the default),
-// "openai" (OpenAI Realtime S2S), or "elevenlabs" (ElevenLabs Conversational AI S2S).
-// In the two S2S modes the provider owns the live voice/conversation and MiniMax
-// grades each turn via POST /sessions/:id/observe.
-const VOICE_ENGINES = new Set(["classic", "openai", "elevenlabs"]);
-const normalizeVoiceEngine = (v) => (VOICE_ENGINES.has(v) ? v : "classic");
+// Voice/text session mode (contract C5). A session is either a VOICE call (OpenAI
+// Realtime S2S — the provider owns the live voice/conversation, MiniMax grades each
+// turn via POST /sessions/:id/observe) or a TEXT chat (the MiniMax /message SSE
+// path). The request `mode` field selects this; `session.voiceEngine` records it
+// ("openai" for voice, "text" for text). Default is "voice".
+// (Old stored sessions may carry "classic"/"elevenlabs" — read them fail-soft.)
+const normalizeSessionMode = (v) => (String(v || "").toLowerCase() === "text" ? "text" : "voice");
+const voiceEngineForMode = (m) => (m === "text" ? "text" : "openai");
 
 const PROMPT_CONFIG_PATH = join(__dirname, "data", "prompt-config.json");
 
@@ -391,13 +394,16 @@ app.post("/api/sessions/start", async (req, res) => {
     // Thinking mode for the live conversation: default 'off' (faster). The in-call
     // toggle flips this per turn on POST /message.
     const thinkingMode = req.body?.thinkingMode === "on" ? "on" : "off";
-    // Voice engine: classic (default) | openai | elevenlabs. The two S2S engines
-    // run the live voice via the provider; MiniMax grades through /observe.
-    const voiceEngine = normalizeVoiceEngine(req.body?.voiceEngine);
+    // Session mode (contract C5): "voice" (OpenAI Realtime S2S, default) or "text"
+    // (MiniMax /message chat). `session.voiceEngine` records "openai" | "text".
+    const sessionMode = normalizeSessionMode(mode);
+    const voiceEngine = voiceEngineForMode(sessionMode);
     const openaiVoice = normalizeOpenAIVoice(req.body?.openaiVoice);
-    // ElevenLabs student voice: "auto" (gender-matched catalog) or a specific voice id.
-    const elevenVoiceId = (typeof req.body?.elevenVoiceId === "string" && req.body.elevenVoiceId.trim())
-      ? req.body.elevenVoiceId.trim() : "auto";
+
+    // Assigned-vs-practice ORIGIN is independent of voice/text mode: a session is
+    // "assigned" when it carries an assignmentId (legacy callers may also pass the
+    // now-overloaded mode === "assigned" string).
+    const isAssigned = Boolean(assignmentId) || mode === "assigned";
 
     let personaId2 = personaId;
     let scenario2 = scenario || { title: "Free practice", difficulty: "medium", situation: "", contextNotes: "" };
@@ -405,7 +411,7 @@ app.post("/api/sessions/start", async (req, res) => {
     let assignment = null;
     let profileId2 = profileId || null;
 
-    if (mode === "assigned") {
+    if (isAssigned) {
       assignment = store.getById("assignments", assignmentId);
       if (!assignment) return res.status(404).json({ error: "Assignment not found" });
       personaId2 = assignment.personaId;
@@ -466,9 +472,9 @@ app.post("/api/sessions/start", async (req, res) => {
     };
 
     let courseId2 = courseId;
-    if (mode === "assigned" && assignment) courseId2 = assignment.courseId ?? courseId2;
+    if (assignment) courseId2 = assignment.courseId ?? courseId2;
     let course = courseId2 ? store.getById("courses", courseId2) : null;
-    if (!course && mode === "assigned" && assignment && assignment.courseId) {
+    if (!course && assignment && assignment.courseId) {
       // Assigned session with a specific courseId that no longer exists — hard error.
       return res.status(404).json({ error: "Course not found for this assignment" });
     }
@@ -508,7 +514,8 @@ app.post("/api/sessions/start", async (req, res) => {
       id: sessionId,
       assignmentId: assignment ? assignment.id : null,
       counsellorId,
-      mode: mode === "assigned" ? "assigned" : "practice",
+      mode: assignment ? "assigned" : "practice",
+      sessionMode,
       personaSnapshot,
       scenarioSnapshot: scenario2,
       courseSnapshot,
@@ -520,7 +527,6 @@ app.post("/api/sessions/start", async (req, res) => {
       thinkingMode,
       voiceEngine,
       openaiVoice,
-      elevenVoiceId,
       voice,
       currentPhase: 1,
       satisfactionScore: 50,
@@ -543,7 +549,7 @@ app.post("/api/sessions/start", async (req, res) => {
     res.json({
       sessionId: session.id, firstMessage, emotion: firstEmotion,
       currentPhase: 1, satisfactionScore: 50, milestones: session.milestones, voice, revealPersona, leadCard,
-      voiceEngine, openaiVoice, elevenVoiceId,
+      voiceEngine, openaiVoice, sessionMode,
     });
   } catch (err) {
     console.error("Error in /sessions/start:", err.message);
@@ -758,12 +764,88 @@ app.post("/api/sessions/:id/message", lockedHandler(async (req, res) => {
 }));
 
 // ── Speech-to-speech (S2S) realtime credentials + observation ────────────────
-// In the "openai"/"elevenlabs" voice engines the live voice + conversation run
-// browser↔provider (low latency); MiniMax still grades each turn via /observe.
+// In the "openai" (voice) engine the live voice + conversation run browser↔OpenAI
+// (low latency); MiniMax still grades each turn via /observe.
+
+// What naturally happens next in each call phase — a one-line steer for the voice
+// model so it knows where the conversation is heading.
+const PHASE_NEXT = {
+  1: "you are just getting to know each other; expect the counsellor to ask about your background next.",
+  2: "the counsellor is learning your situation; they will start explaining the programme soon.",
+  3: "the counsellor is presenting the programme; your real concerns will start surfacing.",
+  4: "your objections are on the table; the counsellor is trying to resolve them and move toward asking you to commit.",
+  5: "you are near a decision; the counsellor may ask you to block your seat or pay.",
+};
+
+// Strip the text-pipeline [emotion:*] tags AND a bare trailing standalone emotion
+// word so neither gets stored in the S2S transcript or scored. The realtime model
+// is told not to emit these, but a stray one must never poison the transcript.
+const TRAILING_EMOTION_RE = /[\s,.;:!?—-]*\b(neutral|happy|excited|hesitant|worried|frustrated)\b[\s.!?]*$/i;
+function stripEmotionArtifacts(text) {
+  if (typeof text !== "string") return "";
+  let t = text.replace(/\[emotion:[^\]]*\]/gi, " ");
+  t = t.replace(/\s+/g, " ").trim();
+  // Remove a single bare trailing emotion word (a leftover label), not mid-sentence uses.
+  t = t.replace(TRAILING_EMOTION_RE, "").trim();
+  return t;
+}
+
+// Sanitize the in-browser realtime delivery metrics (contract C2) into the shape
+// the report reads on a counsellor transcript entry: { wpm, pauses, energyVar,
+// durationMs }. Coerce to finite numbers; drop any invalid/missing key. (Distinct
+// from the classic /message sanitizer above, which carries a richer prosody shape.)
+function sanitizeRealtimeDeliveryMetrics(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const out = {};
+  for (const key of ["wpm", "pauses", "energyVar", "durationMs"]) {
+    const n = Number(raw[key]);
+    if (Number.isFinite(n)) out[key] = n;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+// Score a counsellor turn with thinking disabled (chat() defaults to a disabled
+// reasoning block) and a hard 15s budget so /observe never blocks the live call.
+// On timeout/error, treat as a no-op adjustment — never fail the request.
+async function scoreObserveTurn(message, opts) {
+  if (isBackchannel(message)) {
+    return { adjustment: 0, reason: "Backchannel acknowledgement", addressedObjection: null };
+  }
+  try {
+    const scored = await Promise.race([
+      scoreMessage(message, opts),
+      new Promise((resolve) => setTimeout(
+        () => resolve({ adjustment: 0, reason: "score timeout", addressedObjection: null }),
+        15000,
+      )),
+    ]);
+    return scored || { adjustment: 0, reason: "score timeout", addressedObjection: null };
+  } catch (err) {
+    console.warn("[observe] scoring failed (non-fatal):", err?.message);
+    return { adjustment: 0, reason: "scoring unavailable", addressedObjection: null };
+  }
+}
+
+// Build the compact mid-call steering block (contract C2): disposition narrative,
+// open/answered objections with banned phrasing, the current phase + what happens
+// next, and a one-line turn-length reminder. Kept short (≤ ~120 words).
+function buildSteering(session) {
+  const parts = [];
+  const disp = computeDisposition(session);
+  if (disp?.narrative) parts.push(`How you feel now: ${disp.narrative}`);
+  const obj = steeringSummary(session.objectionState);
+  if (obj) parts.push(obj);
+  const phase = session.currentPhase || 1;
+  const phaseName = PHASE_NAMES[phase] || PHASE_NAMES[1];
+  parts.push(`Stage: ${phaseName} — ${PHASE_NEXT[phase] || PHASE_NEXT[1]}`);
+  parts.push("Keep your replies short — about 5 to 15 spoken words.");
+  return parts.join("\n");
+}
 
 // OpenAI Realtime ephemeral client secret for the browser WebRTC peer connection.
-// Body: { voice? } lets the UI audition any of the 10 realtime voices live; it
+// Body: { voice? } lets the UI audition any of the realtime voices live; it
 // re-mints with that voice (the WebRTC session is re-established client-side).
+// Response shape is byte-stable for the client: { value, model, voice, expiresAt }.
 app.post("/api/sessions/:id/realtime/openai-token", async (req, res) => {
   const session = store.getById("sessions", req.params.id);
   if (!session) return res.status(404).json({ error: "Session not found" });
@@ -780,36 +862,24 @@ app.post("/api/sessions/:id/realtime/openai-token", async (req, res) => {
   }
 });
 
-// ElevenLabs Conversational AI WebRTC conversation token + the per-session
-// overrides (persona prompt + the session's authentic Indian student voice) the
-// browser SDK applies at startSession.
-app.post("/api/sessions/:id/realtime/elevenlabs-token", async (req, res) => {
-  const session = store.getById("sessions", req.params.id);
-  if (!session) return res.status(404).json({ error: "Session not found" });
-  try {
-    const agentId = await ensureElevenLabsAgent();
-    const token = await getElevenLabsConversationToken(agentId);
-    // Optional live voice override (in-call picker); else session.elevenVoiceId / gender-match.
-    const overrides = elevenLabsOverridesFor(session, req.body?.voiceId);
-    res.json({ token, agentId, overrides });
-  } catch (err) {
-    console.error("Error minting ElevenLabs realtime token:", err.message);
-    res.status(502).json({ error: err.message });
-  }
-});
-
 // Observe a completed S2S turn pair so MiniMax keeps the live coaching alive:
 // classify + advance phase + SCORE the counsellor turn, then track the student's
 // objection + advance phase on the reply, append both to the server-owned
 // transcript, and return the same coaching fields /message does (minus the reply,
-// which the provider already spoke). Body: { counsellorText, studentText } — either
-// may be empty (e.g. only a counsellor turn so far). Serialized per session.
+// which the provider already spoke) PLUS a `steering` block (contract C2) the
+// client pushes back to the realtime model via session.update.
+// Body: { counsellorText?, studentText?, deliveryMetrics? } — either text may be
+// empty (e.g. only a counsellor turn so far). Serialized per session.
 app.post("/api/sessions/:id/observe", lockedHandler(async (req, res) => {
   const session = store.getById("sessions", req.params.id);
   if (!session) return res.status(404).json({ error: "Session not found. Please start a new session." });
   if (session.status === "ended") return res.status(409).json({ error: "This session has ended." });
-  const cText = typeof req.body?.counsellorText === "string" ? req.body.counsellorText.trim() : "";
-  const sText = typeof req.body?.studentText === "string" ? req.body.studentText.trim() : "";
+  // Strip [emotion:*] tags and a bare trailing emotion word from BOTH texts before
+  // storing/scoring (the realtime model should never emit these, but guard anyway).
+  const cText = stripEmotionArtifacts(typeof req.body?.counsellorText === "string" ? req.body.counsellorText : "");
+  const sText = stripEmotionArtifacts(typeof req.body?.studentText === "string" ? req.body.studentText : "");
+  // deliveryMetrics arrives only with a counsellor turn.
+  const deliveryMetrics = cText ? sanitizeRealtimeDeliveryMetrics(req.body?.deliveryMetrics) : null;
   if (!cText && !sText) return res.status(400).json({ error: "counsellorText or studentText is required" });
 
   if (!Array.isArray(session.objectionState)) session.objectionState = initObjectionState();
@@ -828,18 +898,18 @@ app.post("/api/sessions/:id/observe", lockedHandler(async (req, res) => {
         role: "counsellor", text: cText, phase: session.currentPhase,
         turnType, scoreAfter: preScore, ts: new Date().toISOString(),
       };
+      // deliveryMetrics goes on the counsellor entry under the same field the report reads.
+      if (deliveryMetrics) counsellorEntry.deliveryMetrics = deliveryMetrics;
       session.transcript.push(counsellorEntry);
 
       const windowSize = loadScoringConfig().recentTurnsWindow;
       const recentTurns = session.transcript.slice(-(windowSize + 1), -1).map(({ role, text }) => ({ role, text }));
       const openObjForScore = openObjections(session.objectionState).map(({ category }) => ({ key: category }));
 
-      const scored = isBackchannel(cText)
-        ? { adjustment: 0, reason: "Backchannel acknowledgement", addressedObjection: null }
-        : await scoreMessage(cText, {
-            recentTurns, phase: session.currentPhase, turnType,
-            courseName: session.courseSnapshot?.name, openObjections: openObjForScore,
-          });
+      const scored = await scoreObserveTurn(cText, {
+        recentTurns, phase: session.currentPhase, turnType,
+        courseName: session.courseSnapshot?.name, openObjections: openObjForScore,
+      });
       reason = scored.reason;
       session.satisfactionScore = Math.max(0, Math.min(100, preScore + scored.adjustment));
       counsellorEntry.scoreAfter = session.satisfactionScore;
@@ -855,7 +925,9 @@ app.post("/api/sessions/:id/observe", lockedHandler(async (req, res) => {
       const gateCategory = advancePhase(session, "student", sText);
       const studentTurnIdx = session.transcript.length;
       raisedCategory = gateCategory || detectObjectionCategory(sText);
-      if (raisedCategory) raiseObjection(session.objectionState, raisedCategory, studentTurnIdx);
+      // Store the student's actual sentence as the objection's lastPhrasing so the
+      // anti-loop steering can quote and ban it.
+      if (raisedCategory) raiseObjection(session.objectionState, raisedCategory, studentTurnIdx, sText);
       session.transcript.push({
         role: "student", text: sText, emotion: "neutral", phase: session.currentPhase,
         scoreAfter: session.satisfactionScore, ts: new Date().toISOString(),
@@ -870,10 +942,12 @@ app.post("/api/sessions/:id/observe", lockedHandler(async (req, res) => {
       lastCounsellorAdjustment: lastHist && typeof lastHist.adjustment === "number" ? lastHist.adjustment : null,
       lastCounsellorScoreReason: lastHist?.reason ?? null, objectionState: session.objectionState,
     });
+    // Recompute steering on BOTH counsellor-turn and student-turn observes.
+    const steering = buildSteering(session);
 
     res.json({
       currentPhase: session.currentPhase, satisfactionScore: session.satisfactionScore,
-      scoreReason: reason, turnType, milestones: session.milestones, cue,
+      scoreReason: reason, turnType, milestones: session.milestones, cue, steering,
     });
   } catch (err) {
     console.error("Error in /sessions/observe:", err.stack || err.message);

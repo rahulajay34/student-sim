@@ -50,7 +50,9 @@ function buildGeneralProfile(cfg) {
 
 // WHAT YOU KNOW — the anti-brochure knowledge bounds. Only the course IDENTITY
 // is filled in from the snapshot; the bounds stay tight regardless.
-function buildKnowledgeBounds(cfg, course) {
+// Exported so the realtime voice prompt (server/realtime.js) reuses the exact same
+// scoped knowledge-bounds text rather than duplicating it. No behaviour change.
+export function buildKnowledgeBounds(cfg, course) {
   let identity;
   if (course) {
     const mode = courseMode(course);

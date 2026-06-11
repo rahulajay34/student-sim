@@ -94,14 +94,34 @@ async function main() {
   const asnList = await call(`/assignments?counsellorId=${counsellor.id}`);
   check("assignment visible to counsellor", asnList.data.some((a) => a.id === asn.data.id));
 
-  console.log("SESSION (assigned) — this makes real LLM calls, please wait…");
-  const start = await call("/sessions/start", { method: "POST", body: { mode: "assigned", counsellorId: counsellor.id, assignmentId: asn.data.id } });
-  check("start session", start.status === 200 && start.data.sessionId && start.data.firstMessage);
+  console.log("SESSION (assigned, text mode) — this makes real LLM calls, please wait…");
+  // mode is now the voice/text axis (C5); the assigned origin is driven by assignmentId.
+  const start = await call("/sessions/start", { method: "POST", body: { mode: "text", counsellorId: counsellor.id, assignmentId: asn.data.id } });
+  check("start session", start.status === 200 && start.data.sessionId && start.data.firstMessage !== undefined);
   check("start response has milestones", typeof start.data.milestones?.objectionsRaised === "number");
+  check("start echoes sessionMode=text + voiceEngine=text", start.data.sessionMode === "text" && start.data.voiceEngine === "text");
   const sid = start.data.sessionId;
   const sessionGet = await call(`/sessions/${sid}`);
+  check("session origin is assigned (assignmentId-driven)", sessionGet.data.mode === "assigned");
   check("session has courseSnapshot", sessionGet.data.courseSnapshot && /Cyber Security|Ethical Hacking/i.test(sessionGet.data.courseSnapshot.name));
   check("session snapshots rubric", sessionGet.data.rubricSnapshot?.templateId === "rt-grounded-v2");
+
+  console.log("REALTIME (token mint wiring + removed elevenlabs endpoint)");
+  // Token mint: with no/invalid OPENAI_API_KEY this returns a missing-key-shaped
+  // error (4xx/5xx). We only assert the endpoint is WIRED — a 200 (real key) or a
+  // 4xx/5xx error body both count; a 404 (route missing) does not.
+  const tok = await call(`/sessions/${sid}/realtime/openai-token`, { method: "POST", body: {} });
+  check("openai-token endpoint wired (200 or shaped error, not 404)", tok.status === 200 || (tok.status >= 400 && tok.status !== 404));
+  // The ElevenLabs token route must be gone.
+  const elTok = await call(`/sessions/${sid}/realtime/elevenlabs-token`, { method: "POST", body: {} });
+  check("elevenlabs-token route removed (404)", elTok.status === 404);
+
+  console.log("OBSERVE (S2S coaching turn + steering block)");
+  const obs = await call(`/sessions/${sid}/observe`, { method: "POST", body: { counsellorText: "Tell me, what is making you hesitate about the fees?", deliveryMetrics: { wpm: 145, pauses: 3, energyVar: 0.7, durationMs: 4200 } } });
+  check("observe returns coaching fields", obs.status === 200 && typeof obs.data.satisfactionScore === "number" && typeof obs.data.currentPhase === "number");
+  check("observe returns a steering string (C2)", typeof obs.data.steering === "string" && obs.data.steering.length > 0);
+  const sessionAfterObserve = await call(`/sessions/${sid}`);
+  check("observe persisted sanitized deliveryMetrics { wpm } on counsellor turn", Array.isArray(sessionAfterObserve.data.transcript) && sessionAfterObserve.data.transcript.some((e) => e.role === "counsellor" && e.deliveryMetrics?.wpm === 145));
 
   const m1 = await call(`/sessions/${sid}/message`, { method: "POST", body: { message: "Hi! I understand the technical side feels intimidating. Our first module starts from absolute basics with mentor support — many career switchers with no coding background have completed it. What worries you most?" } });
   check("message 1 returns reply + score", m1.status === 200 && m1.data.reply && typeof m1.data.satisfactionScore === "number");
@@ -117,10 +137,20 @@ async function main() {
   console.log("END -> REPORT");
   const end = await call(`/sessions/${sid}/end`, { method: "POST" });
   check("end session returns reportId", end.status === 200 && end.data.reportId);
+  check("end returns immediately with status", end.data.status === "generating" || end.data.status === "ready");
   const rid = end.data.reportId;
 
-  const report = await call(`/reports/${rid}`);
-  const r = report.data;
+  // Report generation is async now: poll until the stub flips to ready/fallback.
+  let r = null;
+  const deadline = Date.now() + 150_000;
+  for (;;) {
+    const report = await call(`/reports/${rid}`);
+    r = report.data;
+    if (r?.status !== "generating") break;
+    if (Date.now() > deadline) break;
+    await new Promise((res) => setTimeout(res, 2000));
+  }
+  check("report finished generating (ready, not fallback)", r?.status === "ready" || r?.status === undefined);
   check("report has overall % + band + outcome", r.overall && typeof r.overall.percent === "number" && r.overall.band && r.overall.outcome);
   // deliveryMetrics were sent on message 2, so this counts as a voice session: voice_delivery is graded -> 8 criteria
   check("report has 8 rubric criteria (voice session)", Array.isArray(r.rubric) && r.rubric.length === 8 && r.rubric.every((x) => x.level && x.label));

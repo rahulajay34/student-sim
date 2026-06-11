@@ -1,10 +1,7 @@
-import { useEffect, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import Orb from "./Orb";
 import { scoreColor } from "../../../lib/format";
-import { sidecarStatus, capabilityReady } from "../../../voice/sidecarClient";
-import { OPENAI_VOICES, ELEVENLABS_VOICES, VOICE_ENGINES, ENGINE_OPENAI, ENGINE_ELEVENLABS, ENGINE_CLASSIC, isS2SEngine } from "../../../voice/engines";
-
-const ENGINE_LABEL = Object.fromEntries(VOICE_ENGINES.map((e) => [e.id, e.label]));
+import { OPENAI_VOICES } from "../../../voice/engines";
 
 // ── In-call voice picker (audition voices live; a change reconnects briefly) ───
 function VoicePicker({ voices, voice, onChange }) {
@@ -230,18 +227,13 @@ function VoiceStatusPill({ voice }) {
   // Show error pill even when voice is not enabled (e.g. init failure).
   if (!voice.enabled && !voice.error) return null;
 
-  const sc = sidecarStatus();
-  const hasSidecar = sc?.ok && capabilityReady(sc?.capabilities?.tts);
-
   let label = voice.status;
-  if (voice.status === "loading") label = voice.loadPct ? `Loading ${voice.loadPct}%` : "Connecting…";
+  if (voice.status === "loading") label = "Connecting…";
   else if (voice.status === "idle") label = "Voice ready";
-  else if (voice.status === "recording") label = "Recording…";
   else if (voice.status === "listening") label = "Listening…";
-  else if (voice.status === "transcribing") label = "Transcribing…";
   else if (voice.status === "speaking") label = "Speaking…";
 
-  const isActive = voice.status === "recording" || voice.status === "speaking" || voice.status === "listening";
+  const isActive = voice.status === "speaking" || voice.status === "listening";
 
   return (
     <div style={{ position: "absolute", bottom: 20, left: 20, display: "flex", alignItems: "center", gap: 8 }}>
@@ -258,9 +250,6 @@ function VoiceStatusPill({ voice }) {
             }}
           />
           {label}
-          {hasSidecar && (
-            <span style={{ color: "#10b981", marginLeft: 4 }}>· sidecar</span>
-          )}
         </Pill>
       )}
       {voice.error && (
@@ -524,7 +513,10 @@ function InfoPanel({ course, persona, leadCard, revealPersona }) {
 }
 
 // ── Main CallStage ─────────────────────────────────────────────────────────────
-export default function CallStage({
+// Memoized (default export at the bottom) so per-token transcript streaming in
+// the sidebar — which churns `messages` on the parent — does NOT re-render the
+// orb / analyser subtree. CallStage only re-renders when its own props change.
+function CallStage({
   // session info
   personaName,
   phase,
@@ -535,7 +527,8 @@ export default function CallStage({
   persona,
   leadCard,
   revealPersona,
-  // thinking toggle (S1)
+  // session mode ("voice" | "text") + thinking toggle (text mode)
+  sessionMode = "voice",
   thinkingOn,
   onToggleThinking,
   // orb
@@ -547,13 +540,9 @@ export default function CallStage({
   // voice
   voice,
   onToggleMic,
-  micLatched,
-  // voice engine (S2S)
-  voiceEngine = ENGINE_CLASSIC,
+  // openai realtime voice picker (voice mode)
   openaiVoice,
   onChangeOpenaiVoice,
-  elevenVoice,
-  onChangeElevenVoice,
   // keyboard / sidebar
   onToggleKeyboard,
   sidebarOpen,
@@ -571,6 +560,19 @@ export default function CallStage({
   const timer = useTimer(timerStart);
   const [micHintShown] = useState(true); // always show once; no need to hide
   const em = EMOTION_META[emotion] || EMOTION_META.neutral;
+  const isVoice = sessionMode !== "text";
+
+  // ── Score-change pulse: briefly scale + tint the live sat number on change ──
+  const [satPulse, setSatPulse] = useState(false);
+  const prevSatRef = useRef(satisfaction);
+  useEffect(() => {
+    if (prevSatRef.current !== satisfaction) {
+      prevSatRef.current = satisfaction;
+      setSatPulse(true);
+      const t = setTimeout(() => setSatPulse(false), 600);
+      return () => clearTimeout(t);
+    }
+  }, [satisfaction]);
 
   // ── Live cue chip: enable toggle (persisted) + per-cue dismissal ───────────
   const [cuesEnabled, setCuesEnabled] = useState(() => {
@@ -638,38 +640,40 @@ export default function CallStage({
           <span style={{ fontVariantNumeric: "tabular-nums" }}>{timer}</span>
         </Pill>
 
-        {/* Thinking toggle (S1) */}
-        <button
-          type="button"
-          onClick={onToggleThinking}
-          title="Thinking on = more deliberate student, slower replies."
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            borderRadius: 9999,
-            padding: "4px 12px",
-            fontSize: "0.75rem",
-            color: thinkingOn ? "#fcd9a5" : "#8b90a8",
-            background: "rgba(22,26,38,0.80)",
-            backdropFilter: "blur(8px)",
-            border: `1px solid ${thinkingOn ? "rgba(245,158,11,0.45)" : "#262a36"}`,
-            cursor: "pointer",
-            whiteSpace: "nowrap",
-            transition: "border-color 150ms ease, color 150ms ease",
-          }}
-        >
-          <span
+        {/* Thinking toggle (text mode only — applies to the MiniMax /message reply) */}
+        {!isVoice && (
+          <button
+            type="button"
+            onClick={onToggleThinking}
+            title="Thinking on = more deliberate student, slower replies."
             style={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              flexShrink: 0,
-              background: thinkingOn ? "#f59e0b" : "#4b5167",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              borderRadius: 9999,
+              padding: "4px 12px",
+              fontSize: "0.75rem",
+              color: thinkingOn ? "#fcd9a5" : "#8b90a8",
+              background: "rgba(22,26,38,0.80)",
+              backdropFilter: "blur(8px)",
+              border: `1px solid ${thinkingOn ? "rgba(245,158,11,0.45)" : "#262a36"}`,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              transition: "border-color 150ms ease, color 150ms ease",
             }}
-          />
-          {thinkingOn ? "Thinking on" : "Thinking off"}
-        </button>
+          >
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                flexShrink: 0,
+                background: thinkingOn ? "#f59e0b" : "#4b5167",
+              }}
+            />
+            {thinkingOn ? "Thinking on" : "Thinking off"}
+          </button>
+        )}
 
         {/* Cue chips toggle */}
         <button
@@ -704,29 +708,25 @@ export default function CallStage({
           {cuesEnabled ? "Cues on" : "Cues off"}
         </button>
 
-        {/* Voice engine indicator */}
+        {/* Mode indicator (Voice / Text) */}
         <Pill
           style={{
-            color: isS2SEngine(voiceEngine) ? "#34d399" : "#8b90a8",
-            borderColor: isS2SEngine(voiceEngine) ? "rgba(16,185,129,0.40)" : "#262a36",
+            color: isVoice ? "#34d399" : "#8b90a8",
+            borderColor: isVoice ? "rgba(16,185,129,0.40)" : "#262a36",
           }}
         >
           <span
             style={{
               width: 6, height: 6, borderRadius: "50%", display: "inline-block",
-              background: isS2SEngine(voiceEngine) ? "#10b981" : "#4b5167",
+              background: isVoice ? "#10b981" : "#4b5167",
             }}
           />
-          {ENGINE_LABEL[voiceEngine] || "Classic"}
-          {isS2SEngine(voiceEngine) && <span style={{ color: "#6f7590" }}>· S2S</span>}
+          {isVoice ? "Voice" : "Text"}
         </Pill>
 
-        {/* Live voice picker (per engine) */}
-        {voiceEngine === ENGINE_OPENAI && (
+        {/* Live OpenAI voice picker (voice mode only) */}
+        {isVoice && (
           <VoicePicker voices={OPENAI_VOICES} voice={openaiVoice} onChange={onChangeOpenaiVoice} />
-        )}
-        {voiceEngine === ENGINE_ELEVENLABS && (
-          <VoicePicker voices={ELEVENLABS_VOICES} voice={elevenVoice} onChange={onChangeElevenVoice} />
         )}
       </div>
 
@@ -770,7 +770,17 @@ export default function CallStage({
                   flexShrink: 0,
                 }}
               />
-              <span style={{ color: satHex, fontWeight: 600 }}>
+              <span
+                style={{
+                  color: satHex,
+                  fontWeight: 600,
+                  display: "inline-block",
+                  fontVariantNumeric: "tabular-nums",
+                  transform: satPulse ? "scale(1.45)" : "scale(1)",
+                  textShadow: satPulse ? `0 0 10px ${satHex}` : "none",
+                  transition: "transform 250ms cubic-bezier(0.34,1.56,0.64,1), text-shadow 250ms ease",
+                }}
+              >
                 {satisfaction ?? 0}
               </span>
               <span style={{ color: "#8b90a8" }}>sat</span>
@@ -835,12 +845,12 @@ export default function CallStage({
       {/* ── Bottom controls bar ─────────────────────────────────────────── */}
       <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          {/* Mic button. S2S: open mic, button toggles mute. Classic: latch on/off. */}
-          {(() => {
-            const micActive = isS2SEngine(voiceEngine) ? (voice.enabled && !voice.muted) : micLatched;
-            const micTitle = isS2SEngine(voiceEngine)
-              ? (voice.enabled ? (voice.muted ? "Unmute mic" : "Mute mic") : "Connect voice")
-              : (voice.enabled ? (micLatched ? "Mute mic" : "Activate mic") : "Enable voice first");
+          {/* Mic button (voice mode): open mic; button toggles mute. */}
+          {isVoice && (() => {
+            const micActive = voice.enabled && !voice.muted;
+            const micTitle = voice.enabled
+              ? (voice.muted ? "Unmute mic" : "Mute mic")
+              : "Connect voice";
             return (
               <CtrlBtn
                 title={micTitle}
@@ -871,36 +881,23 @@ export default function CallStage({
           </CtrlBtn>
         </div>
 
-        {/* Mic hint */}
-        {voice.enabled && micHintShown && (
+        {/* Mic hint (voice mode) */}
+        {isVoice && voice.enabled && micHintShown && (
           <p style={{ color: "#8b90a8", fontSize: "0.7rem", margin: 0 }}>
-            {isS2SEngine(voiceEngine) ? (
-              voice.muted ? (
-                <>
-                  Hold{" "}
-                  <kbd style={{ background: "#161a26", border: "1px solid #262a36", borderRadius: 4, padding: "1px 5px", fontFamily: "inherit", fontSize: "0.7rem", color: "#e7e9f4" }}>Space</kbd>{" "}
-                  to talk · tap the mic for hands-free
-                </>
-              ) : "Mic open (hands-free) — tap the mic to mute"
-            ) : (
+            {voice.muted ? (
               <>
                 Hold{" "}
-                <kbd
-                  style={{
-                    background: "#161a26",
-                    border: "1px solid #262a36",
-                    borderRadius: 4,
-                    padding: "1px 5px",
-                    fontFamily: "inherit",
-                    fontSize: "0.7rem",
-                    color: "#e7e9f4",
-                  }}
-                >
-                  Space
-                </kbd>{" "}
-                to talk
+                <kbd style={{ background: "#161a26", border: "1px solid #262a36", borderRadius: 4, padding: "1px 5px", fontFamily: "inherit", fontSize: "0.7rem", color: "#e7e9f4" }}>Space</kbd>{" "}
+                to talk · tap the mic for hands-free
               </>
-            )}
+            ) : "Mic open (hands-free) — tap the mic to mute"}
+          </p>
+        )}
+
+        {/* Text-mode hint */}
+        {!isVoice && (
+          <p style={{ color: "#8b90a8", fontSize: "0.7rem", margin: 0 }}>
+            Type in the panel to talk to the student
           </p>
         )}
       </div>
@@ -910,3 +907,5 @@ export default function CallStage({
     </div>
   );
 }
+
+export default memo(CallStage);

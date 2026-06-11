@@ -1,40 +1,15 @@
-// Shared voice-engine constants for the 3-way toggle (Classic / OpenAI Realtime /
-// ElevenLabs). Used by the GreenRoom selector, the in-call CallStage controls, and
-// Session wiring. The selection is remembered in localStorage between calls.
-
-export const ENGINE_CLASSIC = "classic";
-export const ENGINE_OPENAI = "openai";
-export const ENGINE_ELEVENLABS = "elevenlabs";
-
-export const VOICE_ENGINES = [
-  {
-    id: ENGINE_CLASSIC,
-    label: "Classic",
-    short: "STT → MiniMax → TTS",
-    desc: "The original pipeline. Works offline; authentic Indian student voices. Highest latency.",
-  },
-  {
-    id: ENGINE_OPENAI,
-    label: "OpenAI Realtime",
-    short: "Speech-to-speech",
-    desc: "Lowest latency. American-base voices instructed to speak Indian English + light Hinglish.",
-  },
-  {
-    id: ENGINE_ELEVENLABS,
-    label: "ElevenLabs",
-    short: "Speech-to-speech",
-    desc: "Low latency with authentic Indian voices (same voice as Classic for this student).",
-  },
-];
-
-export function isS2SEngine(engine) {
-  return engine === ENGINE_OPENAI || engine === ENGINE_ELEVENLABS;
-}
+// Voice catalog for the single (OpenAI Realtime) engine.
+//
+// The platform now runs ONE voice engine: OpenAI Realtime speech-to-speech.
+// This module is what survived the consolidation — it carries only the OpenAI
+// voice catalog (for the green-room + in-call voice picker) plus the persisted
+// default-voice preference. The old 3-way engine toggle and the two legacy
+// pipelines (and their constants/storage keys) are gone.
 
 // OpenAI Realtime voices (audition any live from the in-call control). marin/cedar
 // are the newest gpt-realtime voices and sound the most natural. All are
-// American/British base, instructed to speak Indian English. "auto" gender-matches
-// (female→Marin, male→Cedar) from the student's profile.
+// American/British base, instructed to speak natural Indian English. "auto"
+// gender-matches (female→Marin, male→Cedar) from the student's profile.
 export const OPENAI_VOICES = [
   { id: "auto", label: "Auto (match student gender)", note: "♀ → Marin · ♂ → Cedar — recommended" },
   { id: "marin", label: "Marin", note: "Newest · natural · female-leaning" },
@@ -51,35 +26,11 @@ export const OPENAI_VOICES = [
 
 export const DEFAULT_OPENAI_VOICE = "auto";
 
-// ElevenLabs student voices — authentic Indian accents (your original catalog).
-// "auto" gender-matches (Priya ♀ / Prashant ♂) from the student's profile.
-export const ELEVENLABS_VOICES = [
-  { id: "auto", label: "Auto (match student gender)", note: "Priya ♀ / Prashant ♂ — recommended" },
-  { id: "hK2VWYcsIcpRFeFwf1QD", label: "Priya", note: "Female · Indian · warm" },
-  { id: "khNT67c7kgWhlbNQynFY", label: "Prashant", note: "Male · Indian" },
-  { id: "hczKB0VbXLcBTn17ShYS", label: "Vikram", note: "Male · Indian · deep" },
-];
-export const DEFAULT_ELEVEN_VOICE = "auto";
-
-export const ENGINE_STORAGE_KEY = "mct_voice_engine";
 export const OPENAI_VOICE_STORAGE_KEY = "mct_openai_voice";
-export const ELEVEN_VOICE_STORAGE_KEY = "mct_eleven_voice";
 
-export function loadStoredEngine() {
-  try {
-    const v = localStorage.getItem(ENGINE_STORAGE_KEY);
-    return VOICE_ENGINES.some((e) => e.id === v) ? v : ENGINE_CLASSIC;
-  } catch { return ENGINE_CLASSIC; }
-}
 export function loadStoredOpenAIVoice() {
   try {
     const v = localStorage.getItem(OPENAI_VOICE_STORAGE_KEY);
     return OPENAI_VOICES.some((o) => o.id === v) ? v : DEFAULT_OPENAI_VOICE;
   } catch { return DEFAULT_OPENAI_VOICE; }
-}
-export function loadStoredElevenVoice() {
-  try {
-    const v = localStorage.getItem(ELEVEN_VOICE_STORAGE_KEY);
-    return ELEVENLABS_VOICES.some((o) => o.id === v) ? v : DEFAULT_ELEVEN_VOICE;
-  } catch { return DEFAULT_ELEVEN_VOICE; }
 }

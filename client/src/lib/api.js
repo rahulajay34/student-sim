@@ -49,14 +49,21 @@ export const api = {
   getSession: (id) => req(`/sessions/${id}`),
   getSessionCue: (id) => req(`/sessions/${id}/cue`, { method: "POST" }),
 
-  // speech-to-speech (S2S) realtime engines
+  // realtime voice engine (OpenAI Realtime speech-to-speech)
   // openai-token: { voice? } → { value (ephemeral ek_…), model, voice, expiresAt }
   getOpenAIRealtimeToken: (id, voice) => req(`/sessions/${id}/realtime/openai-token`, { method: "POST", body: voice ? { voice } : {} }),
-  // elevenlabs-token: { voiceId? } → { token, agentId, overrides }
-  getElevenLabsRealtimeToken: (id, voiceId) => req(`/sessions/${id}/realtime/elevenlabs-token`, { method: "POST", body: voiceId ? { voiceId } : {} }),
-  // observe: feed a completed S2S turn to MiniMax for live scoring/cue/phase/objections
-  observeTurn: (id, { counsellorText, studentText }) =>
-    req(`/sessions/${id}/observe`, { method: "POST", body: { counsellorText: counsellorText || "", studentText: studentText || "" } }),
+  // observe (C2): feed a completed voice turn to MiniMax for live scoring/cue/phase/
+  // objections. Counsellor turns may carry deliveryMetrics; the response adds a
+  // compact `steering` string used to nudge the voice model mid-call.
+  observeTurn: (id, { counsellorText, studentText, deliveryMetrics } = {}) =>
+    req(`/sessions/${id}/observe`, {
+      method: "POST",
+      body: {
+        counsellorText: counsellorText || "",
+        studentText: studentText || "",
+        ...(deliveryMetrics ? { deliveryMetrics } : {}),
+      },
+    }),
 
   // reports
   getReports: (counsellorId) => req(`/reports${qs(counsellorId)}`),

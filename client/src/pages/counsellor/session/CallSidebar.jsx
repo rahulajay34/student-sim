@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { memo, useEffect, useRef, useState, useCallback } from "react";
 import CoachPanel from "./CoachPanel";
 import CueCard from "./CueCard";
 import { scoreColor, TOKEN_HEX } from "../../../lib/format";
@@ -52,7 +52,10 @@ function TypingIndicator() {
 }
 
 // ── Message bubble ─────────────────────────────────────────────────────────────
-function Bubble({ message }) {
+// Memoized so a per-token re-render of the in-flight streaming bubble doesn't
+// re-render every settled bubble in the transcript. Each bubble is keyed by its
+// stable message id; only the bubble whose `text` is mutating actually re-renders.
+const Bubble = memo(function Bubble({ message }) {
   if (message.role === "system") {
     return (
       <div style={{ display: "flex", justifyContent: "center" }}>
@@ -84,6 +87,40 @@ function Bubble({ message }) {
       </div>
     </div>
   );
+});
+
+// ── Streaming bubble (isolated per-token render) ──────────────────────────────
+// Renders the in-flight student reply while it streams. It owns its own text
+// state and registers its setter on the `sinkRef` the parent holds, so per-token
+// updates re-render ONLY this component — never the transcript list, CallStage, or
+// the orb. The parent commits the canonical reply to `messages` on `done` and
+// clears this via sink(""), at which point it renders nothing.
+function StreamingBubble({ sinkRef, onGrow }) {
+  const [text, setText] = useState("");
+  useEffect(() => {
+    if (sinkRef) sinkRef.current = setText;
+    return () => { if (sinkRef && sinkRef.current === setText) sinkRef.current = null; };
+  }, [sinkRef]);
+  // Follow the growing reply to the bottom of the scroll area each token.
+  useEffect(() => { if (text) onGrow?.(); }, [text, onGrow]);
+  if (!text) return null;
+  return (
+    <div style={{ display: "flex", justifyContent: "flex-start" }}>
+      <div style={{
+        maxWidth: "85%",
+        whiteSpace: "pre-wrap",
+        padding: "10px 14px",
+        fontSize: "0.875rem",
+        lineHeight: 1.55,
+        background: "#1d2740",
+        color: "#cdd6f4",
+        border: "1px solid #3730a3",
+        borderRadius: "1rem 1rem 1rem 0.25rem",
+      }}>
+        {text}
+      </div>
+    </div>
+  );
 }
 
 // ── Send icon ─────────────────────────────────────────────────────────────────
@@ -98,7 +135,7 @@ function SendIcon() {
 }
 
 // ── Transcript tab ─────────────────────────────────────────────────────────────
-function TranscriptTab({ messages, awaitingReply, onSend, inputRef }) {
+function TranscriptTab({ messages, awaitingReply, onSend, registerStreamSink, inputRef }) {
   const scrollRef = useRef(null);
   const userScrolledRef = useRef(false);
   const [inputVal, setInputVal] = useState("");
@@ -111,11 +148,13 @@ function TranscriptTab({ messages, awaitingReply, onSend, inputRef }) {
     userScrolledRef.current = distFromBottom > 80;
   }, []);
 
-  useEffect(() => {
+  const scrollToBottom = useCallback(() => {
     const el = scrollRef.current;
     if (!el || userScrolledRef.current) return;
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [messages, awaitingReply]);
+  }, []);
+
+  useEffect(() => { scrollToBottom(); }, [messages, awaitingReply, scrollToBottom]);
 
   function handleKeyDown(e) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -146,6 +185,7 @@ function TranscriptTab({ messages, awaitingReply, onSend, inputRef }) {
             </p>
           )}
           {messages.map((m) => <Bubble key={m.id} message={m} />)}
+          {registerStreamSink && <StreamingBubble sinkRef={registerStreamSink} onGrow={scrollToBottom} />}
           {awaitingReply && <TypingIndicator />}
         </div>
       </div>
@@ -230,6 +270,7 @@ export default function CallSidebar({
   messages,
   awaitingReply,
   onSend,
+  registerStreamSink,
   satisfaction,
   scoreHistory,
   deliveryMetrics,
@@ -360,6 +401,7 @@ export default function CallSidebar({
                 messages={messages}
                 awaitingReply={awaitingReply}
                 onSend={onSend}
+                registerStreamSink={registerStreamSink}
                 inputRef={inputRef}
               />
             ) : (
