@@ -22,9 +22,19 @@ export function useCountUp(target, duration = 500) {
   const animate = numeric && duration > 0 && !prefersReducedMotion();
   const [value, setValue] = useState(() => (animate ? 0 : target));
   const frameRef = useRef(0);
+  // Animate only the FIRST time per mount. Later target changes (e.g. a data
+  // refetch swapping in a new number) snap straight to the target instead of
+  // re-running the count-up from the current value, which looked like the number
+  // "flying" on every refresh. A remount gets a fresh ref → animates again.
+  const didAnimateRef = useRef(false);
 
   useEffect(() => {
-    if (!animate) return; // nothing to schedule; value already at target
+    if (!animate) return undefined; // nothing to schedule; value already at target
+    if (didAnimateRef.current) {
+      setValue(target); // already animated once this mount → just snap to the new target
+      return undefined;
+    }
+    didAnimateRef.current = true;
     let start = null;
     const tick = (ts) => {
       if (start == null) start = ts;

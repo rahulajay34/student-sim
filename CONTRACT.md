@@ -70,30 +70,44 @@ Assignment{ id, counsellorId, personaId, personaPromptOverride|null, scenario:Sc
             revealPersona: boolean,          // default true; false = "blind call" (GreenRoom hides persona card)
             status: "assigned"|"in_progress"|"completed", createdBy, createdAt, sessionId|null, reportId|null }
 Session   { id, assignmentId|null, counsellorId, mode:"assigned"|"practice",
+            sessionMode:"voice"|"text",      // resolved at start from the body `mode` field ("text" explicit → "text"; all else → "voice")
+            voiceEngine:"openai"|"text",     // "openai" for voice sessions, "text" for text sessions; old sessions may carry "classic"|"elevenlabs" — read fail-soft
+            openaiVoice: string,             // the auditioned/gender-matched OpenAI voice key (e.g. "marin", "cedar", "auto")
             personaSnapshot:{name,category,label,coreAnxiety,behaviourPrompt,voiceName?,voiceGender?,personality?},
             personalityFlavour: { mood, activeQuirks:[string], talkativeness, humour, skepticism, formality, notes },
-            voice:{key,name,gender,elevenLabsVoiceId},  // student TTS voice picked at start (server/voices.js); absent on pre-voice sessions
-            scenarioSnapshot:Scenario,
+            voice:{key,name,gender},         // student identity picked at start (server/voices.js); drives display name + OpenAI gender-match
+                                             // NOTE: elevenLabsVoiceId is absent (removed with the classic/ElevenLabs engines)
+            leadCard:{profileId,name,gender,age,occupation,education,city}|null,  // resolved from profileId at start; null for bare-persona sessions
+            scenarioSnapshot:Scenario,       // Scenario may carry pushiness:1-5 and hesitancy:1-5 sliders (neutral 3)
             courseSnapshot:Course|null,      // full Course record snapshotted at session start
             rubricSnapshot:{templateId,name,criteria}|null,  // snapshotted at session start from assignment or default
             promptSnapshot:string,           // composed student system prompt at session start (phase 1, score 50, no turn hint)
             milestones:{ discoveryDone:bool, presentationDone:bool, paymentAsked:bool, objectionsRaised:number },
-            objectionState:[{ category, status:"open"|"addressed", firstRaisedTurn, lastRaisedTurn, addressedTurn|null, timesRaised }],
+            objectionState:[{ category, status:"open"|"addressed", firstRaisedTurn, lastRaisedTurn, addressedTurn|null,
+                              timesRaised, lastPhrasing:string|null }],
             //   objection lifecycle tracker (server/objections.js). Seeded empty at start; fail-soft to []
             //   for sessions created before it existed. category ∈ the 11 objection keys (fee, emi_affordability,
             //   parents_family, time_commitment, competing_priorities, trust_legitimacy, job_guarantee_placement,
             //   course_fit_relevance, language_english, tech_access) + "other".
+            //   lastPhrasing: last verbatim text the student used for this objection; prompt bans its re-use.
+            //   Loop-break nudge fires at timesRaised >= 2.
             currentPhase:1..5, satisfactionScore:0..100,
             lastTurnVerbosity:"open"|"short"|null,  // per-turn verbosity override rolled server-side each
             //   counsellor turn (probability of "open" scales with personality talkativeness; phase 3 forces
             //   "short" unless turnType==="invite"; never two "open" in a row). null on pre-roll/old sessions.
             scoreHistory:[{turn,score,adjustment,reason}],
             transcript:[{role:"counsellor"|"student", text, phase, scoreAfter, ts,
-                         turnType?, scoreReason?,   // counsellor entries
-                         emotion? }],                // student entries
+                         turnType?, scoreReason?, deliveryMetrics?,  // counsellor entries
+                         emotion? }],                                  // student entries
             status:"active"|"ended", startedAt, endedAt|null }
 Report    { id, sessionId, assignmentId|null, counsellorId, counsellorName, personaName, scenarioTitle,
-            overall:{ percent:0..100, band:"Needs Work"|"Good"|"Excellent", outcome:"Converted"|"Not Converted", outcomeDetail },
+            status:"generating"|"ready"|"fallback",  // "generating" while the background LLM job runs;
+            //   "ready" on success; "fallback" when Call A failed (neutral placeholder, regenerable:true).
+            //   Old reports without this field are treated as "ready".
+            partial?: true,                 // set when Call B or C failed but Call A succeeded (sections default to empty arrays/"")
+            overall:{ percent:0..100, band:"Needs Work"|"Good"|"Excellent", headline:string,
+                      outcome:"Converted"|"Not Converted", outcomeDetail },
+            //   headline: "Next session, focus on …" — one punchy sentence from Call B; "" while generating or if B failed.
             rubric:[{key,label,weight,score:1..5,level,justification}],
             // rubric length = number of graded criteria (voice_delivery excluded in text sessions);
             // weights are renormalized so they always sum to ~100.
@@ -104,7 +118,10 @@ Report    { id, sessionId, assignmentId|null, counsellorId, counsellorName, pers
             drills:[{title, focusCriterion, objectionCategory, instruction}],
             benchmarks:{ sessionMinutes:number|null, medianPaidMinutes:number|null,
                          paymentAskSeen:boolean, paymentAskNormPct:number|null },
-            scoreArc:[{turn,score}], generatedAt }
+            scoreArc:[{turn,score}],
+            transcript: (copy of session.transcript — persisted immediately in the stub),
+            finalScore: number|null,        // session.satisfactionScore at end time — persisted in the stub
+            generatedAt }
             // Legacy reports (pre-v2, no rubricSnapshot) use the fixed 6-criterion rubric:
             //   rapport(15), discovery(20), objections(25), knowledge(15), closing(15), communication(10).
 ```
@@ -141,10 +158,10 @@ Legacy reports without a `rubricSnapshot` use the fixed 6-criterion list noted a
 | POST | `/assignments` | `{counsellorId,personaId,courseId,rubricTemplateId?,personaPromptOverride?,scenario,revealPersona?}` (`courseId` required; `rubricTemplateId` optional, must exist if provided; `revealPersona` boolean, default true) | `Assignment` |
 | GET | `/assignments/:id` | — | enriched `Assignment` |
 | DELETE | `/assignments/:id` | — | `{ok:true}` |
-| POST | `/sessions/start` | `{mode,counsellorId,assignmentId?,personaId?,scenario?,courseId?}` (`courseId` optional; assigned sessions inherit from assignment; fallback to IIM Ranchi BA course) | `{sessionId,firstMessage,emotion,currentPhase,satisfactionScore,milestones,voice}` |
-| POST | `/sessions/:id/message` | `{message,deliveryMetrics?}` | `{reply,emotion,currentPhase,satisfactionScore,scoreReason,turnType,milestones,cue}` (409 if session ended; SSE when `Accept: text/event-stream` — see below) |
-| POST | `/sessions/:id/cue` | — | `{cue,source}` — richer on-demand coaching cue: one deterministic LLM call (`llmCue`) over recent context, falling back to the synchronous corpus `instantCue` on any failure/timeout. `source` ∈ `"llm"\|"corpus"`. Admin/counsellor-agnostic (no auth layer). |
-| POST | `/sessions/:id/end` | — | `{reportId}` (idempotent; regenerates in place when the existing report is a neutral fallback) |
+| POST | `/sessions/start` | `{mode:"voice"\|"text", counsellorId, assignmentId?, personaId?, scenario?, courseId?, openaiVoice?, profileId?}` (`mode:"text"` selects the text engine; all other values (including omitted) default to `"voice"` (OpenAI Realtime). `courseId` optional; assigned sessions inherit from assignment. `openaiVoice` optional voice key. `profileId` optional lead-profile id.) | `{sessionId, firstMessage, emotion, currentPhase, satisfactionScore, milestones, voice, voiceEngine, openaiVoice, sessionMode, revealPersona, leadCard}` |
+| POST | `/sessions/:id/message` | `{message, deliveryMetrics?, thinking?}` | `{reply, emotion, currentPhase, satisfactionScore, scoreReason, turnType, milestones, cue}` (409 if session ended; text sessions only; SSE when `Accept: text/event-stream` — see below) |
+| POST | `/sessions/:id/cue` | — | `{cue, source}` — richer on-demand coaching cue: one deterministic LLM call (`llmCue`) over recent context, falling back to the synchronous corpus `instantCue` on any failure/timeout. `source` ∈ `"llm"\|"corpus"`. Admin/counsellor-agnostic (no auth layer). |
+| POST | `/sessions/:id/end` | — | `{reportId, status:"generating"\|"ready"\|"fallback"}` — immediately returns after persisting a stub; report fills in the background. Idempotent: re-calling while `status:"generating"` returns the same `reportId`; re-calling on a `"fallback"` or stale `"generating"` stub (server restart) re-kicks generation. |
 | GET | `/sessions/:id` | — | `Session` |
 | GET | `/sessions/:id/prompt` | — | `{studentSystemPrompt, scoringPrompt, reportPrompt}` (composed, current; admin-only at UI layer) |
 | DELETE | `/sessions/:id` | — | `{ok:true}` (test/admin cleanup) |
@@ -182,14 +199,7 @@ token-overlap similar to any of the last 6 student turns: it regenerates once wi
 yourself" note, and on a second loop falls back to a short move-forward acknowledgement. The
 trailing `[emotion:X]` tag is always preserved (canned/regen/loop-fallback default to `neutral`).
 
-**Convincement** (persistence-pays-off): before each reply the server computes a hint
-(`resistant`|`warming`|`ready`) from the live score, the per-difficulty `convincement` thresholds
-(lowered defaults: easy 55 / medium 60 / hard 70 — so a well-run call can actually close instead of
-pinning near 50) / `effortTurns` (in `prompt-config.json`), and the objection state — `ready` when `score >= threshold`
-OR (no open objections AND `>= effortTurns` counsellor turns scored `>= +2` AND `score >= threshold-10`);
-`warming` when within 10 of threshold or half the raised objections are addressed. The hint plus the
-objection-state summary (which concerns are ANSWERED vs open) are injected into the student prompt so
-addressing concerns and persistence actually move the student toward "yes" and stop verbatim loops.
+**Disposition** (replaces the old score-threshold convincement model): before each text reply, and injected into every voice-session realtime instruction via `/observe`, the server calls `computeDisposition(session)` → `{ stage: "guarded"|"listening"|"warming"|"ready", narrative, persuadability }`. Stage emerges from score momentum (last ~6 `scoreHistory` adjustments), objection-addressed ratio, good/bad turn counts, and a hidden per-session `persuadability` (FNV-1a hash of session id blended with persona skepticism + scenario hesitancy). The student prompt receives only the natural-language narrative — NO numbers, no score, no threshold is exposed. `"ready"` demands both a high readiness signal AND no open objections. The old `resistant`/`warming`/`ready` hint strings are still usable via `stageToLegacyHint` for backward compatibility.
 
 **SSE protocol** — `POST /sessions/:id/message` with `Accept: text/event-stream` streams the reply:
 - `event: token` / `data: {text}` — raw reply tokens as the model generates them (perceived latency).
@@ -200,17 +210,20 @@ addressing concerns and persistence actually move the student toward "yes" and s
 - `event: error` / `data: {error}` — on failure (includes `LLM_TIMEOUT`).
 Non-SSE requests keep today's JSON response shape exactly.
 
-### Speech-to-speech engines (addendum to §3)
+### Voice engine (addendum to §3)
 
-A session has a **`voiceEngine`**: `"classic"` (default; STT→MiniMax→TTS, unchanged) | `"openai"` (OpenAI Realtime) | `"elevenlabs"` (ElevenLabs Conversational AI). Set at `POST /sessions/start` via body `{ voiceEngine?, openaiVoice? }` (both echoed in the response and stored on the session). In the two S2S engines the provider owns the live voice/conversation; MiniMax grades each turn via `/observe`.
+There is now **one voice engine**: OpenAI Realtime speech-to-speech over WebRTC. `session.voiceEngine` = `"openai"` for voice sessions, `"text"` for text sessions. (Old stored sessions may carry `"classic"` or `"elevenlabs"` — read fail-soft; the Session page resumes them as text.)
+
+In voice sessions the live voice/conversation runs browser↔OpenAI for minimal latency (no STT→LLM→TTS hops). MiniMax remains the analytics brain: every completed turn pair is POSTed to `/observe`, which runs the same scoring/objection/phase/cue pipeline as `/message` minus reply generation.
 
 | Method | Path | Body | Returns |
 |---|---|---|---|
-| POST | `/sessions/:id/realtime/openai-token` | `{voice?}` (any of the 10 realtime voices; re-mint to audition live) | `{value, model, voice, expiresAt}` — `value` is an ephemeral `ek_…` client secret for the browser WebRTC peer connection (`POST https://api.openai.com/v1/realtime/calls?model=…`, `Content-Type: application/sdp`) |
-| POST | `/sessions/:id/realtime/elevenlabs-token` | — | `{token, agentId, overrides}` — WebRTC conversation token + per-session overrides (`{agent:{prompt:{prompt},firstMessage,language}, tts:{voiceId}}`) for `@elevenlabs/react` `startSession({conversationToken, connectionType:"webrtc", overrides})` |
-| POST | `/sessions/:id/observe` | `{counsellorText?, studentText?}` | `{currentPhase, satisfactionScore, scoreReason, turnType, milestones, cue}` — runs classify+phase+**MiniMax scoring** on the counsellor text and objection/phase tracking on the student text, appends both to the server-owned transcript, returns the same coaching fields as `/message` (no reply — the provider already spoke it). 409 if ended; serialized per session. |
+| POST | `/sessions/:id/realtime/openai-token` | `{voice?}` (any valid OpenAI realtime voice key, or `"auto"` for gender-matched default; re-mint to audition live) | `{value, model, voice, expiresAt}` — `value` is an ephemeral `ek_…` client secret for the browser WebRTC peer connection (`POST https://api.openai.com/v1/realtime/calls`, `Content-Type: application/sdp`). The token is pre-loaded with the persona instructions, voice, `input_audio_transcription` (`gpt-4o-mini-transcribe` by default), and `semantic_vad`. |
+| POST | `/sessions/:id/observe` | `{counsellorText?, studentText?, deliveryMetrics?}` | `{currentPhase, satisfactionScore, scoreReason, turnType, milestones, cue, steering}` — runs classify+phase+**MiniMax scoring** on the counsellor text and objection/phase tracking on the student text, appends both to the server-owned transcript. `steering` is a compact plain-text block (disposition narrative + open/answered objections with banned phrasings + current phase + turn-length reminder, ≤~120 words) injected mid-call over the data channel. 409 if ended; serialized per session. |
 
-S2S transcript events are POSTed to `/observe` in arrival order through a client-side sequential queue. The OpenAI voice is American-base (instructed to speak Indian English + Hinglish); ElevenLabs reuses the session's authentic Indian `voice.elevenLabsVoiceId`. `voice_delivery` is excluded (no sidecar `/analyze` in S2S), weights renormalized as for text sessions. Server config: §3 env vars `OPENAI_API_KEY`, `OPENAI_REALTIME_MODEL`, `OPENAI_REALTIME_VOICE`, `ELEVENLABS_AGENT_ID`, `ELEVENLABS_CONVAI_LLM`.
+`deliveryMetrics` in `/observe` arrives with the counsellor turn only and carries the in-browser computed `{ wpm, pauses, energyVar, durationMs }` (+ derived `paceVerdict`/`energyVerdict`/`tone` where available). Stored on the counsellor transcript entry under the same `deliveryMetrics` field as `/message`. `voice_delivery` is excluded and weights renormalized for text sessions (no delivery metrics). OpenAI voices are American-base, instructed to speak natural Indian English; `"auto"` gender-matches (female→`marin`, male→`cedar`) from the session's student profile/persona.
+
+S2S transcript events are POSTed to `/observe` in arrival order through a client-side sequential queue. Server env: `OPENAI_API_KEY` (required), `OPENAI_REALTIME_MODEL`, `OPENAI_REALTIME_VOICE` (female default), `OPENAI_REALTIME_VOICE_MALE`, `OPENAI_TRANSCRIBE_MODEL`, `OPENAI_VAD_EAGERNESS`.
 
 ### Analytics (addendum to §3)
 
@@ -253,9 +266,13 @@ endpoint, e.g. `api.login(email,password)`, `api.getPersonas()`, `api.createPers
 `api.getCourses(activeOnly?)`, `api.createCourse(data)`, `api.updateCourse(id,data)`, `api.deleteCourse(id)`,
 `api.getRubricTemplates()`, `api.createRubricTemplate(data)`, `api.updateRubricTemplate(id,data)`, `api.deleteRubricTemplate(id)`,
 `api.getAssignments(counsellorId?)`, `api.createAssignment(data)`, `api.getAssignment(id)`,
-`api.deleteAssignment(id)`, `api.startSession(payload)`, `api.sendMessage(id,message)`,
-`api.endSession(id)`, `api.getSession(id)`, `api.getReports(counsellorId?)`, `api.getReport(id)`,
-`api.getAdminAnalytics()`, `api.getCounsellorAnalytics(id)`.
+`api.deleteAssignment(id)`, `api.startSession(payload)`, `api.sendMessage(id,message,deliveryMetrics?,thinking?)`,
+`api.endSession(id)`, `api.regenerateReport(sessionId)` (re-calls `/end` on a fallback), `api.getSession(id)`,
+`api.getOpenAIRealtimeToken(id,voice?)`, `api.observeTurn(id,{counsellorText?,studentText?,deliveryMetrics?})`,
+`api.getReports(counsellorId?)`, `api.getReport(id)`, `api.getLeadProfiles(category?)`,
+`api.getAdminAnalytics()`, `api.getCounsellorAnalytics(id)`,
+`api.getPromptConfig()`, `api.updatePromptConfig(data)`, `api.getScoringConfig()`, `api.updateScoringConfig(data)`,
+`api.getSessionPrompts(id)`.
 Each throws `Error(data.error)` on non-2xx.
 
 ---
@@ -291,13 +308,18 @@ All default-exported. Keep them small, presentational, Tailwind-styled per §1.
 - `Badge({color="brand"|"success"|"warn"|"danger"|"slate", children})`
 - `StatCard({label, value, hint, icon})`
 - `Avatar({name, color, size})` (initials)
-- `Table({columns:[{key,header,render?}], rows, onRowClick?})`
+- `Table({columns:[{key,header,render?,className?,sortable?,sortValue?}], rows, onRowClick?})` — columns may be `sortable:true` for click-to-sort with `aria-sort`; uses `sortValue(row)` or cell value for comparison
 - `EmptyState({title, hint, action})`
 - `Spinner({size})`
 - `Sidebar({items:[{to,label,icon}], footer})` (collapsible, active highlight via NavLink)
 - `Topbar({title, right})`
 - `ScoreMeter({score})` (0–100 horizontal bar, color via scoreColor)
 - `DifficultyBadge({level})` (easy/medium/hard → success/warn/danger Badge)
+- `ConfirmDialog({open, onClose, onConfirm, title, message, confirmLabel?, variant?})` — confirmation modal with primary/danger variant
+- `SearchInput({value, onChange, placeholder?, ...})` — debounced search text input
+- `CountUp({value, duration?, decimals?, format?, className})` — animated number counter
+- `Modal` now has a **focus trap** (Tab / Shift-Tab cycle within the dialog)
+- `useCreateShortcut(onTrigger, {key?, enabled?})` hook — keyboard shortcut (default key `"n"`) for triggering create actions; in `src/ui/useCreateShortcut.js`
 
 ---
 
@@ -320,98 +342,46 @@ pages/shared/ReportDetail.jsx
 pages/shared/RubricBar.jsx ScoreArcChart.jsx TranscriptView.jsx PhaseStepper.jsx
 ```
 
-Voice pipeline (`src/voice/*`) is unchanged and reused by `Session.jsx`.
+Voice pipeline (`src/voice/*`): now only `useOpenAIRealtime.js` + `engines.js` (the classic pipeline is deleted — see §8).
 
 ---
 
-## 8. Existing voice pipeline (reuse, do not rewrite)
+## 8. Voice pipeline (`src/voice/`)
 
-`Session.jsx` reuses `useVoiceConversation({onUserUtterance})` from `src/voice/useVoiceConversation.js`.
-Returns `{enabled,status,loadPct,error,enable,disable,speak,stopSpeaking,startListening,stopListening}`.
-Push-to-talk = hold Space (interrupt while speaking). Speak the student's reply when voice is enabled.
-Keep this behaviour; just restyle the chat to the new design and add a Monexa-style waveform/visual when recording/speaking.
+**One engine: OpenAI Realtime speech-to-speech over WebRTC.** The classic browser pipeline
+(`useVoiceConversation`, Kokoro-82M TTS, browser whisper-tiny STT, `@huggingface/transformers`,
+`@ricky0123/vad-web`) and the ElevenLabs conversational AI pipeline are **deleted**.
+The Python voice sidecar (`voice-server/`) is **deleted**; there is no `/tts`, `/stt`, or `/analyze`
+endpoint anymore.
 
----
+`Session.jsx` uses `useOpenAIRealtime` from `src/voice/useOpenAIRealtime.js`. The hook exposes a
+`voice`-compatible surface: `{enabled, status, loadPct, error, enable, disable, getAnalyser,
+changeVoice, muted, setMuted, sendText, sendSteering}`.
 
-## 9. Voice sidecar (port 3002)
+`src/voice/engines.js` holds the OpenAI voice catalog (11 options including `"auto"`) and the
+`localStorage` storage key for the preferred voice. No 3-way engine toggle exists.
 
-Local FastAPI server (`voice-server/`, Python 3.11 via uv). The browser voice pipeline is the automatic
-fallback; the sidecar is probed once per session and each capability is used independently.
-
-### Endpoints
-
-| Method | Path | Body / params | Returns |
-|---|---|---|---|
-| GET | `/health` | — | `{ok:true, capabilities:{tts,stt,analyze}, ttsEngine, sttEngine}` |
-| POST | `/tts` | JSON `{text, emotion?, intensity?, voice?}` (`voice` = ElevenLabs voice ID override; ignored by chatterbox/kokoro fallbacks) | `audio/wav` bytes |
-| POST | `/stt` | multipart `audio` (wav) | `{text, words:[{word,start,end}], durationSec}` — routed by client only when sttEngine is "scribe"; kept as fallback and for smoke test |
-| POST | `/analyze` | multipart `audio` (wav) + form field `transcript` (optional) | prosody metrics + verdicts |
-
-**`/health` capability status values:** `"ready" | "loading" | "unloaded" | "off" | "error:<msg>"`
-
-**`/health` `ttsEngine`:** `"elevenlabs" | "chatterbox" | "kokoro" | null`. TTS engine chain is
-`elevenlabs → chatterbox → kokoro`: ElevenLabs is tried first when `ELEVENLABS_API_KEY` is present
-in the repo-root `.env` (optional `VOICE_ELEVENLABS_VOICE_ID`); on a missing key or any failure the
-sidecar degrades silently to the next engine. Per-request ElevenLabs failures fall back at request
-time without permanently changing the global engine selection.
-
-**`/health` `sttEngine`:** `"scribe" | "whisper" | null`. STT engine chain is `scribe → whisper`:
-ElevenLabs Scribe is used when `ELEVENLABS_API_KEY` is present; auto-detects language (Hinglish
-supported). The client routes counsellor STT to the sidecar only when `sttEngine === "scribe"`;
-otherwise uses browser whisper-tiny to avoid stalling on the first-request faster-whisper download.
-
-**`/tts` emotion enum:** `"neutral" | "happy" | "hesitant" | "worried" | "frustrated" | "excited"`
-
-**`/tts` intensity:** `0.0..1.0` (default `0.5`). Scales Chatterbox exaggeration ±0.15 around the
-emotion base. Kokoro ignores intensity but uses speed: neutral 1.0 · happy 1.05 · excited 1.12 ·
-hesitant 0.88 · worried 0.94 · frustrated 1.06.
-
-**`/analyze` response shape:**
-```
-{
-  tone: "warm" | "neutral" | "flat" | "tense",
-  energy: "low" | "medium" | "high",
-  wpm: number | null,
-  pitchVarSemitones: number,
-  pauseRatio: number,
-  energyCv: number,
-  verdicts: {
-    pace: "slow" | "good" | "fast" | null,
-    energy: "flat" | "good" | "hot",
-    pitchVariation: "monotone" | "good"
-  }
-}
-```
-
-### REST API changes (addendum to §3)
-
-- `POST /api/sessions/:id/message` body gains optional `deliveryMetrics?` (the `/analyze` response
-  object; validated strictly — numeric fields must be finite, string fields capped at 32 chars,
-  verdicts must be a `{pace, energy, pitchVariation}` object with string values ≤16 chars).
-  Stored on the counsellor transcript entry.
-- `POST /api/sessions/start` response gains `emotion: string` (default `"neutral"`).
-- `POST /api/sessions/:id/message` response gains `emotion: string` (the student's current emotion)
-  and `turnType: "statement"|"question"|"invite"` (the classified counsellor turn).
-- `POST /api/sessions/:id/message` response (and the SSE `done` payload) gains `cue:
-  { source:"corpus"|"llm", headline:string, points:string[], example:string|null }` — a real-time
-  counsellor coaching card derived from the student's just-raised objection + session state
-  (synchronous `instantCue`). The cue v2 context passed to `instantCue` (both here and on the
-  `/cue` fallback) is `{ session, lastStudentText, objectionCategory, lastCounsellorAdjustment,
-  lastCounsellorScoreReason, objectionState }` — the last scoring adjustment/reason and live
-  objection state let the card react to a good/bad move and surface still-open concerns.
-  `POST /api/sessions/:id/cue` returns `{cue, source}` for a richer
-  on-demand `llmCue` (one deterministic LLM call) that falls back to `instantCue` on any failure.
+Delivery metrics computed in-browser: `{ wpm, pauses, energyVar, durationMs }` from VAD speech events
+and a mic `AnalyserNode`; forwarded to `/observe` for `voice_delivery` grading.
 
 ### Transcript entry fields (addendum to §2 Session shape)
 
 - Student entries: `{ role:"student", text, phase, scoreAfter, ts, emotion?: string }`
 - Counsellor entries: `{ role:"counsellor", text, phase, scoreAfter, ts, turnType?: string, scoreReason?: string, deliveryMetrics?: object }`
 
-The `emotion` field on student entries drives the sidecar TTS call for that reply.
-The `deliveryMetrics` field on counsellor entries is used by `report.js` to grade the
-`voice_delivery` rubric criterion (criterion is excluded and weights renormalized for text sessions).
+The `deliveryMetrics` field on counsellor entries (shape: `{ wpm?, pauses?, energyVar?, durationMs?, tone?, paceVerdict?, energyVerdict? }`)
+is used by `report.js` to grade the `voice_delivery` rubric criterion (criterion is excluded and
+weights renormalized for text sessions or when no metrics are present).
 `turnType` (set at append time) and `scoreReason` (backfilled after scoring) are stored on
 counsellor entries for transparency and the coach view.
+
+### Real-time counsellor cue (addendum to §3)
+
+`POST /api/sessions/:id/message` response (and the SSE `done` payload) gains `cue:
+{ source:"corpus"|"llm", headline:string, points:string[], example:string|null }` — a real-time
+counsellor coaching card (synchronous `instantCue`). `POST /api/sessions/:id/cue` returns
+`{cue, source}` for a richer on-demand `llmCue` (one deterministic LLM call) with `instantCue`
+fallback. The `/observe` response carries the same `cue` field.
 
 ### Config files (`server/data/`)
 
@@ -431,9 +401,12 @@ Two admin-editable JSON config files, loaded fail-soft to built-in defaults if m
 
 ### Single-model note
 
-All LLM calls (chat, scoring, coherence gate, report) use a **single model**
-`nemotron-3-nano:30b` (env override `OLLAMA_MODEL`). Sampling presets in `server/ollama.js`:
-`STUDENT_SAMPLING {temperature:0.9, top_p:0.95, repeat_penalty:1.3}` for roleplay;
-`DETERMINISTIC_SAMPLING {temperature:0.2}` for scoring/coherence/report. `chat()` accepts an
-options object (`timeoutMs`, `model` override, sampling knobs) and throws `Error{code:'LLM_TIMEOUT'}`
-on timeout (45s chat/scoring, 120s report); `chatStream()` is the async-generator streaming variant.
+All LLM calls (chat, scoring, coherence gate, report) use **MiniMax-M3** via `https://api.minimax.io`
+(OpenAI-compatible; env override `MINIMAX_MODEL`). The client lives in `server/ollama.js` (legacy
+filename kept). Sampling presets: `STUDENT_SAMPLING {temperature:0.9, top_p:0.95, repeat_penalty:1.3}`
+for roleplay; `DETERMINISTIC_SAMPLING {temperature:0.2}` for scoring/coherence/report. `chat()`
+accepts an options object (`timeoutMs`, `model` override, sampling knobs) and throws
+`Error{code:'LLM_TIMEOUT'}` on timeout (45 s chat/scoring, 60 s per report call); `chatStream()` is
+the async-generator streaming variant. M3 is a reasoning model: `<think>…</think>` blocks are
+stripped from both `chat()` and `chatStream()` output. In voice sessions MiniMax is NOT used for the
+student's spoken replies (OpenAI Realtime owns those); it remains the analytics brain via `/observe`.

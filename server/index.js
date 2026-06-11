@@ -18,7 +18,7 @@ import { buildAdminAnalytics, buildCounsellorAnalytics } from "./analytics.js";
 import { classifyCounsellorTurn } from "./classify.js";
 import { getPromptConfig } from "./promptConfig.js";
 import { composeForInspection } from "./prompt.js";
-import { pickStudentVoice } from "./voices.js";
+import { pickStudentVoice, inferGenderFromName } from "./voices.js";
 import { rollSessionFlavour, DEFAULT_PERSONALITY } from "./personality.js";
 import {
   mintOpenAIClientSecret, buildRealtimeInstructions, normalizeOpenAIVoice, openAIVoiceForSession, OPENAI_REALTIME_MODEL,
@@ -722,7 +722,7 @@ app.post("/api/sessions/:id/message", lockedHandler(async (req, res) => {
     // owned by advancePhase; we do not double-count here.
     const studentTurnIdx = session.transcript.length; // position the student entry will take
     const raisedCategory = gateCategory || detectObjectionCategory(replyText);
-    if (raisedCategory) raiseObjection(session.objectionState, raisedCategory, studentTurnIdx);
+    if (raisedCategory) raiseObjection(session.objectionState, raisedCategory, studentTurnIdx, replyText);
 
     session.transcript.push({
       role: "student", text: replyText, emotion, phase: session.currentPhase,
@@ -813,7 +813,9 @@ async function scoreObserveTurn(message, opts) {
   }
   try {
     const scored = await Promise.race([
-      scoreMessage(message, opts),
+      // timeoutMs ≤ the race window so chat() aborts the in-flight MiniMax fetch
+      // when the sentinel wins, instead of leaving a dangling LLM call/connection.
+      scoreMessage(message, opts, undefined, { timeoutMs: 14000 }),
       new Promise((resolve) => setTimeout(
         () => resolve({ adjustment: 0, reason: "score timeout", addressedObjection: null }),
         15000,
@@ -1028,13 +1030,16 @@ app.post("/api/sessions/:id/end", lockedHandler(async (req, res) => {
     const existing = store.getAll("reports").find((r) => r.sessionId === session.id);
 
     if (existing) {
-      // Still generating → return the same { reportId, status } (idempotent).
-      if (existing.status === "generating") {
+      // Still generating WITH an active in-memory job → return the same
+      // { reportId, status } (idempotent).
+      if (existing.status === "generating" && reportJobs.has(session.id)) {
         return res.json({ reportId: existing.id, status: "generating" });
       }
-      // A neutral fallback is not terminal: regenerate in place. Flip its status
-      // back to "generating" and kick a fresh background job.
-      if (needsRegeneration(existing) || existing.status === "fallback") {
+      // A neutral fallback is not terminal: regenerate in place. Also covers a
+      // STALE "generating" stub left behind by a server restart (the in-memory
+      // reportJobs map was wiped but the JSON store still says "generating", with
+      // no active job) — re-kick a fresh background job instead of getting stuck.
+      if (needsRegeneration(existing) || existing.status === "fallback" || existing.status === "generating") {
         store.update("reports", existing.id, { status: "generating" });
         store.update("sessions", session.id, { status: "ended", endedAt: new Date().toISOString() });
         if (session.assignmentId) store.update("assignments", session.assignmentId, { status: "completed", reportId: existing.id });

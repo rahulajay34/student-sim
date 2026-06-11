@@ -63,6 +63,9 @@ function Bubble({ turn, showScoreReason }) {
       : null;
   const turnType = isCounsellor ? turn.turnType : null;
   const scoreAfter = isCounsellor ? turn.scoreAfter : null;
+  // Strip old inline [emotion:X] artifacts embedded in the text by pre-split
+  // sessions (modern sessions carry emotion in turn.emotion, shown as a chip).
+  const displayText = (turn.text || "").replace(/\[emotion:[^\]]*\]/gi, "").trim();
 
   return (
     <div className={`flex flex-col ${isCounsellor ? "items-end" : "items-start"}`}>
@@ -90,7 +93,7 @@ function Bubble({ turn, showScoreReason }) {
             : "rounded-bl-md bg-canvas text-ink"
         }`}
       >
-        <p className="whitespace-pre-wrap break-words">{turn.text}</p>
+        <p className="whitespace-pre-wrap break-words">{displayText}</p>
       </div>
 
       {/* Score reason annotation — counsellor turns only, shown when prop is set */}

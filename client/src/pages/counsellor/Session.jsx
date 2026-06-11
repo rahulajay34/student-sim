@@ -491,9 +491,10 @@ export default function Session() {
         setPhase(s.currentPhase || 1);
         setScore(s.satisfactionScore ?? 0);
         // Session mode is authoritative from the record on the live route.
-        // sessionMode (C5) → "voice"|"text"; voiceEngine "text" implies text mode.
-        const resolvedMode =
-          s.sessionMode === "text" || s.voiceEngine === "text" ? "text" : "voice";
+        // Only OpenAI Realtime sessions resume as voice; every other engine
+        // (text / legacy classic|elevenlabs / missing) resumes as text so typed
+        // turns go through submit()→/message and actually produce a student reply.
+        const resolvedMode = s.voiceEngine === "openai" ? "voice" : "text";
         setSessionMode(resolvedMode);
         if (s.openaiVoice) setOpenaiVoice(s.openaiVoice);
         setTimerStart(s.startedAt ? new Date(s.startedAt).getTime() : Date.now());

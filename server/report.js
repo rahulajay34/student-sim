@@ -44,14 +44,23 @@ function transcriptText(transcript) {
   return (transcript || [])
     .map((m, i) => {
       const who = m.role === "counsellor" ? "COUNSELLOR" : "STUDENT";
-      let line = `[turn ${i}] ${who}: ${m.text}`;
+      // Strip old inline [emotion:X] artifacts embedded in m.text by pre-split
+      // sessions (modern sessions carry emotion in m.emotion). Keeps these tags
+      // out of both the rendered transcript and the LLM grading prompt.
+      const cleanText = m.text ? m.text.replace(/\[emotion:[^\]]*\]/gi, "").replace(/\s+/g, " ").trim() : "";
+      let line = `[turn ${i}] ${who}: ${cleanText}`;
       // Append delivery metrics for counsellor entries when present.
       if (m.role === "counsellor" && m.deliveryMetrics) {
         const dm = m.deliveryMetrics;
         const parts = [];
         if (dm.tone !== undefined) parts.push(`tone=${dm.tone}`);
         if (Number.isFinite(dm.wpm)) parts.push(`${Math.round(dm.wpm)}wpm`);
+        // Classic-sidecar shape (old sessions):
         if (Number.isFinite(dm.pauseRatio)) parts.push(`pauses=${dm.pauseRatio}`);
+        // Realtime S2S shape (new /observe sessions): pauses/energyVar/durationMs.
+        if (Number.isFinite(dm.pauses)) parts.push(`pauses=${dm.pauses}`);
+        if (Number.isFinite(dm.energyVar)) parts.push(`energyVar=${dm.energyVar.toFixed(2)}`);
+        if (Number.isFinite(dm.durationMs)) parts.push(`durationMs=${dm.durationMs}`);
         if (parts.length > 0) line += ` [delivery: ${parts.join(", ")}]`;
       }
       // Append non-neutral student emotion when present.

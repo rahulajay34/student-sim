@@ -49,11 +49,13 @@ function useCountUp(target, active, duration = 600) {
   const end = Number(target) || 0;
   // When inactive (e.g. fallback report) just show the final number outright.
   const [value, setValue] = useState(active ? 0 : end);
-  const doneRef = useRef(false);
 
+  // No one-shot ref here: the deps keep this from re-running while `end` is
+  // stable, and a ref would leave the value frozen at 0 under StrictMode's
+  // setup/cleanup/setup cycle (the first run's frame gets cancelled, the
+  // second run would early-return).
   useEffect(() => {
-    if (!active || doneRef.current || end <= 0) return undefined;
-    doneRef.current = true;
+    if (!active || end <= 0) return undefined;
     let raf;
     const start = performance.now();
     const tick = (now) => {
@@ -224,13 +226,20 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
 
   // Poll every 2s while the report is still generating; give up at 3 minutes.
   const isGenerating = report && statusOf(report) === "generating";
+  // Hold the poll-window start in a ref so it survives the effect re-running each
+  // time setReport swaps in a new object — otherwise `startedAt` reset every tick
+  // and the 3-minute give-up timeout could never fire.
+  const pollStartRef = useRef(null);
   useEffect(() => {
-    if (!report || statusOf(report) !== "generating") return;
+    if (!isGenerating) {
+      pollStartRef.current = null;
+      return undefined;
+    }
+    if (!pollStartRef.current) pollStartRef.current = Date.now();
     let active = true;
-    const startedAt = Date.now();
     const timer = setInterval(() => {
       if (!active) return;
-      if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
+      if (Date.now() - pollStartRef.current > POLL_TIMEOUT_MS) {
         setPollTimedOut(true);
         clearInterval(timer);
         return;
@@ -248,7 +257,7 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
       active = false;
       clearInterval(timer);
     };
-  }, [id, report, isGenerating]);
+  }, [id, isGenerating]);
 
   // Regenerate a fallback (or timed-out) report by re-calling /end for the session.
   async function handleRegenerate() {

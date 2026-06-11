@@ -13,9 +13,11 @@ import { api } from "../lib/api";
 // `steering` string. Because the connect-time BASE instructions are NOT returned
 // to the client (the token endpoint only echoes value/model/voice), we CANNOT do
 // a `session.update` instructions replace without dropping the persona. Instead we
-// inject the live state non-destructively as a `conversation.item.create` system
-// item — supported by the Realtime API, additive to (not replacing) the standing
-// instructions. See `sendSteering`.
+// inject the live state non-destructively as a `conversation.item.create` item.
+// We send it with role:"system" first; if the GA Realtime API rejects that role
+// (it may only accept user/assistant conversation items), we detect the error
+// event and fall back to role:"user" with an internal-state prefix, re-sending and
+// using "user" for all subsequent steering. See `sendSteering`/`sendSteeringRaw`.
 //
 // Delivery metrics (C4): per counsellor utterance we compute { wpm, pauses,
 // energyVar, durationMs } from the VAD speech_started/speech_stopped events
@@ -41,6 +43,11 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
 
   const pcRef = useRef(null);
   const dcRef = useRef(null);
+  // Monotonic connect generation. Each connect() bumps it; a stale invocation
+  // (superseded by a newer connect/changeVoice while awaiting SDP) bails out and
+  // cleans up only its own locally-captured allocations so it can't clobber the
+  // newer call's refs or leak a mic stream.
+  const connectGenRef = useRef(0);
   const micStreamRef = useRef(null);
   const audioElRef = useRef(null);
   const audioCtxRef = useRef(null);
@@ -57,6 +64,16 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
   const utterRef = useRef(null); // { startMs, durMs, segments, speaking, segStartMs, rms: [] }
   const rmsTimerRef = useRef(null);
 
+  // Steering-role fallback (C3 defensive): we send the live-state item with
+  // role:"system". If the GA Realtime API rejects that (it may only accept
+  // user/assistant conversation items), an error event arrives within ~2s of the
+  // send — we flip to role:"user" with an internal-state prefix and re-send, then
+  // use "user" for all future steering. Module-lifetime via refs; never throws.
+  const steerFallbackToUserRef = useRef(false);
+  const lastSteerRef = useRef(null); // { text, atMs } of the most recent steering send
+  const steerWarnedRef = useRef(false);
+  const sendSteeringRawRef = useRef(null); // points at sendSteeringRaw (set below; lets handleEvent re-send)
+
   const onTranscriptRef = useRef(onTranscript);
   const onErrorRef = useRef(onError);
   const sessionIdRef = useRef(sessionId);
@@ -68,7 +85,7 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
 
   // Fresh per-utterance accumulator.
   function resetUtterance() {
-    utterRef.current = { startMs: 0, durMs: 0, segments: 0, speaking: false, segStartMs: 0, rms: [] };
+    utterRef.current = { startMs: 0, endMs: 0, durMs: 0, segments: 0, speaking: false, segStartMs: 0, rms: [] };
   }
 
   // Sample local-mic RMS ~10 Hz while the counsellor speaks (energy variance).
@@ -101,12 +118,18 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
     const u = utterRef.current;
     if (!u) return undefined;
     const out = {};
-    const durMs = Math.round(u.durMs);
+    const durMs = Math.round(u.durMs); // speech-only time (sum of VAD segments)
     if (durMs > 0) out.durationMs = durMs;
 
+    // WPM uses wall-clock utterance duration (start→last speech_stopped, pauses
+    // included) so a counsellor who pauses mid-sentence isn't over-rated. Falls
+    // back to speech-only durMs if endMs was never captured.
+    const wallMs = (u.startMs > 0 && u.endMs > u.startMs)
+      ? Math.round(u.endMs - u.startMs)
+      : durMs;
     const words = String(text || "").trim().split(/\s+/).filter(Boolean).length;
-    if (words > 0 && durMs > 400) {
-      out.wpm = Math.round((words / durMs) * 60000);
+    if (words > 0 && wallMs > 400) {
+      out.wpm = Math.round((words / wallMs) * 60000);
     }
     // pauses ≈ speech segments within the utterance minus 1 (never negative).
     if (u.segments > 0) out.pauses = Math.max(0, u.segments - 1);
@@ -117,6 +140,19 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
       const variance = u.rms.reduce((a, b) => a + (b - mean) * (b - mean), 0) / u.rms.length;
       out.energyVar = Number(variance.toFixed(5));
     }
+
+    // Derived verdict/tone fields the CoachPanel + FootStrip chips read directly.
+    if (out.wpm != null) {
+      out.paceVerdict = out.wpm < 100 ? "slow" : out.wpm > 170 ? "fast" : "good";
+    }
+    if (out.energyVar != null) {
+      out.energyVerdict = out.energyVar < 0.002 ? "low" : out.energyVar > 0.012 ? "high" : "good";
+    }
+    // tone maps to VerdictChip colorMap keys: "cold" | "neutral" | "warm".
+    out.tone = (out.energyVerdict === "low" || out.paceVerdict === "slow") ? "cold"
+      : (out.energyVerdict === "high" || out.paceVerdict === "fast") ? "warm"
+        : "neutral";
+
     return Object.keys(out).length ? out : undefined;
   }
 
@@ -164,7 +200,9 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
         if (enabledRef.current && statusRef.current === "listening") setStatusBoth("idle");
         const u = utterRef.current;
         if (u && u.speaking) {
-          u.durMs += Math.max(0, performance.now() - u.segStartMs);
+          const now = performance.now();
+          u.durMs += Math.max(0, now - u.segStartMs);
+          u.endMs = now; // wall-clock end of the latest speech segment (pauses-inclusive WPM)
           u.speaking = false;
         }
         break;
@@ -197,6 +235,25 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
       }
       case "error": {
         const msg = evt.error?.message || "OpenAI realtime error";
+        // If this error plausibly references our most recent role:"system" steering
+        // item (same item_id, or any error within ~2s of the send while still on the
+        // system role), flip to role:"user" and re-send the live state defensively.
+        const last = lastSteerRef.current;
+        const recent = last && (performance.now() - last.atMs) < 2000;
+        if (!steerFallbackToUserRef.current && recent) {
+          steerFallbackToUserRef.current = true;
+          if (!steerWarnedRef.current) {
+            steerWarnedRef.current = true;
+            console.warn(
+              "[openai-realtime] steering item rejected with role:system; " +
+              "falling back to role:user for live-state updates.",
+            );
+          }
+          lastSteerRef.current = null; // consume so we don't loop on the re-send
+          try { sendSteeringRawRef.current?.(last.text); } catch { /* never throw */ }
+          // Swallow this error (it was our internal steering item, not a user-facing fault).
+          break;
+        }
         console.warn("[openai-realtime] error event:", msg);
         setError(msg);
         onErrorRef.current?.(new Error(msg));
@@ -209,12 +266,24 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
 
   // Establish the WebRTC peer connection for the given voice.
   const connect = useCallback(async (useVoice) => {
+    const gen = ++connectGenRef.current;
     const sid = sessionIdRef.current;
     if (!sid) throw new Error("No session id for realtime connection.");
+
+    // Clean up only this invocation's local allocations when it has been superseded.
+    const bailIfStale = (pc, micStream, micCtx, audioEl) => {
+      if (gen === connectGenRef.current) return false;
+      try { pc?.close(); } catch { /* noop */ }
+      try { micStream?.getTracks().forEach((t) => t.stop()); } catch { /* noop */ }
+      try { micCtx?.close(); } catch { /* noop */ }
+      try { if (audioEl) { audioEl.srcObject = null; audioEl.remove(); } } catch { /* noop */ }
+      return true;
+    };
 
     // 1. Mint the ephemeral token (server pre-loads persona instructions + voice
     //    + model — all bound to the token, so the SDP POST below needs none of them).
     const tok = await api.getOpenAIRealtimeToken(sid, useVoice);
+    if (gen !== connectGenRef.current) return; // stale — token minted but no resources held yet
     const ephemeral = tok.value;
     if (tok.voice) setVoice(tok.voice);
 
@@ -222,13 +291,18 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
     const micStream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 },
     });
+    if (gen !== connectGenRef.current) {
+      micStream.getTracks().forEach((t) => t.stop()); // local capture — don't touch refs
+      return;
+    }
     micStreamRef.current = micStream;
 
     // Local mic AnalyserNode tap for delivery-metrics energy variance (separate
     // from the remote-audio analyser that drives the orb).
+    let micCtx = null;
     try {
       const AC = window.AudioContext || window.webkitAudioContext;
-      const micCtx = new AC();
+      micCtx = new AC();
       micCtxRef.current = micCtx;
       micCtx.resume?.().catch(() => {});
       const micSrc = micCtx.createMediaStreamSource(micStream);
@@ -287,16 +361,22 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
     // the ephemeral token — do NOT pass ?model= (the beta query param now 400s).
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
+    if (bailIfStale(pc, micStream, micCtx, audioEl)) return;
+
     const sdpRes = await fetch(SDP_URL, {
       method: "POST",
       body: offer.sdp,
       headers: { Authorization: `Bearer ${ephemeral}`, "Content-Type": "application/sdp" },
     });
+    if (bailIfStale(pc, micStream, micCtx, audioEl)) return;
+
     if (!sdpRes.ok) {
       const detail = await sdpRes.text().catch(() => "");
       throw new Error(`OpenAI SDP exchange failed (${sdpRes.status}): ${detail.slice(0, 200)}`);
     }
     const answerSdp = await sdpRes.text();
+    if (bailIfStale(pc, micStream, micCtx, audioEl)) return;
+
     await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
   }, [handleEvent]);
 
@@ -358,13 +438,18 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
     const dc = dcRef.current;
     const t = (text || "").trim();
     if (!t) return;
-    if (dc && dc.readyState === "open") {
-      dc.send(JSON.stringify({
-        type: "conversation.item.create",
-        item: { type: "message", role: "user", content: [{ type: "input_text", text: t }] },
-      }));
-      dc.send(JSON.stringify({ type: "response.create" }));
+    if (!dc || dc.readyState !== "open") {
+      // Voice not connected: do NOT surface a phantom transcript bubble or POST
+      // /observe (which would score a turn the student never heard). Tell the
+      // counsellor instead so they can enable the mic / retry.
+      onErrorRef.current?.(new Error("Voice not connected — please enable the mic first."));
+      return;
     }
+    dc.send(JSON.stringify({
+      type: "conversation.item.create",
+      item: { type: "message", role: "user", content: [{ type: "input_text", text: t }] },
+    }));
+    dc.send(JSON.stringify({ type: "response.create" }));
     onTranscriptRef.current?.({ role: "counsellor", text: t });
   }, []);
 
@@ -375,26 +460,44 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
   // is open; never throws.
   // Returns true if the steering was actually sent (dc open), false otherwise so
   // the caller can keep the value pending and retry on the next turn (newest wins).
-  const sendSteering = useCallback((steering) => {
+  const USER_STEER_PREFIX =
+    "[INTERNAL STATE UPDATE — not spoken by the counsellor; do not reply to this " +
+    "directly; it only updates how you feel]\n";
+
+  // Low-level steering send. Uses role:"system" until the API rejects it (tracked
+  // via steerFallbackToUserRef), then role:"user" with the internal-state prefix.
+  // Records the send so the error handler can detect a steering-item rejection.
+  const sendSteeringRaw = useCallback((s) => {
     const dc = dcRef.current;
-    const s = (steering || "").trim();
-    if (!s) return false;
     if (!dc || dc.readyState !== "open") return false;
+    const asUser = steerFallbackToUserRef.current;
+    const text = asUser
+      ? USER_STEER_PREFIX + "## CURRENT STATE (live update)\n" + s
+      : "## CURRENT STATE (live update)\n" + s;
     try {
       dc.send(JSON.stringify({
         type: "conversation.item.create",
         item: {
           type: "message",
-          role: "system",
-          content: [{ type: "input_text", text: "## CURRENT STATE (live update)\n" + s }],
+          role: asUser ? "user" : "system",
+          content: [{ type: "input_text", text }],
         },
       }));
+      lastSteerRef.current = { text: s, atMs: performance.now() };
       return true;
     } catch (err) {
       console.warn("[openai-realtime] steering send failed:", err?.message);
       return false;
     }
-  }, []);
+  }, [USER_STEER_PREFIX]);
+
+  useEffect(() => { sendSteeringRawRef.current = sendSteeringRaw; }, [sendSteeringRaw]);
+
+  const sendSteering = useCallback((steering) => {
+    const s = (steering || "").trim();
+    if (!s) return false;
+    return sendSteeringRaw(s);
+  }, [sendSteeringRaw]);
 
   const getAnalyser = useCallback(() => analyserRef.current, []);
 

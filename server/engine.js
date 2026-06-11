@@ -171,7 +171,16 @@ const REPEAT_NOTE = `
 
 IMPORTANT: You already said almost exactly this in a previous turn — do NOT repeat yourself. The counsellor has just responded to you. React to what the counsellor actually told you in this latest message: accept it, ask ONE specific new follow-up, or raise a DIFFERENT concern. Do not restate the same objection in the same words. Keep it short and natural. End with a [emotion:X] tag as usual.`;
 
-const LOOP_FALLBACK_LINE = "Haan sir, I hear you. Let me think about that and let's move ahead.";
+const LOOP_FALLBACK_LINE = "Right sir, I hear you. Let me think about that and let's move ahead.";
+
+// Last-resort boundary guard: no caller may ever receive an empty student reply,
+// whatever path the gate took (e.g. the model returning only an emotion tag, or
+// makesSense accepting an empty string).
+function ensureNonEmpty({ text, emotion }) {
+  if (typeof text === "string" && text.trim()) return { text, emotion };
+  console.warn("[engine] empty reply after gating — substituting fallback line");
+  return { text: DOUBLE_FAILURE_LINE, emotion: "neutral" };
+}
 
 // Shared pieces for the per-turn reply: turnHint classification + composed prompt
 // + message array. Used by both the streaming and non-streaming entry points.
@@ -278,7 +287,7 @@ export async function getStudentReply(session) {
   const ctx = prepareReply(session);
   const raw = await chat(ctx.messages, studentSampling(session));
   const parsed = parseEmotion(raw);
-  return gateReply(parsed, ctx);
+  return ensureNonEmpty(await gateReply(parsed, ctx));
 }
 
 // Streaming student reply for the SSE path. Yields RAW tokens as they arrive
@@ -295,7 +304,7 @@ export async function* getStudentReplyStream(session) {
     yield tok;
   }
   const parsed = parseEmotion(buf);
-  const gated = await gateReply(parsed, ctx);
+  const gated = ensureNonEmpty(await gateReply(parsed, ctx));
   // raw is the canonical spoken text with the emotion tag re-attached, kept for
   // any caller that wants the protocol-complete string.
   return { text: gated.text, emotion: gated.emotion, raw: withEmotion(gated.text, gated.emotion) };

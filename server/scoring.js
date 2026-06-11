@@ -309,7 +309,7 @@ function normalizeOpts(opts, legacyCourseName) {
   };
 }
 
-export async function scoreMessage(message, opts, legacyCourseName) {
+export async function scoreMessage(message, opts, legacyCourseName, chatOpts = {}) {
   const config = loadScoringConfig();
 
   if (isBackchannel(message, config)) {
@@ -320,7 +320,9 @@ export async function scoreMessage(message, opts, legacyCourseName) {
   const prompt = buildScoringPrompt({ message, ...norm }, config);
 
   try {
-    const raw = await chat([{ role: "user", content: prompt }], SCORING_SAMPLING);
+    // chatOpts may carry a timeoutMs so a raced caller (e.g. /observe's 15s
+    // Promise.race) can abort the in-flight LLM fetch instead of leaving it dangling.
+    const raw = await chat([{ role: "user", content: prompt }], { ...SCORING_SAMPLING, ...chatOpts });
     const result = extractJson(raw);
     const adjustment = Math.max(-10, Math.min(10, Math.round(Number(result.adjustment)) || 0));
     return { adjustment, reason: result.reason || "", addressedObjection: coerceAddressedObjection(result.addressedObjection) };

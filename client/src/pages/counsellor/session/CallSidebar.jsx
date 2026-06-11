@@ -394,9 +394,18 @@ export default function CallSidebar({
             </button>
           </div>
 
-          {/* Tab content */}
+          {/* Tab content — both panels stay mounted (display toggling, not
+              conditional render) so StreamingBubble's ref sink doesn't desync if
+              the user switches tabs mid-stream. */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-            {tab === "transcript" ? (
+            <div
+              style={{
+                flex: 1,
+                flexDirection: "column",
+                overflow: "hidden",
+                display: tab === "transcript" ? "flex" : "none",
+              }}
+            >
               <TranscriptTab
                 messages={messages}
                 awaitingReply={awaitingReply}
@@ -404,20 +413,26 @@ export default function CallSidebar({
                 registerStreamSink={registerStreamSink}
                 inputRef={inputRef}
               />
-            ) : (
-              <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                <div style={{ flex: 1, overflowY: "auto" }}>
-                  <CueCard cue={cue} refining={cueRefining} />
-                  <CoachPanel
-                    satisfaction={satisfaction}
-                    scoreHistory={scoreHistory}
-                    deliveryMetrics={deliveryMetrics}
-                    milestones={milestones}
-                    emotion={emotion}
-                  />
-                </div>
+            </div>
+            <div
+              style={{
+                flex: 1,
+                flexDirection: "column",
+                overflow: "hidden",
+                display: tab === "coach" ? "flex" : "none",
+              }}
+            >
+              <div style={{ flex: 1, overflowY: "auto" }}>
+                <CueCard cue={cue} refining={cueRefining} />
+                <CoachPanel
+                  satisfaction={satisfaction}
+                  scoreHistory={scoreHistory}
+                  deliveryMetrics={deliveryMetrics}
+                  milestones={milestones}
+                  emotion={emotion}
+                />
               </div>
-            )}
+            </div>
           </div>
 
           {/* Foot strip */}
