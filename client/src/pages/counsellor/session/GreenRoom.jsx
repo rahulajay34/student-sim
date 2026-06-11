@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { probeSidecar, capabilityReady } from "../../../voice/sidecarClient";
 import Spinner from "../../../ui/Spinner";
+import {
+  VOICE_ENGINES, OPENAI_VOICES, ELEVENLABS_VOICES, isS2SEngine, ENGINE_OPENAI, ENGINE_ELEVENLABS,
+  ENGINE_STORAGE_KEY, OPENAI_VOICE_STORAGE_KEY, ELEVEN_VOICE_STORAGE_KEY,
+  loadStoredEngine, loadStoredOpenAIVoice, loadStoredElevenVoice,
+} from "../../../voice/engines";
 
 const CATEGORY_LABEL = {
   studying: "Currently studying",
@@ -151,6 +156,102 @@ function SidecarCheck() {
   );
 }
 
+// ── Voice engine selector ─────────────────────────────────────────────────────
+// Lets the counsellor pick the live voice pipeline before joining: Classic
+// (STT→MiniMax→TTS) or one of the two low-latency speech-to-speech engines.
+// The choice is remembered in localStorage between calls.
+function VoiceEngineCard({ engine, onEngine, openaiVoice, onOpenaiVoice, elevenVoice, onElevenVoice }) {
+  return (
+    <div>
+      <p className="text-sm font-medium" style={{ color: "#e7e9f4" }}>
+        Voice engine
+      </p>
+      <p className="mt-0.5 text-xs" style={{ color: "#8b90a8" }}>
+        Speech-to-speech engines cut latency by skipping the transcribe → think → speak hops.
+      </p>
+      <div className="mt-3 flex flex-col gap-2">
+        {VOICE_ENGINES.map((e) => {
+          const active = engine === e.id;
+          return (
+            <button
+              key={e.id}
+              type="button"
+              onClick={() => onEngine(e.id)}
+              className="rounded-xl px-3 py-2.5 text-left transition-colors"
+              style={{
+                background: active ? "rgba(79,70,229,0.16)" : "#11141d",
+                border: `1px solid ${active ? "rgba(99,102,241,0.55)" : "#262a36"}`,
+              }}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-semibold" style={{ color: active ? "#c7d2fe" : "#e7e9f4" }}>
+                  {e.label}
+                </span>
+                <span
+                  className="rounded-full px-2 py-0.5 text-[0.6rem] font-medium"
+                  style={{
+                    color: isS2SEngine(e.id) ? "#34d399" : "#8b90a8",
+                    background: isS2SEngine(e.id) ? "rgba(16,185,129,0.12)" : "#1a1e2a",
+                  }}
+                >
+                  {e.short}
+                </span>
+              </div>
+              <p className="mt-1 text-xs" style={{ color: "#8b90a8" }}>{e.desc}</p>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* OpenAI default voice (auditioned/changed live in-call too) */}
+      {engine === ENGINE_OPENAI && (
+        <div className="mt-3">
+          <label className="text-xs font-medium" style={{ color: "#8b90a8" }} htmlFor="oa-voice">
+            Student voice
+          </label>
+          <select
+            id="oa-voice"
+            value={openaiVoice}
+            onChange={(ev) => onOpenaiVoice(ev.target.value)}
+            className="mt-1 w-full rounded-lg px-3 py-2 text-sm"
+            style={{ background: "#11141d", border: "1px solid #262a36", color: "#e7e9f4" }}
+          >
+            {OPENAI_VOICES.map((v) => (
+              <option key={v.id} value={v.id}>{v.label} — {v.note}</option>
+            ))}
+          </select>
+          <p className="mt-1 text-[0.68rem]" style={{ color: "#6f7590" }}>
+            OpenAI voices are American-base, instructed to speak Indian English + light Hinglish. You can switch voices live during the call.
+          </p>
+        </div>
+      )}
+
+      {/* ElevenLabs voice / accent (authentic Indian voices) */}
+      {engine === ENGINE_ELEVENLABS && (
+        <div className="mt-3">
+          <label className="text-xs font-medium" style={{ color: "#8b90a8" }} htmlFor="el-voice">
+            Student voice / accent
+          </label>
+          <select
+            id="el-voice"
+            value={elevenVoice}
+            onChange={(ev) => onElevenVoice(ev.target.value)}
+            className="mt-1 w-full rounded-lg px-3 py-2 text-sm"
+            style={{ background: "#11141d", border: "1px solid #262a36", color: "#e7e9f4" }}
+          >
+            {ELEVENLABS_VOICES.map((v) => (
+              <option key={v.id} value={v.id}>{v.label} — {v.note}</option>
+            ))}
+          </select>
+          <p className="mt-1 text-[0.68rem]" style={{ color: "#6f7590" }}>
+            Authentic Indian voices. You can switch voices live during the call.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Dark card wrapper ─────────────────────────────────────────────────────────
 function DarkCard({ title, children }) {
   return (
@@ -184,6 +285,23 @@ export default function GreenRoom({
 }) {
   const revealPersona =
     !assignment || assignment.revealPersona !== false;
+
+  // Voice engine selection (remembered between calls).
+  const [engine, setEngine] = useState(loadStoredEngine);
+  const [openaiVoice, setOpenaiVoice] = useState(loadStoredOpenAIVoice);
+  const [elevenVoice, setElevenVoice] = useState(loadStoredElevenVoice);
+  const setEnginePersist = (e) => {
+    setEngine(e);
+    try { localStorage.setItem(ENGINE_STORAGE_KEY, e); } catch { /* noop */ }
+  };
+  const setVoicePersist = (v) => {
+    setOpenaiVoice(v);
+    try { localStorage.setItem(OPENAI_VOICE_STORAGE_KEY, v); } catch { /* noop */ }
+  };
+  const setElevenVoicePersist = (v) => {
+    setElevenVoice(v);
+    try { localStorage.setItem(ELEVEN_VOICE_STORAGE_KEY, v); } catch { /* noop */ }
+  };
 
   return (
     <div
@@ -310,8 +428,23 @@ export default function GreenRoom({
             )}
           </div>
 
-          {/* ── Right: System check ── */}
+          {/* ── Right: Voice engine + System check ── */}
           <div className="space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#8b90a8" }}>
+              Voice
+            </p>
+
+            <DarkCard>
+              <VoiceEngineCard
+                engine={engine}
+                onEngine={setEnginePersist}
+                openaiVoice={openaiVoice}
+                onOpenaiVoice={setVoicePersist}
+                elevenVoice={elevenVoice}
+                onElevenVoice={setElevenVoicePersist}
+              />
+            </DarkCard>
+
             <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#8b90a8" }}>
               System check
             </p>
@@ -354,7 +487,7 @@ export default function GreenRoom({
           <button
             type="button"
             disabled={joining}
-            onClick={() => onJoin(true)}
+            onClick={() => onJoin(true, { engine, openaiVoice, elevenVoice })}
             className="flex min-w-[220px] items-center justify-center gap-2 rounded-2xl px-8 py-3.5 text-base font-semibold transition-opacity disabled:opacity-60"
             style={{ background: "#4f46e5", color: "#fff" }}
           >
@@ -376,20 +509,23 @@ export default function GreenRoom({
                 >
                   <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.47 11.47 0 003.58.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.58a1 1 0 01-.24 1.01l-2.21 2.2z" />
                 </svg>
-                Join call
+                {isS2SEngine(engine) ? "Join voice call" : "Join call"}
               </>
             )}
           </button>
 
-          <button
-            type="button"
-            disabled={joining}
-            onClick={() => onJoin(false)}
-            className="text-sm font-medium transition-colors disabled:opacity-50"
-            style={{ color: "#8b90a8" }}
-          >
-            Join without voice
-          </button>
+          {/* Text-only join is classic-only; the S2S engines are voice-native. */}
+          {!isS2SEngine(engine) && (
+            <button
+              type="button"
+              disabled={joining}
+              onClick={() => onJoin(false, { engine, openaiVoice, elevenVoice })}
+              className="text-sm font-medium transition-colors disabled:opacity-50"
+              style={{ color: "#8b90a8" }}
+            >
+              Join without voice
+            </button>
+          )}
         </div>
       </div>
     </div>

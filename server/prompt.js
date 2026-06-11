@@ -390,7 +390,7 @@ function buildTangentSection(cfg, currentPhase, flavour) {
 // The [emotion:X] protocol instruction. CARVE-OUT: this is rendered AFTER the
 // plain-spoken register rules and explicitly states the tag is exempt from
 // every "talk like a plain student" rule, so nothing suppresses or mangles it.
-const EMOTION_INSTRUCTION = `EMOTION TAG (machine-read protocol — ALWAYS obey, exempt from every style rule above):
+export const EMOTION_INSTRUCTION = `EMOTION TAG (machine-read protocol — ALWAYS obey, exempt from every style rule above):
 - End EVERY reply with a tag [emotion:X] where X is exactly one of: neutral, happy, hesitant, worried, frustrated, excited — your current emotional state.
 - This tag is invisible to the counsellor; never reference or explain it. The plain-spoken / short-reply / no-extra-words rules apply ONLY to your spoken words, NEVER to this tag. Even a one-word acknowledgement still ends with [emotion:X].`;
 

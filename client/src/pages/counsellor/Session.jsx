@@ -4,6 +4,12 @@ import { api } from "../../lib/api";
 import { postMessageStream, stripStreamingEmotionTag, createSentenceChunker } from "../../lib/stream";
 import { useAuth } from "../../lib/auth.jsx";
 import { useVoiceConversation } from "../../voice/useVoiceConversation";
+import { useOpenAIRealtime } from "../../voice/useOpenAIRealtime";
+import { useElevenLabsRealtime } from "../../voice/useElevenLabsRealtime";
+import {
+  isS2SEngine, ENGINE_CLASSIC, DEFAULT_OPENAI_VOICE, DEFAULT_ELEVEN_VOICE,
+  OPENAI_VOICE_STORAGE_KEY, ELEVEN_VOICE_STORAGE_KEY,
+} from "../../voice/engines";
 import Button from "../../ui/Button";
 import Spinner from "../../ui/Spinner";
 import EmptyState from "../../ui/EmptyState";
@@ -263,6 +269,20 @@ export default function Session() {
   const [timerStart, setTimerStart] = useState(null);
   const [studentVoiceId, setStudentVoiceId] = useState(null);
 
+  // ── Voice engine (classic | openai | elevenlabs) ───────────────────────────
+  // Resolved from the green-room choice (router state) on join, then authoritative
+  // from the session record on the live route. The two S2S engines run the voice
+  // browser↔provider; MiniMax grades each turn via /observe.
+  const [voiceEngine, setVoiceEngine] = useState(location.state?.voiceEngine || ENGINE_CLASSIC);
+  const [openaiVoice, setOpenaiVoice] = useState(location.state?.openaiVoice || DEFAULT_OPENAI_VOICE);
+  const [elevenVoice, setElevenVoice] = useState(location.state?.elevenVoice || DEFAULT_ELEVEN_VOICE);
+  const openaiVoiceRef = useRef(openaiVoice);
+  const elevenVoiceRef = useRef(elevenVoice);
+  useEffect(() => { openaiVoiceRef.current = openaiVoice; }, [openaiVoice]);
+  useEffect(() => { elevenVoiceRef.current = elevenVoice; }, [elevenVoice]);
+  // The engine-appropriate voice to enable the active S2S hook with.
+  const engineVoiceFor = (eng) => (eng === "openai" ? openaiVoiceRef.current : eng === "elevenlabs" ? elevenVoiceRef.current : undefined);
+
   // ── Info panel data (course facts / scenario / blind-mode flag) ─────────────
   const [course, setCourse] = useState(null);
   const [scenario, setScenario] = useState(null);
@@ -314,12 +334,30 @@ export default function Session() {
   const submitRef = useRef(null);
   const spaceDownRef = useRef(false);
   const sidebarInputRef = useRef(null);
+  // Realtime (S2S) transcript handler + a sequential queue so /observe calls land
+  // in transcript order. Assigned after the handler is defined (like submitRef).
+  const realtimeTranscriptRef = useRef(null);
+  const observeChainRef = useRef(Promise.resolve());
 
-  // ── Voice pipeline ─────────────────────────────────────────────────────────
-  const voice = useVoiceConversation({
+  // ── Voice pipelines ────────────────────────────────────────────────────────
+  // All three hooks are created unconditionally (hook rules); only the selected
+  // engine is enabled. `voice` is the active one, passed to the shared call UI.
+  const classicVoice = useVoiceConversation({
     onUserUtterance: (t, meta) => submitRef.current?.(t, meta),
     ttsVoiceId: studentVoiceId,
   });
+  const openaiRT = useOpenAIRealtime({
+    sessionId: activeSessionId,
+    defaultVoice: openaiVoice,
+    onTranscript: (e) => realtimeTranscriptRef.current?.(e),
+  });
+  const elevenRT = useElevenLabsRealtime({
+    sessionId: activeSessionId,
+    defaultVoice: elevenVoice,
+    onTranscript: (e) => realtimeTranscriptRef.current?.(e),
+  });
+  const s2s = isS2SEngine(voiceEngine);
+  const voice = voiceEngine === "openai" ? openaiRT : voiceEngine === "elevenlabs" ? elevenRT : classicVoice;
 
   // ── Derived orbState ───────────────────────────────────────────────────────
   // awaitingReply (sending=true) → "thinking"
@@ -332,7 +370,8 @@ export default function Session() {
     orbState = "thinking";
   } else if (voice.status === "speaking") {
     orbState = "speaking";
-  } else if (pttHeld || (micLatched && voice.status === "recording")) {
+  } else if (voice.status === "listening" || pttHeld || (micLatched && voice.status === "recording")) {
+    // "listening" is emitted by the S2S engines while the counsellor is speaking.
     orbState = "listening";
   }
 
@@ -435,8 +474,17 @@ export default function Session() {
   }, [isNewRoute]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Green room join handler ────────────────────────────────────────────────
-  async function handleJoin(withVoice) {
+  async function handleJoin(withVoice, opts = {}) {
     if (!grPayload) return;
+    const engine = opts.engine || voiceEngine || ENGINE_CLASSIC;
+    const oaVoice = opts.openaiVoice || openaiVoice;
+    const elVoice = opts.elevenVoice || elevenVoice;
+    // The two S2S engines are voice-native (the provider owns the conversation),
+    // so a "join without voice" still connects the realtime session.
+    const useVoice = isS2SEngine(engine) ? true : withVoice;
+    setVoiceEngine(engine);
+    setOpenaiVoice(oaVoice);
+    setElevenVoice(elVoice);
     setJoinError(null);
     setJoining(true);
     setUiState("connecting");
@@ -448,12 +496,15 @@ export default function Session() {
         ...grPayload,
         counsellorFirst: true,
         thinkingMode: "off",
+        voiceEngine: engine,
+        openaiVoice: oaVoice,
+        elevenVoiceId: elVoice,
       });
       const newId = res.sessionId;
       setActiveSessionId(newId);
       navigate(`/app/session/${newId}`, {
         replace: true,
-        state: { autoVoice: withVoice },
+        state: { autoVoice: useVoice, voiceEngine: engine, openaiVoice: oaVoice, elevenVoice: elVoice },
       });
     } catch (err) {
       setJoinError(err?.message || "Could not start the session. Please try again.");
@@ -514,6 +565,10 @@ export default function Session() {
         setPhase(s.currentPhase || 1);
         setScore(s.satisfactionScore ?? 0);
         setStudentVoiceId(s.voice?.elevenLabsVoiceId ?? null);
+        // Voice engine is authoritative from the session record on the live route.
+        if (s.voiceEngine) setVoiceEngine(s.voiceEngine);
+        if (s.openaiVoice) setOpenaiVoice(s.openaiVoice);
+        if (s.elevenVoiceId) setElevenVoice(s.elevenVoiceId);
         setTimerStart(s.startedAt ? new Date(s.startedAt).getTime() : Date.now());
         const transcript = Array.isArray(s.transcript) ? s.transcript : [];
         const msgs = transcript.map((m, i) => ({
@@ -573,7 +628,11 @@ export default function Session() {
     setTimerStart((t) => t || Date.now());
     // Gate on the loading overlay until the pipeline is ready (handled below).
     setUiState("voice-loading");
-    voice.enable().catch(() => {
+    // Enable the active engine with its engine-appropriate voice.
+    voice.enable(engineVoiceFor(voiceEngine)).then(() => {
+      // S2S starts MUTED — the counsellor holds Space to talk (push-to-talk).
+      if (isS2SEngine(voiceEngine)) voice.setMuted?.(true);
+    }).catch(() => {
       // Enable failed — drop the gate and let the counsellor proceed text-first.
       voiceGatePending.current = false;
       setUiState("live");
@@ -810,6 +869,55 @@ export default function Session() {
     submitRef.current = submit;
   });
 
+  // ══ Realtime (S2S) coaching loop ═══════════════════════════════════════════
+  // In the openai/elevenlabs engines the provider owns the spoken conversation.
+  // Each final transcript (counsellor or student) is shown as a bubble and posted
+  // to /observe so MiniMax keeps the live score/cue/phase/milestones updating. The
+  // posts run through observeChainRef so they hit the server in transcript order.
+  function applyObserve(res) {
+    if (!res) return;
+    if (res.currentPhase) setPhase(res.currentPhase);
+    if (typeof res.satisfactionScore === "number") {
+      setScore(res.satisfactionScore);
+      // Only add a history point when a counsellor turn was actually scored
+      // (student-only observes carry the unchanged score for meter sync).
+      if (res.turnType) setScoreHistory((prev) => [...prev, { turn: prev.length, score: res.satisfactionScore }]);
+    }
+    if (res.milestones) setMilestones(res.milestones);
+
+    const turn = ++turnCounterRef.current;
+    if (res.cue && typeof res.cue === "object") {
+      setCue(res.cue);
+      setCueRefining(true);
+      api.getSessionCue(activeSessionId || sessionId)
+        .then((out) => { if (turnCounterRef.current === turn && out?.cue) setCue(out.cue); })
+        .catch(() => { /* keep instant cue */ })
+        .finally(() => { if (turnCounterRef.current === turn) setCueRefining(false); });
+    }
+  }
+
+  function handleRealtimeTranscript({ role, text }) {
+    // Defensively strip any leaked [emotion:X] tag so it never reaches the bubble,
+    // /observe, or the report (the realtime prompt already forbids it).
+    const clean = (text || "").replace(/\[emotion:[^\]]*\]/gi, "").replace(/\s+/g, " ").trim();
+    if (!clean || (role !== "counsellor" && role !== "student")) return;
+    setMessages((prev) => [
+      ...prev,
+      { id: `${role[0]}${Date.now()}-${prev.length}`, role, text: clean, emotion: "neutral" },
+    ]);
+    if (role === "student") setEmotion("neutral");
+    const sid = activeSessionId || sessionId;
+    const body = role === "counsellor" ? { counsellorText: clean } : { studentText: clean };
+    observeChainRef.current = observeChainRef.current
+      .catch(() => {})
+      .then(() => api.observeTurn(sid, body))
+      .then((res) => applyObserve(res))
+      .catch((e) => { console.warn("[observe] failed:", e?.message); });
+  }
+  useEffect(() => {
+    realtimeTranscriptRef.current = handleRealtimeTranscript;
+  });
+
   // ── Voice mode toggle ──────────────────────────────────────────────────────
   function toggleVoice() {
     if (voice.enabled) {
@@ -823,8 +931,18 @@ export default function Session() {
     }
   }
 
-  // Mic button handler: toggle voice enable (latching); PTT is held-Space.
+  // Mic button handler. Classic: latch voice enable/disable (PTT is held-Space).
+  // S2S: the realtime connection is the call itself, so the button mutes/unmutes.
   function handleToggleMic() {
+    if (s2s) {
+      if (!voice.enabled) {
+        voice.enable(engineVoiceFor(voiceEngine)).then(() => voice.setMuted?.(true)).catch(() => {});
+      } else {
+        // Toggle mute (hands-free open mic ↔ muted/push-to-talk).
+        voice.setMuted?.(!voice.muted);
+      }
+      return;
+    }
     if (!voice.enabled) {
       // Enable voice first.
       toggleVoice();
@@ -836,8 +954,10 @@ export default function Session() {
   }
 
   // ── Hold SPACE to talk (push-to-talk) ─────────────────────────────────────
+  // Classic engine only — the S2S engines keep the mic open with provider-side
+  // turn detection, so there is no push-to-talk.
   useEffect(() => {
-    if (!voice.enabled) return;
+    if (!voice.enabled || s2s) return;
 
     const isTyping = (el) => {
       const tag = el?.tagName;
@@ -870,7 +990,47 @@ export default function Session() {
       spaceDownRef.current = false;
       setPttHeld(false);
     };
-  }, [voice.enabled, voice.startListening, voice.stopListening]);
+  }, [voice.enabled, voice.startListening, voice.stopListening, s2s]);
+
+  // ── S2S push-to-talk: mic starts muted; hold SPACE to unmute (talk), release to
+  // re-mute. Restores the prior mute state on release so "hands-free" (mic button
+  // unmuted) stays open. ───────────────────────────────────────────────────────
+  const mutedRef = useRef(false);
+  const pttPrevMuteRef = useRef(true);
+  useEffect(() => { mutedRef.current = voice.muted; }, [voice.muted]);
+  useEffect(() => {
+    if (!voice.enabled || !s2s) return;
+
+    const isTyping = (el) => {
+      const tag = el?.tagName;
+      return tag === "TEXTAREA" || tag === "INPUT" || el?.isContentEditable;
+    };
+    const onKeyDown = (e) => {
+      if (e.code !== "Space" || e.repeat) return;
+      if (isTyping(document.activeElement)) return;
+      e.preventDefault();
+      if (spaceDownRef.current) return;
+      spaceDownRef.current = true;
+      setPttHeld(true);
+      pttPrevMuteRef.current = mutedRef.current; // remember (keep hands-free open mic)
+      voice.setMuted?.(false);
+    };
+    const onKeyUp = (e) => {
+      if (e.code !== "Space" || !spaceDownRef.current) return;
+      e.preventDefault();
+      spaceDownRef.current = false;
+      setPttHeld(false);
+      voice.setMuted?.(pttPrevMuteRef.current);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      spaceDownRef.current = false;
+      setPttHeld(false);
+    };
+  }, [voice.enabled, s2s, voice.setMuted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── End session ───────────────────────────────────────────────────────────
   function confirmEnd() {
@@ -1057,6 +1217,20 @@ export default function Session() {
         awaitingReply={awaitingReply}
         hasMessages={messages.length > 0}
         voice={voice}
+        // ── Voice engine (S2S) ──
+        voiceEngine={voiceEngine}
+        openaiVoice={openaiVoice}
+        onChangeOpenaiVoice={(v) => {
+          setOpenaiVoice(v);
+          try { localStorage.setItem(OPENAI_VOICE_STORAGE_KEY, v); } catch { /* noop */ }
+          voice.changeVoice?.(v);
+        }}
+        elevenVoice={elevenVoice}
+        onChangeElevenVoice={(v) => {
+          setElevenVoice(v);
+          try { localStorage.setItem(ELEVEN_VOICE_STORAGE_KEY, v); } catch { /* noop */ }
+          voice.changeVoice?.(v);
+        }}
         onToggleMic={handleToggleMic}
         micLatched={micLatched}
         onToggleKeyboard={() => {
@@ -1088,7 +1262,7 @@ export default function Session() {
         onTab={setSidebarTab}
         messages={messages}
         awaitingReply={sending}
-        onSend={(text) => submit(text)}
+        onSend={(text) => (s2s ? voice.sendText?.(text) : submit(text))}
         satisfaction={score}
         scoreHistory={scoreHistory}
         deliveryMetrics={lastDeliveryMetrics}

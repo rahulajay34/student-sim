@@ -8720,5 +8720,1119 @@
       }
     ],
     "generatedAt": "2026-06-11T13:27:45.565Z"
+  },
+  {
+    "id": "rep-c210db56",
+    "sessionId": "ses-ed9a30ec",
+    "assignmentId": null,
+    "counsellorId": "counsellor-1",
+    "counsellorName": "Priya Sharma",
+    "personaName": "Recent Graduate (Not Working)",
+    "scenarioTitle": "Free practice",
+    "overall": {
+      "percent": 27,
+      "band": "Needs Work",
+      "outcome": "Not Converted",
+      "outcomeDetail": "The call ended in the discovery phase with no presentation, no payment ask, and no follow-up commitment, leaving a 50/100 satisfied but unconverted Arpita whose NEET-vs-course conflict was never addressed."
+    },
+    "rubric": [
+      {
+        "key": "rapport",
+        "label": "Rapport & Opening",
+        "weight": 10.5,
+        "score": 2,
+        "level": "Developing",
+        "justification": "Below the 'polite, professional' anchor: the counsellor correctly uses 'Hi Arpita' and asks why she's here, but turn 3's disjointed 'This time we are not siding motion neutral' visibly confuses the student ('Oh, sorry about that'), breaking the opening flow before any personal connection is made."
+      },
+      {
+        "key": "discovery",
+        "label": "Needs Discovery",
+        "weight": 15.8,
+        "score": 2,
+        "level": "Developing",
+        "justification": "Falls short of the standard checklist anchor — only one open question ('May I know why you are here, and what kind of help do you want from me?') is asked before the transcript ends, with zero probing of the NEET-prep + side-income tension, family dynamics, or current financial pressure the student just surfaced."
+      },
+      {
+        "key": "presentation",
+        "label": "Programme Presentation",
+        "weight": 15.8,
+        "score": 1,
+        "level": "Poor",
+        "justification": "Anchors to 'no curriculum overview at all' — the student explicitly framed her enquiry as exploratory ('I took that qualifier test because I wanted to explore if this course could help me'), and the counsellor delivered zero programme content, not a single module, fee, or duration detail."
+      },
+      {
+        "key": "objections",
+        "label": "Objection Handling",
+        "weight": 21.1,
+        "score": 1,
+        "level": "Poor",
+        "justification": "No objections were raised and no pre-emptive objection handling was demonstrated (e.g., no parent fee-awareness check, no EMI/loan mention, no trust-building on scams or placement) — the counsellor missed the opportunity to pre-empt the obvious NEET-vs-course conflict the student just named."
+      },
+      {
+        "key": "knowledge",
+        "label": "Product Knowledge & Accuracy",
+        "weight": 15.8,
+        "score": 1,
+        "level": "Poor",
+        "justification": "No product facts were stated at all in the visible transcript — no fee (₹1,49,000 + GST), no duration (10 months), no module list, no campus-immersion format — so there is no evidence of product knowledge, let alone treated as a trust weapon."
+      },
+      {
+        "key": "closing",
+        "label": "Closing & Payment Ask",
+        "weight": 10.5,
+        "score": 1,
+        "level": "Poor",
+        "justification": "No payment ask, no follow-up anchor, no next-step commitment — the call died in the discovery phase, far from the ~78% mark where the payment ask should land, matching the 'coercion or no close' floor of the anchor."
+      },
+      {
+        "key": "communication",
+        "label": "Communication & Empathy",
+        "weight": 10.5,
+        "score": 2,
+        "level": "Developing",
+        "justification": "Below 'polite, clear, and patient' — the turn 3 non-sequitur ('This time we are not siding motion neutral') is unprofessional and forced the student to apologise; beyond that the counsellor is courteous but emotionally flat and misses the human weight of preparing for NEET while unemployed."
+      }
+    ],
+    "phaseBreakdown": [
+      {
+        "phase": 1,
+        "name": "Opening",
+        "summary": "Opening was technically correct (name used, audio confirmed) but marred by a bizarre turn 3 line that confused the student; no personal connection established.",
+        "didWell": "Correctly greeted 'Hi Arpita' and confirmed two-way audio before asking purpose.",
+        "toImprove": "Drop the auto-generated/garbled line in turn 3 and open with a warmer, student-led prompt like 'Before I share anything, tell me a bit about yourself.'"
+      },
+      {
+        "phase": 2,
+        "name": "Discovery",
+        "summary": "One discovery question was asked; the student volunteered a high-value signal (NEET prep + wanting to earn on the side, recently graduated, from Mohali) but the counsellor did not follow up before the transcript ends.",
+        "didWell": "Used an open-ended 'why are you here' question rather than a checklist interrogation.",
+        "toImprove": "Probe the NEET timeline ('When is your next attempt?'), the side-income goal ('What kind of work, what number?'), and family buy-in ('Is anyone else involved in this decision?') before moving on."
+      },
+      {
+        "phase": 3,
+        "name": "Presentation",
+        "summary": "Presentation was entirely absent — no curriculum, no format, no fee, no outcomes shared despite the student being in exploration mode.",
+        "didWell": "Recognised (implicitly) that discovery had to come first and did not jump to a fee dump.",
+        "toImprove": "After 2–3 discovery questions, tie the curriculum to her NEET-plus-earning context — e.g., the I1–I6 Industry Readiness modules on AI Product Management and AI Strategy map directly to 'earn on the side'."
+      },
+      {
+        "phase": 4,
+        "name": "Objections & Negotiation",
+        "summary": "No objections were raised by the student and none were pre-empted by the counsellor — the NEET-vs-course conflict sat unaddressed.",
+        "didWell": "Did not fabricate or steer away from the student's stated tension.",
+        "toImprove": "Pre-empt the obvious 'I don't have time for NEET + course' and 'how will I pay' objections before they surface — e.g., explain the 10-month weekend-friendly format and the two-instalment option early."
+      },
+      {
+        "phase": 5,
+        "name": "Close",
+        "summary": "No close, no payment ask, no follow-up commitment; the call simply stopped after the student's opening line.",
+        "didWell": "Did not apply false scarcity or pressure (which is good, but only because nothing was attempted).",
+        "toImprove": "End every exploratory call with an anchored next step — a specific time for a follow-up demo or a slot-blocking call with parents on the line — so the lead does not go cold."
+      }
+    ],
+    "strengths": [
+      {
+        "point": "Used the student's name correctly on first contact and confirmed two-way audio before any business talk.",
+        "quote": "Hi Arpita, I'm audible to you."
+      },
+      {
+        "point": "Opened with a genuine open-ended discovery question rather than launching into a script.",
+        "quote": "May I know why you are here, and what kind of help do you want from me?"
+      },
+      {
+        "point": "Did not invent scarcity or pressure tactics in the brief exchange that did occur.",
+        "quote": "(no coercive line was used in the visible turns)"
+      }
+    ],
+    "improvements": [
+      {
+        "point": "Turn 3 contains a non-sequitur that visibly broke the student's flow and forced her to apologise — openings must be clean and human.",
+        "quote": "This time we are not siding motion neutral.",
+        "suggestion": "Replace with a one-line warm opener such as 'Before I share anything, tell me a little about you and what brought you to the qualifier test' — and rehearse the first 30 seconds until they are muscle memory."
+      },
+      {
+        "point": "The student volunteered two high-value signals (NEET prep + want to earn on the side) and the counsellor did not unpack either before the call ended.",
+        "quote": "I wanted to explore if this course could help me eventually earn something on the side while I'm preparing for NEET.",
+        "suggestion": "Always run a 3-question discovery cluster on a green lead: (1) current situation/time available, (2) the number/income outcome they want, (3) who else is part of the decision. Anchor value to their words, not yours."
+      },
+      {
+        "point": "No programme content was shared even though the student is in 'explore' mode — leaving her with zero new information to evaluate.",
+        "quote": "I took that qualifier test because I wanted to explore if this course could help me...",
+        "suggestion": "After discovery, deliver a tight 60–90 second curriculum story tied to her goal (e.g., the I1 AI Product Management module as a path to side income while in NEET prep) before asking for the next step."
+      }
+    ],
+    "keyMoments": [
+      {
+        "turn": 3,
+        "type": "miss",
+        "note": "The disjointed 'This time we are not siding motion neutral' line broke the opening flow and forced the student to apologise — a trust-damaging moment in the first minute of a high-ticket sale."
+      },
+      {
+        "turn": 5,
+        "type": "best",
+        "note": "Asking 'May I know why you are here, and what kind of help do you want from me?' is the right student-led opener — it handed Arpita the wheel and surfaced the NEET + side-income context."
+      },
+      {
+        "turn": 6,
+        "type": "miss",
+        "note": "Arpita volunteered the most important context of the call (recently graduated, NEET prep, wants side income) and the transcript ends with no follow-up — the single highest-leverage discovery window was left open."
+      }
+    ],
+    "drills": [
+      {
+        "title": "The First 30 Seconds Script Lock",
+        "focusCriterion": "rapport",
+        "objectionCategory": "trust_legitimacy",
+        "instruction": "Record yourself doing 10 cold openings to a fake lead. The opener must contain: (1) their name, (2) audio check, (3) a single warm question that hands the wheel to the student. Cut and re-record every take that includes a filler, a script glitch, or any line that doesn't flow from the previous one. Play back and self-coach against the turn 3 failure in this call."
+      },
+      {
+        "title": "NEET-vs-Course Pre-Emption Drill",
+        "focusCriterion": "objections",
+        "objectionCategory": "competing_priorities",
+        "instruction": "With a training partner role-playing Arpita (recent grad, preparing for NEET, wants side income), practise the moment after the student reveals the NEET conflict. Within 15 seconds you must: acknowledge the conflict, reframe the 10-month online + campus-immersion format as NEET-compatible, and pre-empt the 'I won't have time' objection before they voice it. Repeat until it sounds natural, not rehearsed."
+      },
+      {
+        "title": "Tie-the-Curriculum-to-Their-World Drill",
+        "focusCriterion": "presentation",
+        "objectionCategory": "course_fit_relevance",
+        "instruction": "For three different student personas (a side-income seeker, a career-switcher, a promotion-hunter), practise a 60-second curriculum pitch where every module name is anchored to a specific line the persona just said. For Arpita, that means mapping I1 (AI Product Management) and I6 (Board-Ready Executive Communication) to 'earn on the side' and C2 (Finance & Unit Economics) to 'I want to understand business'. Time yourself and cut anything that doesn't mention her world."
+      }
+    ],
+    "benchmarks": {
+      "sessionMinutes": 2.5,
+      "medianPaidMinutes": 25.1,
+      "paymentAskSeen": false,
+      "paymentAskNormPct": 87
+    },
+    "scoreArc": [
+      {
+        "turn": 0,
+        "score": 50
+      },
+      {
+        "turn": 1,
+        "score": 50
+      },
+      {
+        "turn": 2,
+        "score": 50
+      },
+      {
+        "turn": 3,
+        "score": 50
+      },
+      {
+        "turn": 4,
+        "score": 50
+      }
+    ],
+    "transcript": [
+      {
+        "role": "counsellor",
+        "text": "Thank you.",
+        "phase": 1,
+        "turnType": "statement",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T14:55:55.076Z",
+        "scoreReason": "Just a routine 'Thank you' acknowledgement with no content to evaluate, which is ordinary at this early opening phase."
+      },
+      {
+        "role": "counsellor",
+        "text": "Hi Arpita, I'm audible to you.",
+        "phase": 2,
+        "turnType": "statement",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T14:56:00.241Z",
+        "scoreReason": "Routine connectivity check / acknowledgement at the start of discovery, no substantive content."
+      },
+      {
+        "role": "student",
+        "text": "Yeah hi sir, I can hear you. [emotion:neutral]",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T14:56:04.083Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "This time we are not siding motion neutral.",
+        "phase": 2,
+        "turnType": "statement",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T14:56:06.584Z",
+        "scoreReason": "Statement is incoherent and does not constitute a meaningful discovery question or response."
+      },
+      {
+        "role": "student",
+        "text": "Oh, sorry about that. Yeah, I’m here, you’re audible. [emotion:neutral]",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T14:56:10.135Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "OK, cool. May I know why you are here, and what kind of help do you want from me?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T14:56:18.603Z",
+        "scoreReason": "Ordinary discovery question in the right phase, letting the student talk about their reason for the call."
+      },
+      {
+        "role": "student",
+        "text": "Sure, so I’m Arpita, I’m from Mohali. I took that qualifier test because I wanted to explore if this course could help me eventually earn something on the side while I’m preparing for NEET. [emotion:neutral]",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T14:56:22.114Z"
+      }
+    ],
+    "generatedAt": "2026-06-11T14:58:13.705Z"
+  },
+  {
+    "id": "rep-3e428591",
+    "sessionId": "ses-74f4d58a",
+    "assignmentId": null,
+    "counsellorId": "counsellor-1",
+    "counsellorName": "Priya Sharma",
+    "personaName": "Working Professional — Same Field",
+    "scenarioTitle": "Free practice",
+    "overall": {
+      "percent": 33,
+      "band": "Needs Work",
+      "outcome": "Not Converted",
+      "outcomeDetail": "The student satisfaction of 48/100 and the absent payment ask confirm no conversion — the call stalled after a misnamed opener and a single discovery question, never reaching the seat-block ask or follow-up."
+    },
+    "rubric": [
+      {
+        "key": "rapport",
+        "label": "Rapport & Opening",
+        "weight": 10.5,
+        "score": 1,
+        "level": "Poor",
+        "justification": "Matches the 1-anchor exactly: the counsellor opens by calling the student 'Lathi' in turn 0 ('Hi, Lathi') before the student corrects to 'Aditi', producing the disjointed, confused start described at level 1."
+      },
+      {
+        "key": "discovery",
+        "label": "Needs Discovery",
+        "weight": 15.8,
+        "score": 2,
+        "level": "Developing",
+        "justification": "The counsellor does open with 'may I know why you are here?' in turn 6, but the transcript shows zero follow-up probing into the 'why' behind her career switch, current vs. expected package, or family context — falling below the level-3 anchor that requires covering the standard qualification checklist."
+      },
+      {
+        "key": "presentation",
+        "label": "Programme Presentation",
+        "weight": 15.8,
+        "score": 1,
+        "level": "Poor",
+        "justification": "No programme overview, module structure, fee, duration, or format is shared in the visible transcript — matching the 1-anchor of jumping past curriculum entirely."
+      },
+      {
+        "key": "objections",
+        "label": "Objection Handling",
+        "weight": 21.1,
+        "score": 2,
+        "level": "Developing",
+        "justification": "Zero objections were raised and the counsellor did not pre-empt any concerns (no fee-disclosure check, no fraud-scam reassurance), so no handling behaviour was demonstrated at all in the transcript."
+      },
+      {
+        "key": "knowledge",
+        "label": "Product Knowledge & Accuracy",
+        "weight": 15.8,
+        "score": 2,
+        "level": "Developing",
+        "justification": "No fee, duration, module, or eligibility facts were stated in the visible transcript, so accuracy cannot be credited; the score sits below the level-3 anchor that requires the standard facts to be stated correctly."
+      },
+      {
+        "key": "closing",
+        "label": "Closing & Payment Ask",
+        "weight": 10.5,
+        "score": 1,
+        "level": "Poor",
+        "justification": "No payment ask, no follow-up anchored to a time, and no ₹4,000 seat-block step occurred in the transcript — matching the 1-anchor of failing to close at all."
+      },
+      {
+        "key": "communication",
+        "label": "Communication & Empathy",
+        "weight": 10.5,
+        "score": 2,
+        "level": "Developing",
+        "justification": "The misnaming in turn 0 ('Hi, Lathi') creates an awkward start that the counsellor only partially recovers from in turn 2 ('Hi Aditi'), sitting below the level-3 anchor of polite and patient throughout with no emotional flatness."
+      }
+    ],
+    "phaseBreakdown": [
+      {
+        "phase": 1,
+        "name": "Opening",
+        "summary": "Greeting and trust-setting; call opened with a name error and a clipped 'Speak, just speak' prompt that set a confusing tone.",
+        "didWell": "Recovered quickly to the correct name 'Aditi' by turn 2 and asked a courteous 'How are you doing?'.",
+        "toImprove": "Verify the student's name from the CRM/lead sheet before the call and open with a warm, prepared line that hands the student the wheel."
+      },
+      {
+        "phase": 2,
+        "name": "Discovery",
+        "summary": "Discovery was triggered by a single 'why are you here?' question; the student volunteered she is a software developer wanting a career switch, but no follow-up probing occurred in the visible transcript.",
+        "didWell": "Used an open-ended question that let the student self-identify ('I'm a software developer with about one and a half years of experience').",
+        "toImprove": "Probe the motivation behind the switch, current role, current CTC vs. target CTC, and whether parents/spouse are involved in the decision before moving on."
+      },
+      {
+        "phase": 3,
+        "name": "Presentation",
+        "summary": "Presentation did not occur in the visible transcript — no modules, fee, duration, or format was shared.",
+        "didWell": "Acknowledged the student's reason for enquiry before speaking, which is the right precondition for a tailored pitch.",
+        "toImprove": "Anchor the pitch to her software-developer background — e.g., 'Your SQL and Python will be reinforced in Modules 1 and 2, and Module 4 is where you cross over into business decision-making.'"
+      },
+      {
+        "phase": 4,
+        "name": "Objections & Negotiation",
+        "summary": "No objections were raised in the visible portion of the call and the counsellor did not pre-empt any.",
+        "didWell": "Did not invent pressure or scarcity, which is better than the coercive 1-anchor.",
+        "toImprove": "Pre-empt trust and fee objections by stating fee (₹70,000 + GST), seat-block (₹4,000), and institute (IIM Ranchi x Masai) up front, and disarming fraud concerns with a 'no payment links over chat' reassurance."
+      },
+      {
+        "phase": 5,
+        "name": "Close",
+        "summary": "No close was attempted; the call appears to have stalled or ended after discovery without a payment ask.",
+        "didWell": "Did not use coercive scarcity tactics.",
+        "toImprove": "Anchor a specific follow-up ('Can I put you down for a 7:30 PM callback tomorrow with your parents?') and, when ready, make the ₹4,000 seat-block ask with a clear next step."
+      }
+    ],
+    "strengths": [
+      {
+        "point": "Opened with an open-ended 'why are you here?' question that let the student volunteer her background and intent.",
+        "quote": "may I know why you are here?"
+      },
+      {
+        "point": "Recovered the name error within two turns instead of doubling down on the wrong name.",
+        "quote": "Hi Aditi."
+      }
+    ],
+    "improvements": [
+      {
+        "point": "Verify the student's name from the lead sheet before the call begins — calling her 'Lathi' in turn 0 is a trust-breaking opener for a working professional.",
+        "quote": "Hi, Lathi.",
+        "suggestion": "Pull up the lead card 60 seconds before the call and greet with the correct name plus a one-line context hook, e.g., 'Hi Aditi — I see you took the qualifier; thanks for making time.'"
+      },
+      {
+        "point": "Treat discovery as the engine of the call, not a single question — probe the 'why' behind the career switch and the family/financial context before pitching.",
+        "quote": "may I know why you are here?",
+        "suggestion": "After her initial answer, ask 3 follow-ups: current CTC, target CTC, and 'Is anyone else — parent or partner — part of this decision?' before you ever mention a module."
+      },
+      {
+        "point": "Lead with a tailored programme summary tied to her software-developer background; do not defer the curriculum overview.",
+        "quote": "Speak, just speak. Yeah. Hi, Lathi.",
+        "suggestion": "Use her self-description as the bridge: 'As a software developer, Modules 1 and 2 will sharpen your SQL/Python, and Modules 4 and 7 are where the business-decision layer kicks in — that's the switch you came here for.'"
+      }
+    ],
+    "keyMoments": [
+      {
+        "turn": 0,
+        "type": "miss",
+        "note": "Opened with the wrong name ('Hi, Lathi') and a clipped 'Speak, just speak' — broke trust in the first 10 seconds with a working-professional persona who is evaluating credibility."
+      },
+      {
+        "turn": 6,
+        "type": "best",
+        "note": "Used the right open-ended discovery question ('may I know why you are here?') and let the student self-disclose her background and intent — the foundation a tailored pitch needed."
+      }
+    ],
+    "drills": [
+      {
+        "title": "Name-and-context opener drill",
+        "focusCriterion": "rapport",
+        "objectionCategory": "trust_legitimacy",
+        "instruction": "Before every mock call, write the student's correct name, current role, and one context hook (city, qualifier score, or lead source) on a sticky note. Open the call with: 'Hi [Name] — I see you're a [Role] from [City]; thanks for taking the qualifier. Any queries from your end, or should I walk you through the programme first?'"
+      },
+      {
+        "title": "Three-layer discovery drill",
+        "focusCriterion": "discovery",
+        "objectionCategory": "competing_priorities",
+        "instruction": "For any persona, force yourself to ask exactly three follow-ups after the initial 'why are you here?' — (1) current vs. target CTC, (2) decision-makers involved, (3) timeline to switch. Do not mention the programme until all three are answered."
+      },
+      {
+        "title": "Pre-empt-and-disarm objection drill",
+        "focusCriterion": "objections",
+        "objectionCategory": "trust_legitimacy",
+        "instruction": "Within the first 2 minutes of the presentation, proactively state: (a) the institute (IIM Ranchi x Masai), (b) the exact fee (₹70,000 + GST, ₹78,600 upfront), and (c) the fraud-scam disclaimer ('I will not share any payment links over chat'). Then ask, 'Does that match what you had in mind?' to surface hidden objections early."
+      }
+    ],
+    "benchmarks": {
+      "sessionMinutes": 4.5,
+      "medianPaidMinutes": 25.1,
+      "paymentAskSeen": false,
+      "paymentAskNormPct": 87
+    },
+    "scoreArc": [
+      {
+        "turn": 0,
+        "score": 50
+      },
+      {
+        "turn": 1,
+        "score": 48
+      },
+      {
+        "turn": 2,
+        "score": 48
+      },
+      {
+        "turn": 3,
+        "score": 48
+      },
+      {
+        "turn": 4,
+        "score": 48
+      }
+    ],
+    "transcript": [
+      {
+        "role": "counsellor",
+        "text": "Hi. Speak, just speak. Yeah. Hi, Lathi.",
+        "phase": 1,
+        "turnType": "statement",
+        "scoreAfter": 48,
+        "ts": "2026-06-11T14:54:35.116Z",
+        "scoreReason": "Vague, unfocused opening with no proper greeting, introduction, or agenda-setting — sounds unprofessional and like a connectivity/setup fumbling rather than a competent start."
+      },
+      {
+        "role": "student",
+        "text": "Yeah hi sir. [emotion:neutral]",
+        "emotion": "neutral",
+        "phase": 1,
+        "scoreAfter": 48,
+        "ts": "2026-06-11T14:54:39.945Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Hi Aditi.",
+        "phase": 2,
+        "turnType": "statement",
+        "scoreAfter": 48,
+        "ts": "2026-06-11T14:54:46.485Z",
+        "scoreReason": "Simple greeting acknowledging the student at the start of the discovery phase; ordinary and expected."
+      },
+      {
+        "role": "student",
+        "text": "Hello sir. [emotion:neutral]",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 48,
+        "ts": "2026-06-11T14:54:51.815Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "How are you doing?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 48,
+        "ts": "2026-06-11T14:54:52.642Z",
+        "scoreReason": "A simple greeting/small-talk opener in the discovery phase; ordinary and expected, nothing to penalize or reward."
+      },
+      {
+        "role": "student",
+        "text": "I am doing well sir, thank you. [emotion:neutral]",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 48,
+        "ts": "2026-06-11T14:54:57.471Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Great. Uh, may I know why you are here?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 48,
+        "ts": "2026-06-11T14:55:03.807Z",
+        "scoreReason": "Ordinary discovery question asking the student why they are interested, which is appropriate for this phase."
+      },
+      {
+        "role": "student",
+        "text": "Um, I'm Adithi. I'm a software developer with about one and a half years of experience, and I'm looking to make a career switch, so I took the qualifier test. [emotion:neutral]",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 48,
+        "ts": "2026-06-11T14:55:07.643Z"
+      }
+    ],
+    "generatedAt": "2026-06-11T14:58:33.477Z"
+  },
+  {
+    "id": "rep-c4140daa",
+    "sessionId": "ses-dddf6143",
+    "assignmentId": null,
+    "counsellorId": "counsellor-1",
+    "counsellorName": "Priya Sharma",
+    "personaName": "Working Professional — Same Field",
+    "scenarioTitle": "Free practice",
+    "overall": {
+      "percent": 24,
+      "band": "Needs Work",
+      "outcome": "Not Converted",
+      "outcomeDetail": "The student did not agree to pay the ₹4000 seat-block — the call collapsed into a technical dead-end on turn 6 with no discovery, no presentation, and no payment ask ever attempted, leaving satisfaction at 46/100."
+    },
+    "rubric": [
+      {
+        "key": "rapport",
+        "label": "Rapport & Opening",
+        "weight": 10.5,
+        "score": 2,
+        "level": "Developing",
+        "justification": "The counsellor used the student's name correctly ('Hi, Amit') but the opening immediately devolved into a disjointed, confused attempt to troubleshoot the platform ('There's no pauses. Can we speak a bit more? Hmm. It wants us to keep quiet. I think we can do the space bar.'), matching the anchor for a fractured start with no personal connection."
+      },
+      {
+        "key": "discovery",
+        "label": "Needs Discovery",
+        "weight": 15.8,
+        "score": 1,
+        "level": "Poor",
+        "justification": "No discovery of any kind occurred — not education, work status, current package, goals, or the 'why' behind the enquiry — before the call collapsed, matching the anchor of never establishing what the student actually needs."
+      },
+      {
+        "key": "presentation",
+        "label": "Programme Presentation",
+        "weight": 15.8,
+        "score": 1,
+        "level": "Poor",
+        "justification": "Zero curriculum, fee, duration, or value content was delivered, matching the anchor of jumping past (or simply never reaching) the presentation entirely."
+      },
+      {
+        "key": "objections",
+        "label": "Objection Handling",
+        "weight": 21.1,
+        "score": 1,
+        "level": "Poor",
+        "justification": "No objections were raised and none were pre-empted; the counsellor had no opportunity to demonstrate reactive or proactive objection handling, matching the anchor of failing to address concerns at all."
+      },
+      {
+        "key": "knowledge",
+        "label": "Product Knowledge & Accuracy",
+        "weight": 15.8,
+        "score": 1,
+        "level": "Poor",
+        "justification": "No product facts were stated, so the counsellor neither demonstrated accuracy nor avoided error — there is simply nothing to score, which sits closest to the anchor of failing to establish baseline knowledge."
+      },
+      {
+        "key": "closing",
+        "label": "Closing & Payment Ask",
+        "weight": 10.5,
+        "score": 1,
+        "level": "Poor",
+        "justification": "No payment ask, no follow-up commitment, and no next step were set, matching the anchor of closing by default (i.e., never closing at all)."
+      },
+      {
+        "key": "communication",
+        "label": "Communication & Empathy",
+        "weight": 10.5,
+        "score": 2,
+        "level": "Developing",
+        "justification": "The counsellor was polite and used the student's name, but the moment the call stalled they muttered platform-debugging language aloud ('It wants us to keep quiet... I think we can do the space bar'), which is emotionally flat/procedural at best and unprofessional at worst — closer to the 1 anchor than the 3 anchor of 'polite, clear, and patient throughout.'"
+      }
+    ],
+    "phaseBreakdown": [
+      {
+        "phase": 1,
+        "name": "Opening",
+        "summary": "A two-line greeting that named the student correctly but never moved beyond a stalled, fragmented technical exchange.",
+        "didWell": "Correctly used the prospect's name (Amit) and maintained a polite tone.",
+        "toImprove": "Take ownership of the technical wobble — acknowledge it warmly, suggest re-joining if audio fails, and never vocalise platform debugging to the student."
+      },
+      {
+        "phase": 2,
+        "name": "Discovery",
+        "summary": "Discovery never started; the call ended before a single qualification question was asked.",
+        "didWell": "No negative habits were displayed in the small window that existed.",
+        "toImprove": "Open every call with a prepared discovery opener tied to the lead source, so a technical hiccup doesn't eat the discovery window."
+      },
+      {
+        "phase": 3,
+        "name": "Presentation",
+        "summary": "No presentation, curriculum, fee, or value framing was delivered.",
+        "didWell": "Nothing actionable in this phase.",
+        "toImprove": "Have a 60-second 'value snapshot' rehearsed so it can be delivered even if the opening runs long."
+      },
+      {
+        "phase": 4,
+        "name": "Objections & Negotiation",
+        "summary": "No objections surfaced and none were pre-empted because the conversation never reached substantive content.",
+        "didWell": "No opportunity existed to mishandle a concern.",
+        "toImprove": "Build a habit of pre-empting the top 3 objections (fee, family, time) early in the pitch so they are disarmed even on short calls."
+      },
+      {
+        "phase": 5,
+        "name": "Close",
+        "summary": "No close, no payment ask, and no follow-up time was anchored.",
+        "didWell": "Nothing actionable.",
+        "toImprove": "Treat every call as needing an explicit next step — even a re-scheduled time — and lock it to a clock time, not 'I'll call you later'."
+      }
+    ],
+    "strengths": [
+      {
+        "point": "Used the prospect's name correctly in the opening.",
+        "quote": "Hi, Amit. How are you doing? Hello, Amit."
+      },
+      {
+        "point": "Maintained a polite, non-pressuring tone in the brief exchange that did happen.",
+        "quote": "Yeah, I'm good, sir. How are you? … I'm good, sir."
+      }
+    ],
+    "improvements": [
+      {
+        "point": "Stop vocalising platform debugging to the student — it sounds unprofessional and breaks trust.",
+        "quote": "There's no pauses. Can we speak a bit more? Hmm. It wants us to keep quiet. I think we can do the space bar.",
+        "suggestion": "If audio is broken, say warmly: 'Amit, I think the line is acting up for a second — can you hear me clearly? If not, I'll drop you a quick re-join link.' Then own the recovery without exposing the tools."
+      },
+      {
+        "point": "Discovery, presentation, and close all happened at 0% — the call must move into substance within the first 90 seconds.",
+        "quote": "I think we can do the space bar.",
+        "suggestion": "Open with a purpose-statement + first discovery question in the same breath, e.g. 'Before I walk you through the IIM Ranchi programme, can I quickly understand what's pulling you towards it right now?'"
+      },
+      {
+        "point": "No payment ask, no follow-up time anchored — the call ended with zero commitment.",
+        "quote": "I think we can do the space bar.",
+        "suggestion": "Even when tech fails, lock a concrete re-engagement: 'Let's reconnect at 6 PM sharp — can I send you a calendar invite on WhatsApp right now?'"
+      }
+    ],
+    "keyMoments": [
+      {
+        "turn": 2,
+        "type": "miss",
+        "note": "The opening is the only chance to hand the wheel to the student and build connection; the counsellor went straight into a fragmented, technical-feeling exchange and never recovered the rhythm."
+      },
+      {
+        "turn": 4,
+        "type": "miss",
+        "note": "'There's no pauses. Can we speak a bit more? Hmm. It wants us to keep quiet.' — vocalising platform internals to a prospect erodes confidence and signals that the counsellor is unsure of the environment."
+      },
+      {
+        "turn": 6,
+        "type": "miss",
+        "note": "'I think we can do the space bar.' — the final transcript line shows the call ended on a tool-debug note rather than a value, reconnection, or next-step moment, guaranteeing zero conversion."
+      }
+    ],
+    "drills": [
+      {
+        "title": "60-Second Recovery Drill",
+        "focusCriterion": "communication",
+        "objectionCategory": "other",
+        "instruction": "Role-play a call where the audio drops at turn 1. Practice saying exactly: 'Sounds like the line glitched on my side — can you hear me? If it's still rough, I'll WhatsApp you a rejoin link in 10 seconds.' No tool-naming, no muttering about space bars or pauses. Re-attempt 5 times with different 'glitch' scenarios."
+      },
+      {
+        "title": "First-90-Seconds Opener Drill",
+        "focusCriterion": "discovery",
+        "objectionCategory": "course_fit_relevance",
+        "instruction": "For a working professional in analytics, rehearse a single opener that (a) states the purpose, (b) asks a discovery question tied to their current data work, and (c) gets a 'yes' for a 30-second answer. Example target: 'Amit, I see you're already in analytics — before I walk you through the IIM Ranchi programme, can I ask what's the one skill gap that's actually pushing you towards this?' Time yourself — must finish in under 30 seconds."
+      },
+      {
+        "title": "Anchor-the-Next-Step Drill",
+        "focusCriterion": "closing",
+        "objectionCategory": "time_commitment",
+        "instruction": "Practice ending every call — even failed ones — with a clock-time-anchored next step. Pattern to drill: 'Let's reconnect at [exact time] — I'll send a calendar hold on WhatsApp right now. Does that work?' Repeat 5 times for scenarios where the student is silent, technical, or in a hurry."
+      }
+    ],
+    "benchmarks": {
+      "sessionMinutes": 2.2,
+      "medianPaidMinutes": 25.1,
+      "paymentAskSeen": false,
+      "paymentAskNormPct": 87
+    },
+    "scoreArc": [
+      {
+        "turn": 0,
+        "score": 50
+      },
+      {
+        "turn": 1,
+        "score": 50
+      },
+      {
+        "turn": 2,
+        "score": 50
+      },
+      {
+        "turn": 3,
+        "score": 48
+      },
+      {
+        "turn": 4,
+        "score": 46
+      }
+    ],
+    "transcript": [
+      {
+        "role": "counsellor",
+        "text": "Hello.",
+        "phase": 1,
+        "turnType": "statement",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T15:10:37.624Z",
+        "scoreReason": "Just a 'Hello' at the very start of the call — a plain opening greeting with no substantive content yet, which is ordinary for this phase."
+      },
+      {
+        "role": "student",
+        "text": "Hello sir.",
+        "emotion": "neutral",
+        "phase": 1,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T15:10:41.996Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Hi, Amit. How are you doing? Hello, Amit.",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T15:10:51.952Z",
+        "scoreReason": "Routine greeting at the start of discovery; no question asked yet, just a plain hello."
+      },
+      {
+        "role": "student",
+        "text": "Yeah, I'm good, sir. How are you? neutral",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T15:10:55.433Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Hmm. It's fine. Some... There's no pauses. Can we speak a bit more? Hmm. It wants us to keep quiet.",
+        "phase": 2,
+        "turnType": "statement",
+        "scoreAfter": 48,
+        "ts": "2026-06-11T15:11:15.776Z",
+        "scoreReason": "Counsellor rambles incoherently, asking the student to keep quiet and creating awkward pauses instead of conducting discovery with a clear question about background or goals."
+      },
+      {
+        "role": "student",
+        "text": "I'm good, sir. neutral",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 48,
+        "ts": "2026-06-11T15:11:21.346Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "I think we can do the space bar.",
+        "phase": 2,
+        "turnType": "statement",
+        "scoreAfter": 46,
+        "ts": "2026-06-11T15:11:28.556Z",
+        "scoreReason": "The counsellor made an off-topic, awkward comment about 'the space bar' rather than asking a discovery question or engaging the student — this is filler/broken turn, not a genuine probe."
+      }
+    ],
+    "generatedAt": "2026-06-11T15:12:42.685Z"
+  },
+  {
+    "id": "rep-4050e45f",
+    "sessionId": "ses-d23c299b",
+    "assignmentId": null,
+    "counsellorId": "counsellor-1",
+    "counsellorName": "Priya Sharma",
+    "personaName": "Working Professional — Same Field",
+    "scenarioTitle": "Free practice",
+    "overall": {
+      "percent": 31,
+      "band": "Needs Work",
+      "outcome": "Not Converted",
+      "outcomeDetail": "No payment ask was made and the call ended after surface-level discovery with no value delivered, no follow-up anchored, and the student's stated time pressure left unaddressed — far from a ₹4,000 seat-block commitment."
+    },
+    "rubric": [
+      {
+        "key": "rapport",
+        "label": "Rapport & Opening",
+        "weight": 10.5,
+        "score": 2,
+        "level": "Developing",
+        "justification": "The opening is disjointed with audio confusion ('How do I speak? Hello?') and the counsellor pivots abruptly to a curt 'Now, can you introduce yourself?' — closer to anchor 1 (confused, disjointed start) than anchor 3 (polite, professional), though the counsellor did correctly use the name Shubhi from CRM data."
+      },
+      {
+        "key": "discovery",
+        "label": "Needs Discovery",
+        "weight": 15.8,
+        "score": 2,
+        "level": "Developing",
+        "justification": "Only two discovery questions are asked ('What are you looking for from this course?' and 'And what career is that?') and neither probes the why, the current vs expected package, the family context, or the specific technical gap — falling well short of even the anchor 3 'standard qualification checklist'."
+      },
+      {
+        "key": "presentation",
+        "label": "Programme Presentation",
+        "weight": 15.8,
+        "score": 1,
+        "level": "Poor",
+        "justification": "Zero curriculum, fee, module, duration, or format information is shared in the transcript (milestone confirms 'presentation done: false') — matching anchor 1 where the counsellor jumps over any value-building content."
+      },
+      {
+        "key": "objections",
+        "label": "Objection Handling",
+        "weight": 21.1,
+        "score": 1,
+        "level": "Poor",
+        "justification": "The counsellor did not pre-empt or surface any objection even when the student explicitly flagged a tight time window ('I just have a few minutes right now') — failing the 'pre-empts before they are spoken' expectation of anchor 5 and producing no objection handling at all."
+      },
+      {
+        "key": "knowledge",
+        "label": "Product Knowledge & Accuracy",
+        "weight": 15.8,
+        "score": 2,
+        "level": "Developing",
+        "justification": "No product facts (fee, duration, modules, format, eligibility) were stated, so nothing was contradicted, but there is also no evidence of accurate knowledge — closer to 'generic and unverified' than to a counsellor who treats accuracy as a trust weapon."
+      },
+      {
+        "key": "closing",
+        "label": "Closing & Payment Ask",
+        "weight": 10.5,
+        "score": 1,
+        "level": "Poor",
+        "justification": "The call ends after turn 10 with no payment ask, no seat-block mention, no follow-up anchored to a time, and no close of any kind (milestone: 'payment asked: false'), matching the 'no close at all' end of the spectrum."
+      },
+      {
+        "key": "communication",
+        "label": "Communication & Empathy",
+        "weight": 10.5,
+        "score": 2,
+        "level": "Developing",
+        "justification": "Tone is procedurally polite but the curt 'Now, can you introduce yourself?' and the failure to acknowledge the student's stated time pressure ('I just have a few minutes right now') read as emotionally flat with mild command-style framing."
+      }
+    ],
+    "phaseBreakdown": [
+      {
+        "phase": 1,
+        "name": "Opening",
+        "summary": "Greeting and audio check between turns 0-3, with the counsellor knowing the student's name from CRM but stumbling through 'How do I speak? Hello?'.",
+        "didWell": "Used the student's name (Shubhi) correctly on the first attempt, suggesting CRM data was read.",
+        "toImprove": "Resolve audio issues with a confident line ('Can you hear me well? Should we switch to phone?') and replace the abrupt 'Now, can you introduce yourself?' with an open, warm prompt that hands the student the wheel."
+      },
+      {
+        "phase": 2,
+        "name": "Discovery",
+        "summary": "Turns 4-10 — the student reveals they are a senior data analyst at Morningstar, 5 years in, wanting to close a technical-skill gap and move to a senior/product role. The counsellor asks only two shallow questions.",
+        "didWell": "Captured current role, employer, tenure, and stated goal in a short window — basic qualification info is on the table.",
+        "toImprove": "Probe the specific technical gap ('Which tools do you feel weakest in?'), the target role and package, the timeline, and the decision drivers — and explicitly respect the 'few minutes' constraint by tightening the agenda."
+      },
+      {
+        "phase": 3,
+        "name": "Presentation",
+        "summary": "No presentation occurred; the call never moved beyond discovery.",
+        "didWell": "Did not over-pitch prematurely to an experienced analyst, which avoids the anchor-1 trap of pitching basics.",
+        "toImprove": "Even with a time-pressed senior analyst, deliver a tight 60-second value frame: 6 months, 8 modules, IIM Ranchi credential, online + campus immersion, and one role-relevant case (e.g., the analytics-manager track) tied to their stated senior/product ambition."
+      },
+      {
+        "phase": 4,
+        "name": "Objections & Negotiation",
+        "summary": "No objections were raised or pre-empted in the transcript.",
+        "didWell": "Did not invent objections or steamroll the student.",
+        "toImprove": "Acknowledge the time constraint out loud ('I know you're short on time, so let me respect that…') and pre-empt the obvious time-commitment objection by giving a clear '15 minutes, here's the arc' roadmap."
+      },
+      {
+        "phase": 5,
+        "name": "Close",
+        "summary": "No close was attempted; the call simply ends after discovery.",
+        "didWell": "Avoided coercive or high-pressure tactics.",
+        "toImprove": "Anchor a specific follow-up ('Can I call you tomorrow at 6 PM with a tailored walkthrough?') and, once value is shown, present the seat-block path to convert intent into commitment."
+      }
+    ],
+    "strengths": [
+      {
+        "point": "Used the student's name correctly from CRM on the first turn, signalling preparation.",
+        "quote": "Hi, Shubhi. Hello?"
+      },
+      {
+        "point": "Captured role, employer, tenure, and goal in a short window without over-pitching to a senior practitioner.",
+        "quote": "What are you looking for from this course?"
+      }
+    ],
+    "improvements": [
+      {
+        "point": "Replace the curt command with a warm, open opener that hands the student the wheel and respects the 'few minutes' constraint.",
+        "quote": "Now, can you introduce yourself?",
+        "suggestion": "Open with: 'Shubhi, thanks for taking my call — I know you're busy. Before I share anything, what prompted you to explore this programme right now, and what would make this 15 minutes worth it for you?'"
+      },
+      {
+        "point": "Dig past surface goals into the real driver — current vs target package, decision timeline, family/peer context — to ground value in a concrete number.",
+        "quote": "And what career is that?",
+        "suggestion": "Follow the goal with: 'Helpful — what does a senior/product role look like for you in package and scope, and is there a target number or title you're aiming for in the next 12-18 months?'"
+      },
+      {
+        "point": "Build value with a short, role-tailored programme overview and anchor a specific next step instead of letting the call drift to an open end.",
+        "quote": "I just have a few minutes right now.",
+        "suggestion": "Acknowledge the constraint, deliver a 60-second curated pitch (6 months, 8 modules, IIM Ranchi + Masai, online + campus immersion, one analytics-manager case), and close with a booked time: 'Can I block 20 minutes tomorrow at 6 PM to walk you through modules 4-7 that map to the product track?'"
+      }
+    ],
+    "keyMoments": [
+      {
+        "turn": 1,
+        "type": "miss",
+        "note": "Disjointed opening ('How do I speak? Hello?') and abrupt command 'Now, can you introduce yourself?' erode first-impression trust with a senior working professional."
+      },
+      {
+        "turn": 4,
+        "type": "miss",
+        "note": "Student flags 'I just have a few minutes right now' and the counsellor neither acknowledges it nor tightens the agenda — a missed empathy and time-management beat."
+      },
+      {
+        "turn": 7,
+        "type": "miss",
+        "note": "Only a single generic 'What are you looking for from this course?' is asked; no follow-up to surface the specific technical gap, target package, or decision drivers."
+      },
+      {
+        "turn": 10,
+        "type": "miss",
+        "note": "Call ends without any presentation, payment ask, or anchored follow-up — converting a warm working-professional lead into a dead end."
+      }
+    ],
+    "drills": [
+      {
+        "title": "60-Second Curated Pitch for a Time-Pressed Senior Analyst",
+        "focusCriterion": "presentation",
+        "objectionCategory": "time_commitment",
+        "instruction": "Role-play with a timer: open by acknowledging the student's stated time limit, then deliver exactly 60 seconds covering duration (6 months), format (online + campus immersion), the 8-module arc with two modules tied to a senior/product analytics role, and the IIM Ranchi credential — then ask for a booked follow-up."
+      },
+      {
+        "title": "Discovery Depth: From 'What are you looking for?' to a Concrete Number",
+        "focusCriterion": "discovery",
+        "objectionCategory": "course_fit_relevance",
+        "instruction": "Practice a 5-question discovery ladder: current role/tools → specific technical gap → target role and package (current vs expected LPA) → decision timeline → who else is part of the decision. Drill until you can reach a '4.5 to 8-10 LPA' style concrete framing within 4 minutes."
+      },
+      {
+        "title": "Soft Close Under a 3-Minute Remaining Window",
+        "focusCriterion": "closing",
+        "objectionCategory": "competing_priorities",
+        "instruction": "Simulate a student who says 'I have to jump in 3 minutes.' Practice three micro-closes: (a) anchor a specific callback time, (b) offer the seat-block ₹4,000 path with a 10-day balance window, (c) summarise value in one sentence tied to their goal before asking. End each drill with a self-score on whether a follow-up time was actually locked."
+      }
+    ],
+    "benchmarks": {
+      "sessionMinutes": 3.6,
+      "medianPaidMinutes": 25.1,
+      "paymentAskSeen": false,
+      "paymentAskNormPct": 87
+    },
+    "scoreArc": [
+      {
+        "turn": 0,
+        "score": 50
+      },
+      {
+        "turn": 1,
+        "score": 50
+      },
+      {
+        "turn": 2,
+        "score": 49
+      },
+      {
+        "turn": 3,
+        "score": 47
+      },
+      {
+        "turn": 4,
+        "score": 47
+      },
+      {
+        "turn": 5,
+        "score": 47
+      },
+      {
+        "turn": 6,
+        "score": 47
+      }
+    ],
+    "transcript": [
+      {
+        "role": "counsellor",
+        "text": "hello",
+        "phase": 1,
+        "turnType": "statement",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T15:28:59.234Z",
+        "scoreReason": "scoring unavailable"
+      },
+      {
+        "role": "counsellor",
+        "text": "Hi, Shubhi. Hello?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 49,
+        "ts": "2026-06-11T15:29:09.945Z",
+        "scoreReason": "Counsellor simply repeated the greeting twice with the student's name without any discovery question or substantive engagement, which is a weak attempt to start a real conversation."
+      },
+      {
+        "role": "student",
+        "text": "Umm, yeah hi sir. Can you hear me okay?",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 49,
+        "ts": "2026-06-11T15:29:14.471Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Yes, sir. Yes, I can hear you. Hello? How do I speak? Hello?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 47,
+        "ts": "2026-06-11T15:29:32.237Z",
+        "scoreReason": "Counsellor fumbles with audio/connection ('How do I speak? Hello?') instead of responding to the student's greeting or moving into discovery, coming across unprofessional and ungrounded at the start of the call."
+      },
+      {
+        "role": "student",
+        "text": "Yeah, I can hear you clearly, sir. Um, I just have a few minutes right now.",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 47,
+        "ts": "2026-06-11T15:29:36.970Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Now, can you introduce yourself?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 47,
+        "ts": "2026-06-11T15:29:46.016Z",
+        "scoreReason": "A standard opening discovery question inviting the student to introduce themselves is exactly what Phase 2 calls for."
+      },
+      {
+        "role": "student",
+        "text": "Umm, yeah, my name is Shubhi. I'm a senior data analyst, umm, at Morningstar. I've been working for almost five years now, and I took the qualifier test because I'm looking to, you know, upskill a bit.",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 47,
+        "ts": "2026-06-11T15:29:49.143Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "What are you looking for from this course?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 47,
+        "ts": "2026-06-11T15:30:23.131Z",
+        "scoreReason": "Ordinary open-ended discovery question letting the student share their goals, which is the expected move in this phase."
+      },
+      {
+        "role": "student",
+        "text": "Honestly, I'm hoping to, um, close the gap in my technical skills. I want to see if this course can really add value to my career, you know?",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 47,
+        "ts": "2026-06-11T15:30:32.791Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "And what career is that?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 47,
+        "ts": "2026-06-11T15:30:42.375Z",
+        "scoreReason": "Ordinary discovery follow-up question asking the student to clarify their career goal, which is an expected probe at this phase."
+      },
+      {
+        "role": "student",
+        "text": "I'm currently working in analytics, and I'm looking to, um, move into a more senior role or maybe even a product company.",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 47,
+        "ts": "2026-06-11T15:30:45.313Z"
+      }
+    ],
+    "generatedAt": "2026-06-11T15:32:11.385Z"
   }
 ]

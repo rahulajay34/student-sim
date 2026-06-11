@@ -2,6 +2,61 @@ import { useEffect, useState } from "react";
 import Orb from "./Orb";
 import { scoreColor } from "../../../lib/format";
 import { sidecarStatus, capabilityReady } from "../../../voice/sidecarClient";
+import { OPENAI_VOICES, ELEVENLABS_VOICES, VOICE_ENGINES, ENGINE_OPENAI, ENGINE_ELEVENLABS, ENGINE_CLASSIC, isS2SEngine } from "../../../voice/engines";
+
+const ENGINE_LABEL = Object.fromEntries(VOICE_ENGINES.map((e) => [e.id, e.label]));
+
+// ── In-call voice picker (audition voices live; a change reconnects briefly) ───
+function VoicePicker({ voices, voice, onChange }) {
+  const [open, setOpen] = useState(false);
+  const current = voices.find((v) => v.id === voice) || voices[0];
+  return (
+    <div style={{ position: "relative" }}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        title="Change the student's voice (reconnects briefly)"
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 9999,
+          padding: "4px 12px", fontSize: "0.75rem", color: "#c7d2fe",
+          background: "rgba(22,26,38,0.80)", backdropFilter: "blur(8px)",
+          border: "1px solid rgba(99,102,241,0.40)", cursor: "pointer", whiteSpace: "nowrap",
+        }}
+      >
+        <span aria-hidden>🎙</span>
+        <span>Voice: {current.label}</span>
+        <span style={{ color: "#8b90a8", transform: open ? "rotate(180deg)" : "none", transition: "transform 150ms ease" }}>⌄</span>
+      </button>
+      {open && (
+        <div
+          style={{
+            position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 20,
+            width: 240, maxHeight: 280, overflowY: "auto", borderRadius: 12,
+            background: "rgba(18,21,31,0.97)", backdropFilter: "blur(10px)",
+            border: "1px solid #262a36", boxShadow: "0 12px 32px rgba(0,0,0,0.4)", padding: 4,
+          }}
+        >
+          {voices.map((v) => (
+            <button
+              key={v.id}
+              type="button"
+              onClick={() => { onChange?.(v.id); setOpen(false); }}
+              style={{
+                width: "100%", textAlign: "left", display: "flex", flexDirection: "column",
+                gap: 1, padding: "7px 10px", borderRadius: 8, border: "none", cursor: "pointer",
+                background: v.id === voice ? "rgba(99,102,241,0.18)" : "transparent",
+                color: v.id === voice ? "#c7d2fe" : "#e7e9f4",
+              }}
+            >
+              <span style={{ fontSize: "0.78rem", fontWeight: 600 }}>{v.label}</span>
+              <span style={{ fontSize: "0.66rem", color: "#8b90a8" }}>{v.note}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Phase labels (1-indexed, 5 phases) ────────────────────────────────────────
 const PHASE_LABELS = {
@@ -179,13 +234,14 @@ function VoiceStatusPill({ voice }) {
   const hasSidecar = sc?.ok && capabilityReady(sc?.capabilities?.tts);
 
   let label = voice.status;
-  if (voice.status === "loading") label = `Loading ${voice.loadPct}%`;
+  if (voice.status === "loading") label = voice.loadPct ? `Loading ${voice.loadPct}%` : "Connecting…";
   else if (voice.status === "idle") label = "Voice ready";
   else if (voice.status === "recording") label = "Recording…";
+  else if (voice.status === "listening") label = "Listening…";
   else if (voice.status === "transcribing") label = "Transcribing…";
   else if (voice.status === "speaking") label = "Speaking…";
 
-  const isActive = voice.status === "recording" || voice.status === "speaking";
+  const isActive = voice.status === "recording" || voice.status === "speaking" || voice.status === "listening";
 
   return (
     <div style={{ position: "absolute", bottom: 20, left: 20, display: "flex", alignItems: "center", gap: 8 }}>
@@ -492,6 +548,12 @@ export default function CallStage({
   voice,
   onToggleMic,
   micLatched,
+  // voice engine (S2S)
+  voiceEngine = ENGINE_CLASSIC,
+  openaiVoice,
+  onChangeOpenaiVoice,
+  elevenVoice,
+  onChangeElevenVoice,
   // keyboard / sidebar
   onToggleKeyboard,
   sidebarOpen,
@@ -641,6 +703,31 @@ export default function CallStage({
           />
           {cuesEnabled ? "Cues on" : "Cues off"}
         </button>
+
+        {/* Voice engine indicator */}
+        <Pill
+          style={{
+            color: isS2SEngine(voiceEngine) ? "#34d399" : "#8b90a8",
+            borderColor: isS2SEngine(voiceEngine) ? "rgba(16,185,129,0.40)" : "#262a36",
+          }}
+        >
+          <span
+            style={{
+              width: 6, height: 6, borderRadius: "50%", display: "inline-block",
+              background: isS2SEngine(voiceEngine) ? "#10b981" : "#4b5167",
+            }}
+          />
+          {ENGINE_LABEL[voiceEngine] || "Classic"}
+          {isS2SEngine(voiceEngine) && <span style={{ color: "#6f7590" }}>· S2S</span>}
+        </Pill>
+
+        {/* Live voice picker (per engine) */}
+        {voiceEngine === ENGINE_OPENAI && (
+          <VoicePicker voices={OPENAI_VOICES} voice={openaiVoice} onChange={onChangeOpenaiVoice} />
+        )}
+        {voiceEngine === ENGINE_ELEVENLABS && (
+          <VoicePicker voices={ELEVENLABS_VOICES} voice={elevenVoice} onChange={onChangeElevenVoice} />
+        )}
       </div>
 
       {/* ── Info panel (S8): persistent brief below the pills ───────────── */}
@@ -748,18 +835,22 @@ export default function CallStage({
       {/* ── Bottom controls bar ─────────────────────────────────────────── */}
       <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          {/* Mic button */}
-          <CtrlBtn
-            title={voice.enabled ? (micLatched ? "Mute mic" : "Activate mic") : "Enable voice first"}
-            onClick={onToggleMic}
-            style={
-              micLatched
-                ? { background: "#065f46", borderColor: "#10b981", color: "#10b981" }
-                : {}
-            }
-          >
-            <MicIcon />
-          </CtrlBtn>
+          {/* Mic button. S2S: open mic, button toggles mute. Classic: latch on/off. */}
+          {(() => {
+            const micActive = isS2SEngine(voiceEngine) ? (voice.enabled && !voice.muted) : micLatched;
+            const micTitle = isS2SEngine(voiceEngine)
+              ? (voice.enabled ? (voice.muted ? "Unmute mic" : "Mute mic") : "Connect voice")
+              : (voice.enabled ? (micLatched ? "Mute mic" : "Activate mic") : "Enable voice first");
+            return (
+              <CtrlBtn
+                title={micTitle}
+                onClick={onToggleMic}
+                style={micActive ? { background: "#065f46", borderColor: "#10b981", color: "#10b981" } : {}}
+              >
+                <MicIcon />
+              </CtrlBtn>
+            );
+          })()}
 
           {/* Keyboard / sidebar toggle */}
           <CtrlBtn
@@ -783,21 +874,33 @@ export default function CallStage({
         {/* Mic hint */}
         {voice.enabled && micHintShown && (
           <p style={{ color: "#8b90a8", fontSize: "0.7rem", margin: 0 }}>
-            Hold{" "}
-            <kbd
-              style={{
-                background: "#161a26",
-                border: "1px solid #262a36",
-                borderRadius: 4,
-                padding: "1px 5px",
-                fontFamily: "inherit",
-                fontSize: "0.7rem",
-                color: "#e7e9f4",
-              }}
-            >
-              Space
-            </kbd>{" "}
-            to talk
+            {isS2SEngine(voiceEngine) ? (
+              voice.muted ? (
+                <>
+                  Hold{" "}
+                  <kbd style={{ background: "#161a26", border: "1px solid #262a36", borderRadius: 4, padding: "1px 5px", fontFamily: "inherit", fontSize: "0.7rem", color: "#e7e9f4" }}>Space</kbd>{" "}
+                  to talk · tap the mic for hands-free
+                </>
+              ) : "Mic open (hands-free) — tap the mic to mute"
+            ) : (
+              <>
+                Hold{" "}
+                <kbd
+                  style={{
+                    background: "#161a26",
+                    border: "1px solid #262a36",
+                    borderRadius: 4,
+                    padding: "1px 5px",
+                    fontFamily: "inherit",
+                    fontSize: "0.7rem",
+                    color: "#e7e9f4",
+                  }}
+                >
+                  Space
+                </kbd>{" "}
+                to talk
+              </>
+            )}
           </p>
         )}
       </div>

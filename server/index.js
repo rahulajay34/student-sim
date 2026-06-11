@@ -20,7 +20,18 @@ import { getPromptConfig } from "./promptConfig.js";
 import { composeForInspection } from "./prompt.js";
 import { pickStudentVoice } from "./voices.js";
 import { rollSessionFlavour, DEFAULT_PERSONALITY } from "./personality.js";
+import {
+  mintOpenAIClientSecret, buildRealtimeInstructions, normalizeOpenAIVoice, openAIVoiceForSession, OPENAI_REALTIME_MODEL,
+  ensureElevenLabsAgent, getElevenLabsConversationToken, elevenLabsOverridesFor,
+} from "./realtime.js";
 import { writeFileSync, readFileSync } from "fs";
+
+// Voice engine for a session: "classic" (STT -> MiniMax -> TTS, the default),
+// "openai" (OpenAI Realtime S2S), or "elevenlabs" (ElevenLabs Conversational AI S2S).
+// In the two S2S modes the provider owns the live voice/conversation and MiniMax
+// grades each turn via POST /sessions/:id/observe.
+const VOICE_ENGINES = new Set(["classic", "openai", "elevenlabs"]);
+const normalizeVoiceEngine = (v) => (VOICE_ENGINES.has(v) ? v : "classic");
 
 const PROMPT_CONFIG_PATH = join(__dirname, "data", "prompt-config.json");
 
@@ -380,6 +391,13 @@ app.post("/api/sessions/start", async (req, res) => {
     // Thinking mode for the live conversation: default 'off' (faster). The in-call
     // toggle flips this per turn on POST /message.
     const thinkingMode = req.body?.thinkingMode === "on" ? "on" : "off";
+    // Voice engine: classic (default) | openai | elevenlabs. The two S2S engines
+    // run the live voice via the provider; MiniMax grades through /observe.
+    const voiceEngine = normalizeVoiceEngine(req.body?.voiceEngine);
+    const openaiVoice = normalizeOpenAIVoice(req.body?.openaiVoice);
+    // ElevenLabs student voice: "auto" (gender-matched catalog) or a specific voice id.
+    const elevenVoiceId = (typeof req.body?.elevenVoiceId === "string" && req.body.elevenVoiceId.trim())
+      ? req.body.elevenVoiceId.trim() : "auto";
 
     let personaId2 = personaId;
     let scenario2 = scenario || { title: "Free practice", difficulty: "medium", situation: "", contextNotes: "" };
@@ -500,6 +518,9 @@ app.post("/api/sessions/start", async (req, res) => {
       leadCard,
       revealPersona,
       thinkingMode,
+      voiceEngine,
+      openaiVoice,
+      elevenVoiceId,
       voice,
       currentPhase: 1,
       satisfactionScore: 50,
@@ -522,6 +543,7 @@ app.post("/api/sessions/start", async (req, res) => {
     res.json({
       sessionId: session.id, firstMessage, emotion: firstEmotion,
       currentPhase: 1, satisfactionScore: 50, milestones: session.milestones, voice, revealPersona, leadCard,
+      voiceEngine, openaiVoice, elevenVoiceId,
     });
   } catch (err) {
     console.error("Error in /sessions/start:", err.message);
@@ -732,6 +754,130 @@ app.post("/api/sessions/:id/message", lockedHandler(async (req, res) => {
     } else {
       res.status(500).json({ error: err.message });
     }
+  }
+}));
+
+// ── Speech-to-speech (S2S) realtime credentials + observation ────────────────
+// In the "openai"/"elevenlabs" voice engines the live voice + conversation run
+// browser↔provider (low latency); MiniMax still grades each turn via /observe.
+
+// OpenAI Realtime ephemeral client secret for the browser WebRTC peer connection.
+// Body: { voice? } lets the UI audition any of the 10 realtime voices live; it
+// re-mints with that voice (the WebRTC session is re-established client-side).
+app.post("/api/sessions/:id/realtime/openai-token", async (req, res) => {
+  const session = store.getById("sessions", req.params.id);
+  if (!session) return res.status(404).json({ error: "Session not found" });
+  try {
+    // Resolve the voice: an explicit live-picked voice wins; otherwise gender-match
+    // (female→marin, male→cedar) from the session's student gender.
+    const voice = openAIVoiceForSession(session, req.body?.voice);
+    const instructions = buildRealtimeInstructions(session);
+    const out = await mintOpenAIClientSecret({ instructions, voice });
+    res.json({ value: out.value, model: out.model, voice: out.voice, expiresAt: out.expiresAt });
+  } catch (err) {
+    console.error("Error minting OpenAI realtime token:", err.message);
+    res.status(502).json({ error: err.message });
+  }
+});
+
+// ElevenLabs Conversational AI WebRTC conversation token + the per-session
+// overrides (persona prompt + the session's authentic Indian student voice) the
+// browser SDK applies at startSession.
+app.post("/api/sessions/:id/realtime/elevenlabs-token", async (req, res) => {
+  const session = store.getById("sessions", req.params.id);
+  if (!session) return res.status(404).json({ error: "Session not found" });
+  try {
+    const agentId = await ensureElevenLabsAgent();
+    const token = await getElevenLabsConversationToken(agentId);
+    // Optional live voice override (in-call picker); else session.elevenVoiceId / gender-match.
+    const overrides = elevenLabsOverridesFor(session, req.body?.voiceId);
+    res.json({ token, agentId, overrides });
+  } catch (err) {
+    console.error("Error minting ElevenLabs realtime token:", err.message);
+    res.status(502).json({ error: err.message });
+  }
+});
+
+// Observe a completed S2S turn pair so MiniMax keeps the live coaching alive:
+// classify + advance phase + SCORE the counsellor turn, then track the student's
+// objection + advance phase on the reply, append both to the server-owned
+// transcript, and return the same coaching fields /message does (minus the reply,
+// which the provider already spoke). Body: { counsellorText, studentText } — either
+// may be empty (e.g. only a counsellor turn so far). Serialized per session.
+app.post("/api/sessions/:id/observe", lockedHandler(async (req, res) => {
+  const session = store.getById("sessions", req.params.id);
+  if (!session) return res.status(404).json({ error: "Session not found. Please start a new session." });
+  if (session.status === "ended") return res.status(409).json({ error: "This session has ended." });
+  const cText = typeof req.body?.counsellorText === "string" ? req.body.counsellorText.trim() : "";
+  const sText = typeof req.body?.studentText === "string" ? req.body.studentText.trim() : "";
+  if (!cText && !sText) return res.status(400).json({ error: "counsellorText or studentText is required" });
+
+  if (!Array.isArray(session.objectionState)) session.objectionState = initObjectionState();
+
+  try {
+    let turnType = null;
+    let reason = null;
+    let raisedCategory = null;
+
+    // Counsellor turn: classify -> advance phase -> score (MiniMax) -> objection resolve.
+    if (cText) {
+      turnType = classifyCounsellorTurn(cText);
+      advancePhase(session, "counsellor", cText);
+      const preScore = session.satisfactionScore;
+      const counsellorEntry = {
+        role: "counsellor", text: cText, phase: session.currentPhase,
+        turnType, scoreAfter: preScore, ts: new Date().toISOString(),
+      };
+      session.transcript.push(counsellorEntry);
+
+      const windowSize = loadScoringConfig().recentTurnsWindow;
+      const recentTurns = session.transcript.slice(-(windowSize + 1), -1).map(({ role, text }) => ({ role, text }));
+      const openObjForScore = openObjections(session.objectionState).map(({ category }) => ({ key: category }));
+
+      const scored = isBackchannel(cText)
+        ? { adjustment: 0, reason: "Backchannel acknowledgement", addressedObjection: null }
+        : await scoreMessage(cText, {
+            recentTurns, phase: session.currentPhase, turnType,
+            courseName: session.courseSnapshot?.name, openObjections: openObjForScore,
+          });
+      reason = scored.reason;
+      session.satisfactionScore = Math.max(0, Math.min(100, preScore + scored.adjustment));
+      counsellorEntry.scoreAfter = session.satisfactionScore;
+      counsellorEntry.scoreReason = reason;
+      session.scoreHistory.push({ turn: session.scoreHistory.length, score: session.satisfactionScore, adjustment: scored.adjustment, reason });
+      if (scored.addressedObjection) {
+        resolveObjection(session.objectionState, scored.addressedObjection, session.transcript.indexOf(counsellorEntry));
+      }
+    }
+
+    // Student reply (already spoken by the provider): advance phase + track objection.
+    if (sText) {
+      const gateCategory = advancePhase(session, "student", sText);
+      const studentTurnIdx = session.transcript.length;
+      raisedCategory = gateCategory || detectObjectionCategory(sText);
+      if (raisedCategory) raiseObjection(session.objectionState, raisedCategory, studentTurnIdx);
+      session.transcript.push({
+        role: "student", text: sText, emotion: "neutral", phase: session.currentPhase,
+        scoreAfter: session.satisfactionScore, ts: new Date().toISOString(),
+      });
+    }
+
+    store.update("sessions", session.id, session);
+
+    const lastHist = session.scoreHistory[session.scoreHistory.length - 1] || null;
+    const cue = instantCue({
+      session, lastStudentText: sText, objectionCategory: raisedCategory,
+      lastCounsellorAdjustment: lastHist && typeof lastHist.adjustment === "number" ? lastHist.adjustment : null,
+      lastCounsellorScoreReason: lastHist?.reason ?? null, objectionState: session.objectionState,
+    });
+
+    res.json({
+      currentPhase: session.currentPhase, satisfactionScore: session.satisfactionScore,
+      scoreReason: reason, turnType, milestones: session.milestones, cue,
+    });
+  } catch (err) {
+    console.error("Error in /sessions/observe:", err.stack || err.message);
+    res.status(500).json({ error: err.message });
   }
 }));
 

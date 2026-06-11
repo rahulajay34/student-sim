@@ -200,6 +200,18 @@ addressing concerns and persistence actually move the student toward "yes" and s
 - `event: error` / `data: {error}` — on failure (includes `LLM_TIMEOUT`).
 Non-SSE requests keep today's JSON response shape exactly.
 
+### Speech-to-speech engines (addendum to §3)
+
+A session has a **`voiceEngine`**: `"classic"` (default; STT→MiniMax→TTS, unchanged) | `"openai"` (OpenAI Realtime) | `"elevenlabs"` (ElevenLabs Conversational AI). Set at `POST /sessions/start` via body `{ voiceEngine?, openaiVoice? }` (both echoed in the response and stored on the session). In the two S2S engines the provider owns the live voice/conversation; MiniMax grades each turn via `/observe`.
+
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| POST | `/sessions/:id/realtime/openai-token` | `{voice?}` (any of the 10 realtime voices; re-mint to audition live) | `{value, model, voice, expiresAt}` — `value` is an ephemeral `ek_…` client secret for the browser WebRTC peer connection (`POST https://api.openai.com/v1/realtime/calls?model=…`, `Content-Type: application/sdp`) |
+| POST | `/sessions/:id/realtime/elevenlabs-token` | — | `{token, agentId, overrides}` — WebRTC conversation token + per-session overrides (`{agent:{prompt:{prompt},firstMessage,language}, tts:{voiceId}}`) for `@elevenlabs/react` `startSession({conversationToken, connectionType:"webrtc", overrides})` |
+| POST | `/sessions/:id/observe` | `{counsellorText?, studentText?}` | `{currentPhase, satisfactionScore, scoreReason, turnType, milestones, cue}` — runs classify+phase+**MiniMax scoring** on the counsellor text and objection/phase tracking on the student text, appends both to the server-owned transcript, returns the same coaching fields as `/message` (no reply — the provider already spoke it). 409 if ended; serialized per session. |
+
+S2S transcript events are POSTed to `/observe` in arrival order through a client-side sequential queue. The OpenAI voice is American-base (instructed to speak Indian English + Hinglish); ElevenLabs reuses the session's authentic Indian `voice.elevenLabsVoiceId`. `voice_delivery` is excluded (no sidecar `/analyze` in S2S), weights renormalized as for text sessions. Server config: §3 env vars `OPENAI_API_KEY`, `OPENAI_REALTIME_MODEL`, `OPENAI_REALTIME_VOICE`, `ELEVENLABS_AGENT_ID`, `ELEVENLABS_CONVAI_LLM`.
+
 ### Analytics (addendum to §3)
 
 | Method | Path | Returns |
