@@ -1,5 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
+import { loadStoredMicDevice, saveStoredMicDevice } from "./engines";
+
+// Build the getUserMedia audio constraints, layering the optional preferred
+// device on top of the standard echo-cancellation/noise-suppression/mono config.
+// We use deviceId.ideal (NOT exact) so a vanished device falls back to the system
+// default instead of throwing OverconstrainedError.
+function micConstraints(deviceId) {
+  const audio = { echoCancellation: true, noiseSuppression: true, channelCount: 1 };
+  if (deviceId) audio.deviceId = { ideal: deviceId };
+  return { audio };
+}
 
 // OpenAI Realtime speech-to-speech over WebRTC — the single voice engine.
 //
@@ -61,6 +72,7 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
   // It may contain multiple speech segments (the counsellor pausing mid-thought).
   const micAnalyserRef = useRef(null);  // local mic AnalyserNode (energy variance)
   const micCtxRef = useRef(null);
+  const micSrcRef = useRef(null);       // MediaStreamSource feeding the mic analyser (disconnect on re-point)
   const utterRef = useRef(null); // { startMs, durMs, segments, speaking, segStartMs, rms: [] }
   const rmsTimerRef = useRef(null);
 
@@ -109,6 +121,37 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
   }
   function stopRmsSampling() {
     if (rmsTimerRef.current) { clearInterval(rmsTimerRef.current); rmsTimerRef.current = null; }
+  }
+
+  // (Re)point the local-mic AnalyserNode (delivery-metrics energy sampler) at the
+  // given stream. Reuses the existing AudioContext on a mic switch so we don't leak
+  // contexts; disconnects the prior source node first. The analyser is tap-only
+  // (never routed to output). Returns the AudioContext (or null on failure) so the
+  // initial connect can register it on micCtxRef for teardown. Never throws.
+  function setupMicAnalyser(stream) {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      let ctx = micCtxRef.current;
+      if (!ctx) {
+        ctx = new AC();
+        micCtxRef.current = ctx;
+      }
+      ctx.resume?.().catch(() => {});
+      try { micSrcRef.current?.disconnect(); } catch { /* old source already gone */ }
+      const micSrc = ctx.createMediaStreamSource(stream);
+      let analyser = micAnalyserRef.current;
+      if (!analyser) {
+        analyser = ctx.createAnalyser();
+        analyser.fftSize = 256;
+        micAnalyserRef.current = analyser;
+      }
+      micSrc.connect(analyser); // analyser only — not routed to output
+      micSrcRef.current = micSrc;
+      return ctx;
+    } catch (err) {
+      console.warn("[openai-realtime] mic analyser setup failed (no energyVar):", err?.message);
+      return null;
+    }
   }
 
   // Compute the metrics object for the just-completed counsellor utterance from
@@ -174,6 +217,7 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
     audioCtxRef.current = null;
     analyserRef.current = null;
     micAnalyserRef.current = null;
+    micSrcRef.current = null;
     micCtxRef.current = null;
     utterRef.current = null;
   }, []);
@@ -287,10 +331,10 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
     const ephemeral = tok.value;
     if (tok.voice) setVoice(tok.voice);
 
-    // 2. Mic.
-    const micStream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 },
-    });
+    // 2. Mic. Honour the counsellor's stored input-device choice (ideal → falls
+    //    back to the system default if that device is gone).
+    const storedMic = loadStoredMicDevice();
+    const micStream = await navigator.mediaDevices.getUserMedia(micConstraints(storedMic.deviceId));
     if (gen !== connectGenRef.current) {
       micStream.getTracks().forEach((t) => t.stop()); // local capture — don't touch refs
       return;
@@ -299,20 +343,7 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
 
     // Local mic AnalyserNode tap for delivery-metrics energy variance (separate
     // from the remote-audio analyser that drives the orb).
-    let micCtx = null;
-    try {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      micCtx = new AC();
-      micCtxRef.current = micCtx;
-      micCtx.resume?.().catch(() => {});
-      const micSrc = micCtx.createMediaStreamSource(micStream);
-      const micAnalyser = micCtx.createAnalyser();
-      micAnalyser.fftSize = 256;
-      micSrc.connect(micAnalyser); // analyser only — not routed to output
-      micAnalyserRef.current = micAnalyser;
-    } catch (err) {
-      console.warn("[openai-realtime] mic analyser setup failed (no energyVar):", err?.message);
-    }
+    const micCtx = setupMicAnalyser(micStream);
     resetUtterance();
 
     // 3. Peer connection + remote audio playback + analyser tap (for the orb).
@@ -425,6 +456,55 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
     }
   }, [connect, teardown]);
 
+  // Hot-swap the microphone input device WITHOUT reconnecting: getUserMedia the
+  // new device, replaceTrack() on the existing audio RTCRtpSender (so the WebRTC
+  // call keeps running and the ephemeral token is not re-minted), stop the old mic
+  // track(s), and re-point the local delivery-metrics analyser at the new stream.
+  // The new track inherits the current mute state. Persists the choice. On any
+  // failure the old track keeps running and we surface the error via onError —
+  // never throws.
+  const changeMic = useCallback(async (deviceId, label = "") => {
+    const id = deviceId && deviceId !== "default" ? deviceId : null;
+    const pc = pcRef.current;
+    // Persist the preference regardless — so the next connect honours it even if
+    // we're not currently live (no peer connection to replaceTrack on yet).
+    saveStoredMicDevice(id, label);
+    if (!enabledRef.current || !pc) return;
+
+    let newStream = null;
+    try {
+      newStream = await navigator.mediaDevices.getUserMedia(micConstraints(id));
+      const newTrack = newStream.getAudioTracks()[0];
+      if (!newTrack) throw new Error("Selected microphone produced no audio track.");
+
+      // Match the live mute state before the track goes on the wire.
+      newTrack.enabled = !mutedRef.current;
+
+      // Swap into the existing audio sender (no renegotiation needed for same-kind
+      // track replacement). If for some reason there's no audio sender, bail
+      // without disturbing the current mic.
+      const sender = pc.getSenders?.().find((s) => s.track && s.track.kind === "audio");
+      if (!sender) throw new Error("No audio sender on the peer connection.");
+      await sender.replaceTrack(newTrack);
+
+      // Stop the OLD mic track(s) only after the swap succeeds.
+      const oldStream = micStreamRef.current;
+      micStreamRef.current = newStream;
+      try { oldStream?.getTracks().forEach((t) => t.stop()); } catch { /* noop */ }
+
+      // Re-point the delivery-metrics energy analyser at the new stream so WPM/
+      // pauses keep working and energyVar tracks the new input.
+      setupMicAnalyser(newStream);
+    } catch (err) {
+      // Keep the existing mic running; clean up the half-acquired new stream.
+      try { newStream?.getTracks().forEach((t) => t.stop()); } catch { /* noop */ }
+      const msg = err?.message || "Could not switch microphone.";
+      console.warn("[openai-realtime] changeMic failed:", msg);
+      setError(msg);
+      onErrorRef.current?.(new Error(msg));
+    }
+  }, []);
+
   const setMuted = useCallback((m) => {
     mutedRef.current = m;
     setMutedState(m);
@@ -506,7 +586,7 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
   return {
     engine: "openai",
     enabled, status, loadPct: 0, error, voice, muted,
-    enable, disable, changeVoice, setMuted, getAnalyser, sendText, sendSteering,
+    enable, disable, changeVoice, changeMic, setMuted, getAnalyser, sendText, sendSteering,
     // classic-only no-ops so shared UI/handlers are safe when this engine is active
     speak: () => {}, speakChunk: () => {}, beginUtterance: () => {}, endUtterance: () => {},
     stopSpeaking: () => {}, startListening: () => {}, stopListening: () => {},

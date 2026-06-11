@@ -34,3 +34,34 @@ export function loadStoredOpenAIVoice() {
     return OPENAI_VOICES.some((o) => o.id === v) ? v : DEFAULT_OPENAI_VOICE;
   } catch { return DEFAULT_OPENAI_VOICE; }
 }
+
+// ── Mic input-device preference ───────────────────────────────────────────────
+// The counsellor's chosen microphone, persisted across the green room + in-call
+// pickers and read at connect time by the realtime hook. We store BOTH the
+// deviceId and its label: deviceIds are stable per-origin while permission holds,
+// but if the device is later unplugged the stored id silently resolves to the
+// system default — keeping the label lets the UI detect a missing device and show
+// the fallback gracefully. Shape: { deviceId: string, label: string }.
+export const MIC_DEVICE_STORAGE_KEY = "mct_mic_device";
+
+// Load the stored mic preference, fail-soft to the system default (null deviceId).
+// Always returns an object so callers don't have to null-check.
+export function loadStoredMicDevice() {
+  try {
+    const raw = localStorage.getItem(MIC_DEVICE_STORAGE_KEY);
+    if (!raw) return { deviceId: null, label: "" };
+    const parsed = JSON.parse(raw);
+    const deviceId = typeof parsed?.deviceId === "string" && parsed.deviceId ? parsed.deviceId : null;
+    const label = typeof parsed?.label === "string" ? parsed.label : "";
+    return { deviceId, label };
+  } catch { return { deviceId: null, label: "" }; }
+}
+
+// Persist the mic preference. Pass deviceId=null (or "default") to mean "system
+// default" — we store an empty deviceId so loadStoredMicDevice resolves to default.
+export function saveStoredMicDevice(deviceId, label = "") {
+  try {
+    const id = deviceId && deviceId !== "default" ? deviceId : null;
+    localStorage.setItem(MIC_DEVICE_STORAGE_KEY, JSON.stringify({ deviceId: id, label: label || "" }));
+  } catch { /* storage unavailable — preference simply won't persist */ }
+}

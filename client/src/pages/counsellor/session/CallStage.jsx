@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef, useState } from "react";
 import Orb from "./Orb";
 import { scoreColor } from "../../../lib/format";
-import { OPENAI_VOICES } from "../../../voice/engines";
+import { OPENAI_VOICES, loadStoredMicDevice } from "../../../voice/engines";
 
 // ── In-call voice picker (audition voices live; a change reconnects briefly) ───
 function VoicePicker({ voices, voice, onChange }) {
@@ -49,6 +49,159 @@ function VoicePicker({ voices, voice, onChange }) {
               <span style={{ fontSize: "0.66rem", color: "#8b90a8" }}>{v.note}</span>
             </button>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── In-call mic picker (switch input device live; replaceTrack, no reconnect) ──
+// Mirrors VoicePicker's styling/behaviour. Enumerates audioinput devices fresh on
+// open so a freshly-plugged headset shows up; the active device (from the stored
+// preference) is checked. Selecting calls voice.changeMic(deviceId), which hot-
+// swaps the track without re-minting the realtime token.
+function shortMicLabel(label) {
+  if (!label) return "Default";
+  // Strip the common "(04d2:...)" hardware-id suffix browsers append, then trim.
+  const clean = label.replace(/\s*\([0-9a-f]{4}:[0-9a-f]{4}\)\s*$/i, "").trim() || label;
+  return clean.length > 18 ? clean.slice(0, 17) + "…" : clean;
+}
+
+function MicPicker({ onChange }) {
+  const [open, setOpen] = useState(false);
+  const [devices, setDevices] = useState([]); // [{ deviceId, label }]
+  const [activeId, setActiveId] = useState(() => loadStoredMicDevice().deviceId || "default");
+  const wrapRef = useRef(null);
+
+  // Keep the checked item in sync with the stored preference (changeMic persists it).
+  function syncActive() {
+    setActiveId(loadStoredMicDevice().deviceId || "default");
+  }
+
+  async function enumerate() {
+    try {
+      const all = await navigator.mediaDevices.enumerateDevices();
+      const inputs = all.filter((d) => d.kind === "audioinput");
+      let n = 0;
+      setDevices(inputs.map((d) => {
+        n += 1;
+        return { deviceId: d.deviceId, label: d.label || `Microphone ${n}` };
+      }));
+    } catch {
+      setDevices([]);
+    }
+  }
+
+  function toggleOpen() {
+    setOpen((o) => {
+      const next = !o;
+      if (next) { syncActive(); enumerate(); } // fresh list each open
+      return next;
+    });
+  }
+
+  // Click-outside to close (the voice picker stays open until reselect; the mic
+  // picker additionally dismisses on outside click per the device-switch UX).
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDocClick = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  function pick(d) {
+    const id = d?.deviceId || "default";
+    setActiveId(id || "default");
+    onChange?.(id, d?.label || "");
+    setOpen(false);
+  }
+
+  const activeLabel = activeId === "default"
+    ? "Default"
+    : shortMicLabel(devices.find((d) => d.deviceId === activeId)?.label || loadStoredMicDevice().label || "");
+
+  return (
+    <div ref={wrapRef} style={{ position: "relative" }}>
+      <button
+        type="button"
+        onClick={toggleOpen}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        title="Change your microphone input (no reconnect)"
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 9999,
+          padding: "4px 12px", fontSize: "0.75rem", color: "#c7d2fe",
+          background: "rgba(22,26,38,0.80)", backdropFilter: "blur(8px)",
+          border: "1px solid rgba(99,102,241,0.40)", cursor: "pointer", whiteSpace: "nowrap",
+        }}
+      >
+        <span aria-hidden>🎤</span>
+        <span>Mic: {activeLabel}</span>
+        <span style={{ color: "#8b90a8", transform: open ? "rotate(180deg)" : "none", transition: "transform 150ms ease" }}>⌄</span>
+      </button>
+      {open && (
+        <div
+          role="listbox"
+          style={{
+            position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 20,
+            width: 240, maxHeight: 280, overflowY: "auto", borderRadius: 12,
+            background: "rgba(18,21,31,0.97)", backdropFilter: "blur(10px)",
+            border: "1px solid #262a36", boxShadow: "0 12px 32px rgba(0,0,0,0.4)", padding: 4,
+          }}
+        >
+          {/* System default option */}
+          <button
+            type="button"
+            role="option"
+            aria-selected={activeId === "default"}
+            onClick={() => pick({ deviceId: "default" })}
+            style={{
+              width: "100%", textAlign: "left", display: "flex", alignItems: "center",
+              justifyContent: "space-between", gap: 8, padding: "7px 10px", borderRadius: 8,
+              border: "none", cursor: "pointer",
+              background: activeId === "default" ? "rgba(99,102,241,0.18)" : "transparent",
+              color: activeId === "default" ? "#c7d2fe" : "#e7e9f4",
+            }}
+          >
+            <span style={{ fontSize: "0.78rem", fontWeight: 600 }}>System default</span>
+            {activeId === "default" && <span aria-hidden style={{ color: "#818cf8" }}>✓</span>}
+          </button>
+          {devices.map((d, i) => {
+            const checked = d.deviceId === activeId;
+            return (
+              <button
+                key={d.deviceId || `mic-${i}`}
+                type="button"
+                role="option"
+                aria-selected={checked}
+                onClick={() => pick(d)}
+                style={{
+                  width: "100%", textAlign: "left", display: "flex", alignItems: "center",
+                  justifyContent: "space-between", gap: 8, padding: "7px 10px", borderRadius: 8,
+                  border: "none", cursor: "pointer",
+                  background: checked ? "rgba(99,102,241,0.18)" : "transparent",
+                  color: checked ? "#c7d2fe" : "#e7e9f4",
+                }}
+              >
+                <span style={{ fontSize: "0.78rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {d.label}
+                </span>
+                {checked && <span aria-hidden style={{ color: "#818cf8", flexShrink: 0 }}>✓</span>}
+              </button>
+            );
+          })}
+          {devices.length === 0 && (
+            <p style={{ margin: 0, padding: "8px 10px", fontSize: "0.72rem", color: "#8b90a8" }}>
+              No microphones found.
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -543,6 +696,8 @@ function CallStage({
   // openai realtime voice picker (voice mode)
   openaiVoice,
   onChangeOpenaiVoice,
+  // mic input-device picker (voice mode, while connected)
+  onChangeMic,
   // keyboard / sidebar
   onToggleKeyboard,
   sidebarOpen,
@@ -727,6 +882,11 @@ function CallStage({
         {/* Live OpenAI voice picker (voice mode only) */}
         {isVoice && (
           <VoicePicker voices={OPENAI_VOICES} voice={openaiVoice} onChange={onChangeOpenaiVoice} />
+        )}
+
+        {/* Mic input-device picker (voice mode, while connected) */}
+        {isVoice && voice.enabled && (
+          <MicPicker onChange={onChangeMic} />
         )}
       </div>
 

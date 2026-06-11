@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Spinner from "../../../ui/Spinner";
+import { loadStoredMicDevice, saveStoredMicDevice } from "../../../voice/engines";
 
 const CATEGORY_LABEL = {
   studying: "Currently studying",
@@ -65,63 +66,255 @@ function PersonaTraitChips({ personality }) {
   );
 }
 
-// ── Mic permission probe ──────────────────────────────────────────────────────
+// ── Mic input-device picker + permission probe ────────────────────────────────
+// Lists the available audio-input devices and lets the counsellor pick which mic
+// to use for the call. The choice persists to localStorage (mct_mic_device) via
+// the shared voice helper so the realtime hook reads the same value at connect
+// time. Device labels are blank until a getUserMedia grant, so we enumerate again
+// after the first "Test mic" (or immediately when permission is already granted)
+// to fill them in, and we listen to devicechange while mounted to track plug/unplug.
 function MicCheck() {
-  const [state, setMicState] = useState("idle"); // idle | granted | denied | error
+  const [state, setMicState] = useState("idle"); // idle | testing | granted | denied | error
+  const [devices, setDevices] = useState([]); // [{ deviceId, label }]
+  const [selectedId, setSelectedId] = useState(() => loadStoredMicDevice().deviceId || "default");
+  const [level, setLevel] = useState(0); // 0..1 live input level while testing
+  const [metering, setMetering] = useState(false); // a live test stream is open
 
-  async function testMic() {
-    setMicState("testing");
+  // Test-mic teardown handles (stream + audio graph + rAF), torn down on unmount
+  // or when a new test starts.
+  const testRef = useRef({ stream: null, ctx: null, raf: 0 });
+
+  // Enumerate audioinput devices. Falls back to "Microphone N" labels for entries
+  // with no label (the browser hides labels until a getUserMedia grant). Fail-soft.
+  const refreshDevices = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((t) => t.stop());
+      const all = await navigator.mediaDevices.enumerateDevices();
+      const inputs = all.filter((d) => d.kind === "audioinput");
+      let n = 0;
+      const mapped = inputs.map((d) => {
+        n += 1;
+        return { deviceId: d.deviceId, label: d.label || `Microphone ${n}` };
+      });
+      setDevices(mapped);
+      // If the stored device has vanished, fall back to the system default so the
+      // UI never points at a missing input.
+      setSelectedId((prev) => {
+        if (prev === "default") return prev;
+        return mapped.some((m) => m.deviceId === prev) ? prev : "default";
+      });
+    } catch {
+      setDevices([]);
+    }
+  }, []);
+
+  const stopTest = useCallback(() => {
+    const t = testRef.current;
+    if (t.raf) { cancelAnimationFrame(t.raf); t.raf = 0; }
+    try { t.stream?.getTracks().forEach((tr) => tr.stop()); } catch { /* noop */ }
+    try { t.ctx?.close(); } catch { /* noop */ }
+    testRef.current = { stream: null, ctx: null, raf: 0 };
+    setLevel(0);
+    setMetering(false);
+  }, []);
+
+  // Open the SELECTED device, show a live level meter, and (on first grant) refill
+  // device labels. Leaves the stream open so the meter is live until the user
+  // re-tests, picks another device, or leaves the green room.
+  const testMic = useCallback(async (deviceId) => {
+    stopTest();
+    setMicState("testing");
+    const id = (deviceId ?? selectedId);
+    const constraints = id && id !== "default"
+      ? { audio: { deviceId: { ideal: id } } }
+      : { audio: true };
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       setMicState("granted");
+      // Labels are now available — refresh so the dropdown shows real names.
+      refreshDevices();
+      // Live level meter so the counsellor can confirm the right input is picked up.
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AC();
+        ctx.resume?.().catch(() => {});
+        const src = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 256;
+        src.connect(analyser);
+        const buf = new Uint8Array(analyser.frequencyBinCount);
+        const tick = () => {
+          analyser.getByteTimeDomainData(buf);
+          let peak = 0;
+          for (let i = 0; i < buf.length; i++) {
+            const v = Math.abs(buf[i] - 128) / 128;
+            if (v > peak) peak = v;
+          }
+          setLevel(Math.min(1, peak * 1.8));
+          testRef.current.raf = requestAnimationFrame(tick);
+        };
+        testRef.current = { stream, ctx, raf: requestAnimationFrame(tick) };
+        setMetering(true);
+      } catch {
+        // Meter is best-effort; the grant itself already succeeded.
+        testRef.current = { stream, ctx: null, raf: 0 };
+        setMetering(false);
+      }
     } catch {
       setMicState("denied");
     }
+  }, [selectedId, refreshDevices, stopTest]);
+
+  // On mount: if permission is already granted, enumerate immediately (labels are
+  // available without a fresh prompt). Otherwise wait for the user to click "Test
+  // mic". permissions.query is fail-soft (unsupported in some browsers).
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const status = await navigator.permissions?.query?.({ name: "microphone" });
+        if (!alive) return;
+        if (status?.state === "granted") {
+          setMicState("granted");
+          refreshDevices();
+        }
+      } catch {
+        /* permissions API unsupported — labels appear after the first Test mic */
+      }
+    })();
+    return () => { alive = false; };
+  }, [refreshDevices]);
+
+  // Track headset plug/unplug while the green room is mounted.
+  useEffect(() => {
+    const md = navigator.mediaDevices;
+    if (!md) return undefined;
+    const onChange = () => refreshDevices();
+    md.addEventListener?.("devicechange", onChange);
+    return () => md.removeEventListener?.("devicechange", onChange);
+  }, [refreshDevices]);
+
+  // Tear down the live test stream when the component unmounts.
+  useEffect(() => () => stopTest(), [stopTest]);
+
+  // Persist + re-test on selection so the meter reflects the chosen input.
+  function onSelect(e) {
+    const id = e.target.value;
+    setSelectedId(id);
+    const label = id === "default"
+      ? ""
+      : (devices.find((d) => d.deviceId === id)?.label || "");
+    saveStoredMicDevice(id === "default" ? null : id, label);
+    // If a test is already live (or permission is granted), re-open on the new
+    // device so the level meter follows the choice.
+    if (state === "testing" || state === "granted") testMic(id);
   }
 
+  const showPicker = devices.length > 0;
+
   return (
-    <div className="flex items-center justify-between gap-3">
-      <div>
-        <p className="text-sm font-medium" style={{ color: "#e7e9f4" }}>
-          Microphone
-        </p>
-        <p className="text-xs" style={{ color: "#8b90a8" }}>
-          {state === "granted"
-            ? "Access granted"
-            : state === "denied"
-            ? "Access denied — check browser settings"
-            : state === "error"
-            ? "Could not test microphone"
-            : "Not yet tested"}
-        </p>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium" style={{ color: "#e7e9f4" }}>
+            Microphone
+          </p>
+          <p className="text-xs" style={{ color: "#8b90a8" }}>
+            {state === "granted"
+              ? "Access granted"
+              : state === "denied"
+              ? "Access denied — check browser settings"
+              : state === "error"
+              ? "Could not test microphone"
+              : "Not yet tested"}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {state === "granted" && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-900/60 px-2.5 py-0.5 text-xs font-medium text-emerald-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              Ready
+            </span>
+          )}
+          {state === "denied" && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-red-900/60 px-2.5 py-0.5 text-xs font-medium text-red-300">
+              Denied
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => testMic()}
+            disabled={state === "testing"}
+            className="rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+            style={{
+              borderColor: "#262a36",
+              color: "#e7e9f4",
+              background: "#161a26",
+            }}
+          >
+            {state === "testing" ? "Listening…" : "Test mic"}
+          </button>
+        </div>
       </div>
-      <div className="flex items-center gap-2">
-        {state === "granted" && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-900/60 px-2.5 py-0.5 text-xs font-medium text-emerald-300">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-            Ready
-          </span>
-        )}
-        {state === "denied" && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-red-900/60 px-2.5 py-0.5 text-xs font-medium text-red-300">
-            Denied
-          </span>
-        )}
-        <button
-          type="button"
-          onClick={testMic}
-          disabled={state === "testing"}
-          className="rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
-          style={{
-            borderColor: "#262a36",
-            color: "#e7e9f4",
-            background: "#161a26",
-          }}
-        >
-          {state === "testing" ? "Testing…" : "Test mic"}
-        </button>
-      </div>
+
+      {/* Device picker — appears once we have labelled devices (after a grant) */}
+      {showPicker && (
+        <div>
+          <label
+            htmlFor="gr-mic-select"
+            className="mb-1 block text-xs font-medium"
+            style={{ color: "#8b90a8" }}
+          >
+            Input device
+          </label>
+          <div className="relative">
+            <select
+              id="gr-mic-select"
+              value={selectedId}
+              onChange={onSelect}
+              className="w-full cursor-pointer appearance-none rounded-lg border px-3 py-2 pr-8 text-sm focus:outline-none"
+              style={{
+                borderColor: "#262a36",
+                background: "#0f1117",
+                color: "#e7e9f4",
+              }}
+            >
+              <option value="default">System default</option>
+              {devices.map((d, i) => (
+                <option key={d.deviceId || `mic-${i}`} value={d.deviceId}>
+                  {d.label}
+                </option>
+              ))}
+            </select>
+            <span
+              aria-hidden
+              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs"
+              style={{ color: "#8b90a8" }}
+            >
+              ⌄
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Live level meter while testing the selected device */}
+      {(state === "testing" || metering) && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs" style={{ color: "#8b90a8" }}>Level</span>
+          <div
+            className="h-1.5 flex-1 overflow-hidden rounded-full"
+            style={{ background: "#262a36" }}
+          >
+            <div
+              style={{
+                height: "100%",
+                width: `${Math.round(level * 100)}%`,
+                background: level > 0.02 ? "#10b981" : "#3a3f52",
+                transition: "width 80ms linear",
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -951,6 +951,7 @@ export default function Session() {
           try { localStorage.setItem(OPENAI_VOICE_STORAGE_KEY, v); } catch { /* noop */ }
           voice.changeVoice?.(v);
         }}
+        onChangeMic={(deviceId, label) => voice.changeMic?.(deviceId, label)}
         onToggleMic={handleToggleMic}
         onToggleKeyboard={() => {
           if (!sidebarOpen) {
