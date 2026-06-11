@@ -35,13 +35,18 @@ function apiKey() {
 }
 
 // Translate our sampling preset names to the OpenAI-style body MiniMax accepts.
+// `thinking` controls M3's reasoning block: default { type: "disabled" } (no
+// <think> block — faster, cheaper) for every call; a caller passing
+// { type: "adaptive" } re-enables reasoning. If the API ever rejects the field,
+// stripThink() still handles any reasoning block that comes back, so it is safe.
 function buildBody(messages, model, samplingOptions, stream) {
-  const { temperature, top_p, repeat_penalty, max_tokens } = samplingOptions || {};
+  const { temperature, top_p, repeat_penalty, max_tokens, thinking } = samplingOptions || {};
   const body = {
     model,
     stream,
     messages,
     max_tokens: max_tokens || DEFAULT_MAX_TOKENS,
+    thinking: thinking ?? { type: "disabled" },
   };
   if (temperature !== undefined) body.temperature = temperature;
   if (top_p !== undefined) body.top_p = top_p;

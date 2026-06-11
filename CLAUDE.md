@@ -32,6 +32,9 @@ bash voice-server/run.sh                     # installs venv if needed, then sta
 # End-to-end API smoke test (server must be running)
 node scripts/smoke-api.mjs
 
+# Server unit tests (no running server needed)
+node --test server/tests/*.mjs
+
 # Regenerate the 15-course catalog text dumps (then re-run LLM extraction + assembly)
 node scripts/scrape-courses.mjs
 
@@ -59,8 +62,12 @@ Note: if `npm run dev/build/lint` fails with "Permission denied" on a `node_modu
 - `grounding.js` — loads `server/data/seed/*` once (archetypes, objections, benchmarks, conversation-structure); exposes `archetypeForPersona(personaSnapshot)` (category→archetype mapping) and `objectionRepertoire(archetype, difficulty)` (difficulty-scaled objection list with real phrasings) for the student prompt and report engine.
 - `prompt.js` — composes the student system prompt from **persona + personality flavour + archetype + objection repertoire + scenario + phase + score + convincement hint + objection state**; includes natural-speech rules, phase-aware verbosity (from register stats + talkativeness), register reference (real student lines), conditional tangents (mood/phase gated), the convincement section (`ready`/`warming` overrides) and the objection-state summary; all from editable `prompt-config.json` scaffolding. Exports `computeConvincementHint(session)` / `convincementParamsFor(difficulty)`.
 - `engine.js` — `getFirstMessage` / `getStudentReply`; builds the Ollama message array from the **server-owned** transcript (student→assistant, counsellor→user, with a synthetic opening trigger); threads `personalityFlavour` + the convincement hint + objection state into the prompt builder; runs the coherence gate **and** the anti-loop guard (>0.8 token-overlap with the last 6 student turns → regenerate once → move-forward fallback).
-- `scoring.js` — per-message −10..+10 LLM scoring → live satisfaction score; scoring prompt includes grounded counter-move guidance from real converting calls.
+- `scoring.js` — per-message −10..+10 LLM scoring → live satisfaction score; scoring prompt includes grounded counter-move guidance from real converting calls. Leniency knobs load fail-soft from `data/scoring-config.json` (kept in sync with in-file defaults).
 - `report.js` — `generateReport`: one LLM call over the transcript → grades against the session's `rubricSnapshot` with anchor-quoted levels; renormalizes weights when `voice_delivery` is unscoreable (text sessions → 7 graded criteria); adds `keyMoments`/`drills`/`benchmarks`; falls back to `LEGACY_RUBRIC` (6 criteria) for pre-v2 sessions without a `rubricSnapshot`.
+- `classify.js` — `classifyCounsellorTurn(text)`: deterministic, LLM-free classifier of the counsellor's latest message into `statement`/`question`/`invite` (Hinglish + Devanagari aware). `engine.js` + `index.js` feed it to `prompt.js` as the per-turn behaviour hint so the student reacts in kind (nods through explanations, answers questions, asks back mostly when invited).
+- `promptConfig.js` — loads the editable prompt scaffolding (phase instructions, behaviour rules, knowledge-bounds template, turn-discipline, register note, FAQ framing) from `data/prompt-config.json`, **failing soft** to built-in defaults so a bad admin edit can't take the sim down. `prompt.js` reads everything through it.
+- `courseContext.js` — `fmtINR` + `LEGACY_COURSE_CONTEXT`; the v2 prompt injects scoped **knowledge bounds** (per the session's course) instead of the old brochure dump, falling back to `LEGACY_COURSE_CONTEXT` when no course is attached.
+- `voices.js` — `pickStudentVoice`: student ElevenLabs cloned-voice catalog, assigned at session start and snapshotted as `session.voice` so voice + name/gender stay stable across the call and resumes (sidecar falls back to its env default for pre-`voice` sessions).
 
 **Per chat turn** (`POST /api/sessions/:id/message`): advance phase on counsellor msg → score it (`scoreMessage` returns `{adjustment, reason, addressedObjection}`) → append to transcript → roll `session.lastTurnVerbosity` (`open`/`short`; talkativeness-scaled, phase-3 short unless `invite`, never two `open` in a row) and thread it + the previous turn's `adjustment` (one-turn-lag momentum) into the reply prompt → resolve the addressed objection (`resolveObjection`) → generate student reply → advance phase on reply → raise the student's new objection (`raiseObjection`) → persist `session.objectionState` → compute the instant counsellor `cue` (`instantCue`, given the cue v2 context: last adjustment/reason + live objection state). The server owns the transcript; the client never sends history.
 

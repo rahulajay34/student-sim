@@ -36,22 +36,35 @@ log = logging.getLogger("voice.main")
 
 # ---------- ElevenLabs helpers ----------
 
-# Primary model: eleven_v3 (expressive, supports inline audio tags).
-# Override via VOICE_ELEVENLABS_MODEL env var (e.g. set to eleven_flash_v2_5 for lower latency).
-# The v3 alpha retry fallback model is always eleven_flash_v2_5 (no audio tags).
+# Primary model: eleven_v3 (expressive, supports inline audio tags for emotion delivery).
+# The conversation is English-majority so eleven_v3 is stable and delivers noticeably
+# more natural student voices than the flat eleven_flash_v2_5 output.
+# Override via VOICE_ELEVENLABS_MODEL env var to switch to a different model if needed.
+# The automatic error-fallback is always eleven_flash_v2_5 — if eleven_v3 returns a
+# 4xx/5xx the request retries once with the flash model (no audio tags) so a turn
+# never goes silent.
 _EL_MODEL_DEFAULT = "eleven_v3"
 _EL_MODEL_FALLBACK = "eleven_flash_v2_5"
 _EL_API_BASE = "https://api.elevenlabs.io/v1"
 
 
 def _el_model() -> str:
-    """Return the configured ElevenLabs TTS model (env override or default)."""
+    """Return the configured ElevenLabs TTS model (env override or default).
+
+    Default is eleven_v3 — expressive, supports inline audio tags, preferred for
+    the English-majority student roleplay voices (Prashant / Priya / Vikram).
+    Override via VOICE_ELEVENLABS_MODEL env var (e.g. eleven_flash_v2_5 for speed).
+    The automatic error-fallback path (v3 HTTP error → flash retry) is separate and
+    always uses eleven_flash_v2_5 regardless of this setting.
+    """
     return os.environ.get("VOICE_ELEVENLABS_MODEL", _EL_MODEL_DEFAULT).strip() or _EL_MODEL_DEFAULT
 
 
 # eleven_v3 inline audio-tag mapping (prepended to text before synthesis).
 # eleven_v3 supports audio tags like [cheerful], [excited], [hesitant], [sighs],
 # [nervous], [frustrated].  neutral gets no tag (let the model breathe naturally).
+# Tags are applied whenever eleven_v3 is the active model (default or via env var);
+# the fallback eleven_flash_v2_5 uses voice_settings (stability/style/speed) only.
 _EL_V3_AUDIO_TAGS: dict[str, str] = {
     "neutral":    "",
     "happy":      "[cheerful]",
@@ -169,9 +182,11 @@ def _elevenlabs_tts_with_model(
 def _elevenlabs_tts(text: str, emotion: str, voice_override: str | None = None) -> bytes:
     """Call ElevenLabs HTTP API and return WAV bytes.
 
-    Uses eleven_v3 (or VOICE_ELEVENLABS_MODEL override) with inline audio tags.
-    On any 4xx/5xx from v3, retries once with eleven_flash_v2_5 (no audio tags)
-    before raising RuntimeError so the caller can fall back to a local engine.
+    Uses eleven_v3 by default (expressive, inline audio tags for emotion delivery);
+    override via VOICE_ELEVENLABS_MODEL env var to select a different model.
+    When eleven_v3 is active and returns a 4xx/5xx, retries once with
+    eleven_flash_v2_5 (no audio tags) before raising RuntimeError, so a turn
+    never goes silent due to a transient v3 error.
     Logs which model actually served each request.
 
     Raises RuntimeError on all-engine failure so the caller can fall back.
@@ -300,10 +315,195 @@ class TtsRequest(BaseModel):
     voice: str | None = None  # ElevenLabs voice ID override (per-session student voice)
 
 
+# ---------- Devanagari normalizer (for local kokoro only) ----------
+
+# Lookup table: common Hinglish / Hindi words written in Devanagari → Latin transliteration.
+# Kokoro is an English-only model; Devanagari codepoints cause garbled or silent output.
+# ElevenLabs handles Hindi natively so this normalizer is NOT applied on that path.
+_DEVANAGARI_LOOKUP: dict[str, str] = {
+    "हाँ": "haan",
+    "हां": "haan",
+    "नहीं": "nahin",
+    "नही": "nahi",
+    "ठीक": "theek",
+    "अच्छा": "accha",
+    "बहुत": "bahut",
+    "क्या": "kya",
+    "मैं": "main",
+    "मुझे": "mujhe",
+    "मुझको": "mujhko",
+    "हम": "hum",
+    "आप": "aap",
+    "तुम": "tum",
+    "यह": "yeh",
+    "वह": "woh",
+    "कैसे": "kaise",
+    "कब": "kab",
+    "कहाँ": "kahan",
+    "क्यों": "kyun",
+    "कोर्स": "course",
+    "फीस": "fees",
+    "पैसे": "paise",
+    "लाख": "lakh",
+    "हजार": "hazaar",
+    "साल": "saal",
+    "महीना": "mahina",
+    "महीने": "mahine",
+    "समझ": "samajh",
+    "बात": "baat",
+    "काम": "kaam",
+    "सोच": "soch",
+    "देख": "dekh",
+    "सुन": "sun",
+    "पढ़": "padh",
+    "करना": "karna",
+    "करूँगा": "karunga",
+    "करूँगी": "karungi",
+    "जाना": "jaana",
+    "आना": "aana",
+    "रहा": "raha",
+    "रही": "rahi",
+    "था": "tha",
+    "थी": "thi",
+    "है": "hai",
+    "हैं": "hain",
+    "था": "tha",
+    "होगा": "hoga",
+    "होगी": "hogi",
+    "लेकिन": "lekin",
+    "और": "aur",
+    "या": "ya",
+    "तो": "to",
+    "भी": "bhi",
+    "ही": "hi",
+    "से": "se",
+    "में": "mein",
+    "पर": "par",
+    "के": "ke",
+    "का": "ka",
+    "की": "ki",
+    "को": "ko",
+    "ने": "ne",
+    "अगर": "agar",
+    "जब": "jab",
+    "फिर": "phir",
+    "सिर्फ": "sirf",
+    "थोड़ा": "thoda",
+    "ज्यादा": "zyada",
+    "अभी": "abhi",
+    "जल्दी": "jaldi",
+    "बाद": "baad",
+    "पहले": "pehle",
+    "साथ": "saath",
+    "बिना": "bina",
+    "तक": "tak",
+    "मतलब": "matlab",
+    "सही": "sahi",
+    "गलत": "galat",
+    "नया": "naya",
+    "पुराना": "purana",
+    "बड़ा": "bada",
+    "छोटा": "chhota",
+    "अच्छी": "acchi",
+    "बुरा": "bura",
+    "खुश": "khush",
+    "परेशान": "pareshan",
+    "डर": "dar",
+    "उम्मीद": "ummeed",
+    "सपना": "sapna",
+    "नाम": "naam",
+    "जगह": "jagah",
+    "वक्त": "waqt",
+    "जिंदगी": "zindagi",
+    "दोस्त": "dost",
+    "घर": "ghar",
+    "स्कूल": "school",
+    "कॉलेज": "college",
+    "नौकरी": "naukri",
+    "पैसा": "paisa",
+    "रुपए": "rupaye",
+    "रुपये": "rupaye",
+    "हजार": "hazaar",
+    "लाखों": "lakhon",
+    "पढ़ाई": "padhai",
+    "कैरियर": "career",
+    "सफलता": "safalta",
+    "मेहनत": "mehnat",
+    "प्लेसमेंट": "placement",
+    "एडमिशन": "admission",
+    "आवेदन": "aavedan",
+    "परीक्षा": "pariksha",
+    "सर्टिफिकेट": "certificate",
+}
+
+# Devanagari Unicode block: U+0900–U+097F
+_DEVANAGARI_RE = re.compile(r"[ऀ-ॿ]+")
+
+# Danda (।) and double danda (॥) — Devanagari sentence-ending punctuation
+_DANDA_RE = re.compile(r"[।॥]")
+
+
+def _normalize_devanagari_for_kokoro(text: str) -> str:
+    """Transliterate/strip Devanagari from text so local kokoro can speak it.
+
+    Strategy:
+      1. Word-boundary lookup: replace known Hindi words with their Latin forms.
+      2. Replace dandas (।॥) with periods so sentence structure is preserved.
+      3. Strip any remaining Devanagari codepoints (U+0900–U+097F) — unknown
+         words become silent gaps, which is better than garbled phonemes.
+
+    This normalizer is ONLY for the local kokoro path.
+    ElevenLabs handles Hindi natively and must NOT have its text modified here.
+    """
+    # Step 1: replace dandas with periods so the sentence splitter still works.
+    text = _DANDA_RE.sub(".", text)
+    # Step 2: word-boundary lookup (longest word first is already implicit in the dict).
+    for hindi, latin in _DEVANAGARI_LOOKUP.items():
+        # Use word-boundary-style replacement: match whole token surrounded by
+        # non-Devanagari / whitespace / start-of-string / end-of-string.
+        text = text.replace(hindi, latin)
+    # Step 3: strip any remaining Devanagari codepoints.
+    text = _DEVANAGARI_RE.sub("", text)
+    # Clean up multiple spaces left after stripping.
+    text = re.sub(r"  +", " ", text).strip()
+    return text
+
+
+def _safe_hard_split(text: str, max_chars: int) -> list[str]:
+    """Split a long string into chunks ≤ max_chars, avoiding bisecting Devanagari
+    combining sequences (Devanagari vowel signs U+093E–U+094F, virama U+094D).
+
+    For purely ASCII/Latin text this is equivalent to the simple slice.
+    """
+    _DEVANAGARI_COMBINING = re.compile(r"[ा-ॏऀ-ं़्]")
+    chunks: list[str] = []
+    while len(text) > max_chars:
+        cut = max_chars
+        # Walk back up to 6 chars to avoid cutting mid combining-sequence.
+        for back in range(0, min(6, cut)):
+            candidate = cut - back
+            # Safe cut: the character at `candidate` must not be a combining mark.
+            if candidate > 0 and not _DEVANAGARI_COMBINING.match(text[candidate]):
+                cut = candidate
+                break
+        chunks.append(text[:cut])
+        text = text[cut:]
+    if text:
+        chunks.append(text)
+    return chunks
+
+
 def _sentence_chunks(text: str, max_chars: int = MAX_CHUNK_CHARS) -> list[str]:
-    """Split text into sentence-level chunks ≤ max_chars."""
-    # Split on sentence-ending punctuation; keep delimiter with preceding sentence
-    parts = re.split(r"(?<=[.!?])\s+", text.strip())
+    """Split text into sentence-level chunks ≤ max_chars.
+
+    Recognises both ASCII sentence-ending punctuation (.!?) and Devanagari
+    dandas (। U+0964, ॥ U+0965) as sentence boundaries.
+    Hard-split fallback avoids bisecting Devanagari combining sequences.
+    """
+    # Split on sentence-ending punctuation (ASCII or Devanagari danda).
+    # (?<=[.!?]) and (?<=[।॥]) are positive look-behinds so the delimiter
+    # stays with the preceding sentence.
+    parts = re.split(r"(?<=[.!?।॥])\s+", text.strip())
     chunks: list[str] = []
     current = ""
     for part in parts:
@@ -314,11 +514,15 @@ def _sentence_chunks(text: str, max_chars: int = MAX_CHUNK_CHARS) -> list[str]:
         else:
             if current:
                 chunks.append(current)
-            # If single part exceeds max, hard-split it
-            while len(part) > max_chars:
-                chunks.append(part[:max_chars])
-                part = part[max_chars:]
-            current = part
+            # If single part exceeds max, use safe hard-split
+            if len(part) > max_chars:
+                sub_chunks = _safe_hard_split(part, max_chars)
+                # All but the last become complete chunks; the last continues accumulation.
+                for sc in sub_chunks[:-1]:
+                    chunks.append(sc)
+                current = sub_chunks[-1]
+            else:
+                current = part
     if current:
         chunks.append(current)
     return chunks or [text[:max_chars]]
@@ -391,14 +595,14 @@ def tts(req: TtsRequest) -> Response:
                 fallback_engine = None
 
             if fallback_engine is None:
-                # Last resort: kokoro
+                # Last resort: use the lock-protected singleton from capabilities
+                # (avoids reloading Kokoro from disk on every ElevenLabs failure).
                 try:
-                    from kokoro_onnx import Kokoro  # type: ignore
-                    onnx_path = capabilities.MODELS_DIR / "kokoro-v1.0.onnx"
-                    voices_path = capabilities.MODELS_DIR / "voices-v1.0.bin"
-                    capabilities._ensure_kokoro_models(onnx_path, voices_path)
-                    fallback_model = Kokoro(str(onnx_path), str(voices_path))
-                    fallback_engine = "kokoro"
+                    fallback_model, fallback_engine_name = capabilities.get_tts()
+                    if fallback_model is not None and fallback_engine_name in ("kokoro", "chatterbox"):
+                        fallback_engine = fallback_engine_name
+                    else:
+                        raise RuntimeError("no local model available in singleton")
                 except Exception as kokoro_err:
                     raise HTTPException(503, f"TTS all engines failed: {el_err}; kokoro: {kokoro_err}")
 
@@ -414,10 +618,11 @@ def tts(req: TtsRequest) -> Response:
                     arr = wav_tensor.squeeze().cpu().numpy().astype(np.float32)
                     arr = _resample_if_needed(arr, fallback_model.sr, TARGET_SR)
                     fb_segments.append(arr)
-            else:  # kokoro
+            else:  # kokoro — normalize Devanagari before synthesis (kokoro is English-only)
                 speed = KOKORO_SPEED_MAP.get(emotion, 1.0)
                 for chunk in chunks:
-                    samples, sr = fallback_model.create(chunk, voice="af_heart", speed=speed, lang="en-us")
+                    safe_chunk = _normalize_devanagari_for_kokoro(chunk)
+                    samples, sr = fallback_model.create(safe_chunk, voice="af_heart", speed=speed, lang="en-us")
                     arr = np.array(samples, dtype=np.float32)
                     arr = _resample_if_needed(arr, sr, TARGET_SR)
                     fb_segments.append(arr)
@@ -445,9 +650,12 @@ def tts(req: TtsRequest) -> Response:
             segments.append(arr)
 
     elif engine == "kokoro":
+        # Normalize Devanagari before synthesis — kokoro is English-only and
+        # cannot speak Hindi codepoints (ElevenLabs handles Hindi natively).
         speed = KOKORO_SPEED_MAP.get(emotion, 1.0)
         for chunk in chunks:
-            samples, sr = model.create(chunk, voice="af_heart", speed=speed, lang="en-us")
+            safe_chunk = _normalize_devanagari_for_kokoro(chunk)
+            samples, sr = model.create(safe_chunk, voice="af_heart", speed=speed, lang="en-us")
             arr = np.array(samples, dtype=np.float32)
             arr = _resample_if_needed(arr, sr, TARGET_SR)
             segments.append(arr)

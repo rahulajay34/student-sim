@@ -16,7 +16,7 @@ import { archetypeForPersona, objectionRepertoire } from "./grounding.js";
 import { getPromptConfig } from "./promptConfig.js";
 import { fmtINR } from "./courseContext.js";
 import { renderPersonalitySection, DEFAULT_PERSONALITY, rollSessionFlavour } from "./personality.js";
-import { registerLines, voiceBankFor, registerStatsFor } from "./register.js";
+import { voiceBankFor, registerStatsFor } from "./register.js";
 import { summarizeForPrompt, openObjections, addressedObjections } from "./objections.js";
 
 export { fmtINR };
@@ -61,31 +61,47 @@ function buildKnowledgeBounds(cfg, course) {
 }
 
 // Archetype texture + corpus objection repertoire (preserved from NEW).
-function buildArchetypeBlock(persona, scenario) {
+// PHASE-SCOPED: the "WHO YOU REALLY ARE" background texture is included in ALL
+// phases, but the long mined OBJECTIONS list is only relevant once the programme
+// is being discussed/negotiated (phase >= 3). In Opening/Discovery a real student
+// has not surfaced objections yet, so the list is omitted to cut prompt size.
+function buildArchetypeBlock(persona, scenario, currentPhase) {
   const archetype = archetypeForPersona(persona);
   if (!archetype) return "";
-  const repertoire = objectionRepertoire(archetype, scenario?.difficulty);
-  return `WHO YOU REALLY ARE (mined from real calls with students like you — embody this):
+  const texture = `WHO YOU REALLY ARE (mined from real calls with students like you — embody this):
 - Background: ${archetype.background}
 - Goals: ${archetype.goals}
 - Core anxiety: ${archetype.coreAnxiety}
 - Decision dynamics: ${archetype.decisionDynamics}
 - How you talk: ${archetype.languageTexture}
-- Questions you naturally ask: ${archetype.typicalQuestions.slice(0, 4).join(" | ")}
+- Questions you naturally ask: ${archetype.typicalQuestions.slice(0, 4).join(" | ")}`;
+
+  if (currentPhase < 3) return texture;
+
+  const repertoire = objectionRepertoire(archetype, scenario?.difficulty);
+  if (!repertoire.length) return texture;
+  return `${texture}
 
 OBJECTIONS YOU GENUINELY HOLD (raise them naturally at realistic moments, in your own words — these are real phrasings from students like you):
 ${repertoire.map((r) => `- ${r.label}: e.g. ${r.phrasings.map((p) => `"${p}"`).join(" / ")}`).join("\n")}
 Do not dump all objections at once; surface them as the conversation makes them relevant. A good counsellor answer defuses an objection; a pushy or vague answer escalates it.`;
 }
 
+// PHASE-SCOPED: instead of injecting the full 5-phase cfg.phaseLadder every turn
+// (~4 phases of irrelevant text), render only the current phase name + its
+// instruction plus a single one-line pointer at the next phase (none on phase 5).
+// This removes the bulk of the ladder from every prompt without losing the
+// "do not jump ahead" steer.
 function buildPhaseSection(cfg, currentPhase, booking) {
   const raw = cfg.phaseInstructions?.[currentPhase] ?? cfg.phaseInstructions?.[String(currentPhase)] ?? "";
   const instruction = String(raw).replaceAll("{booking}", booking);
+  const nextPhase = currentPhase + 1;
+  const nextPointer = PHASE_NAMES[nextPhase]
+    ? `\nNext (do NOT jump ahead): Phase ${nextPhase} — ${PHASE_NAMES[nextPhase]}.`
+    : "";
   return `CURRENT PHASE: ${currentPhase} — ${PHASE_NAMES[currentPhase]}
 
-You are currently in Phase ${currentPhase}. You must ONLY behave according to Phase ${currentPhase} right now. Do not jump ahead to the next phase on your own.
-
-${cfg.phaseLadder}
+You are currently in Phase ${currentPhase}. You must ONLY behave according to Phase ${currentPhase} right now. Do not jump ahead to the next phase on your own.${nextPointer}
 
 RIGHT NOW — Phase ${currentPhase} instruction:
 ${instruction}`;
@@ -158,10 +174,49 @@ function buildScenarioSection(scenario) {
   return lines.join("\n");
 }
 
+// STUDENT TUNING — two per-mock sliders the counsellor/admin set on 1-5 scales:
+//   pushiness  — how assertively the student pushes back / demands specifics
+//   hesitancy  — how reluctant the student is to commit / buy
+// Rendered as a short behaviour steer. Text is configurable via cfg.tuning with
+// fail-soft inline defaults so a missing/partial config can't break the prompt.
+// Neutral (3) on a slider contributes nothing for that dimension.
+function buildTuningSection(cfg, scenario) {
+  const t = (cfg && cfg.tuning) || {};
+  const push = clamp15(scenario?.pushiness);
+  const hes = clamp15(scenario?.hesitancy);
+  const lines = [];
+
+  const pushText = {
+    low: t.pushinessLow || "PUSHINESS (low): you are easy-going and accommodating. You rarely push back hard — when the counsellor gives a reasonable answer you tend to accept it and move on, and you do not interrupt or demand.",
+    high: t.pushinessHigh || "PUSHINESS (high): you are assertive and pushy. You challenge vague claims, demand specifics and proof, do not let the counsellor brush past your questions, and you press the same point again if you are not satisfied with the answer.",
+  };
+  const hesText = {
+    low: t.hesitancyLow || "HESITANCY (low): you are fairly ready to move forward. You have low resistance to committing — if the value is shown reasonably you are inclined to say yes without dragging it out.",
+    high: t.hesitancyHigh || "HESITANCY (high): you are very reluctant to commit. You want to think it over, you lean on needing to discuss with family / check finances, and you do NOT agree easily even when the pitch is good — you need strong, repeated reassurance before you would consider saying yes.",
+  };
+
+  if (push <= 2) lines.push(pushText.low);
+  else if (push >= 4) lines.push(pushText.high);
+  if (hes <= 2) lines.push(hesText.low);
+  else if (hes >= 4) lines.push(hesText.high);
+
+  if (!lines.length) return "";
+  return `HOW YOU CARRY YOURSELF ON THIS CALL:\n${lines.join("\n")}`;
+}
+
+function clamp15(v) {
+  const n = Math.round(Number(v));
+  if (!Number.isFinite(n)) return 3;
+  return Math.min(5, Math.max(1, n));
+}
+
 // FAQ questions of the selected course, as QUESTION MATERIAL only (answers are
 // deliberately not included — the knowledge bounds forbid the student knowing
 // them). Degrades to "" when the course has no faqQuestions.
-function buildCourseFaqSection(cfg, course) {
+// PHASE-SCOPED: the student asks course questions during/after the presentation
+// (phase >= 3), not in Opening/Discovery — so this is omitted in phases 1-2.
+function buildCourseFaqSection(cfg, course, currentPhase) {
+  if (currentPhase < 3) return "";
   const faqs = course?.faqQuestions || [];
   if (!faqs.length) return "";
   const intro = cfg.faqIntro.replace("{title}", courseTitle(course));
@@ -261,7 +316,7 @@ function buildVerbositySection(cfg, currentPhase, flavour) {
 
   // Presentation is structurally listen-and-acknowledge regardless of stats.
   if (currentPhase === 3) {
-    lines.push("Presentation: you mostly just acknowledge. 3 to 12 words is the whole message — haan sir, okay, theek hai, samajh gaya.");
+    lines.push("Presentation: you mostly just acknowledge. 3 to 12 words is the whole message — yes sir, okay, right, got it, makes sense.");
     return lines.join("\n");
   }
 
@@ -291,46 +346,33 @@ function buildVerbositySection(cfg, currentPhase, flavour) {
 }
 
 // REGISTER REFERENCE — a small rotated sample of real student lines for this
-// persona+phase (voiceBankFor) plus a few backchannels (registerLines). Bounded
-// to ~12-16 lines total so per-turn prompt growth stays small. "Match register,
-// never quote verbatim." Renders nothing when no artifacts are present.
+// persona+phase (voiceBankFor). The mined lines are Hinglish, and the platform
+// is moving to an ENGLISH-majority register, so this injection is DELIBERATELY
+// kept tiny: at most ~3 stage lines, and ONLY in the middle phases (2-4) where a
+// touch of register exemplar still helps. Skipped entirely in Opening (phase 1,
+// just a self-intro) and Close (phase 5). The Hinglish backchannel block is
+// dropped — it pushed the register the wrong way and added little. Renders ""
+// when no artifacts exist (fail-soft).
 function buildRegisterReferenceSection(cfg, persona, currentPhase) {
+  if (currentPhase < 2 || currentPhase > 4) return "";
   const category = persona?.category || "graduate";
-  const bank = voiceBankFor(category, currentPhase, 9)
+  const bank = voiceBankFor(category, currentPhase, 6)
     .map((e) => (typeof e === "string" ? e : e?.text))
     .filter(Boolean);
 
-  // Dedup while preserving rotation order; cap the stage lines at 9.
+  // Dedup while preserving rotation order; cap the stage lines at 3.
   const seen = new Set();
   const stageLines = [];
   for (const t of bank) {
     const k = t.trim().toLowerCase();
     if (k && !seen.has(k)) { seen.add(k); stageLines.push(t.trim()); }
-    if (stageLines.length >= 9) break;
+    if (stageLines.length >= 3) break;
   }
 
-  // A few real backchannels for texture (4 max). Skipped in Close where
-  // bare acks are less the point.
-  let acks = [];
-  if (currentPhase !== 5) {
-    acks = registerLines()
-      .filter((l) => l?.category === "backchannel" && l.text)
-      .slice(0, 4)
-      .map((l) => l.text.trim());
-  }
+  if (!stageLines.length) return "";
 
-  if (!stageLines.length && !acks.length) return "";
-
-  const parts = [];
-  if (stageLines.length) {
-    parts.push(cfg.registerRefIntro);
-    parts.push(stageLines.map((t) => `- "${t}"`).join("\n"));
-  }
-  if (acks.length) {
-    parts.push(cfg.registerRefBackchannelIntro);
-    parts.push(acks.map((t) => `- "${t}"`).join("\n"));
-  }
-  return parts.join("\n");
+  return `${cfg.registerRefIntro}
+${stageLines.map((t) => `- "${t}"`).join("\n")}`;
 }
 
 // NATURAL TANGENTS — only rendered when mood is distracted/chatty AND the phase
@@ -370,7 +412,8 @@ const EMOTION_INSTRUCTION = `EMOTION TAG (machine-read protocol — ALWAYS obey,
 export function buildSystemPrompt(persona, scenario, currentPhase, satisfactionScore = 50, course = null, turnHint = null, flavour = null, convincementHint = null, objectionState = null, turnVerbosity = null, lastAdjustment = null) {
   const cfg = getPromptConfig();
   const booking = bookingOf(course);
-  const archetypeBlock = buildArchetypeBlock(persona, scenario);
+  const archetypeBlock = buildArchetypeBlock(persona, scenario, currentPhase);
+  const tuningSection = buildTuningSection(cfg, scenario);
   const convincementSection = buildConvincementSection(cfg, convincementHint);
   const objectionStateSection = buildObjectionStateSection(cfg, objectionState);
   const turnVerbositySection = buildTurnVerbositySection(cfg, turnVerbosity);
@@ -411,7 +454,7 @@ ${persona.coreAnxiety}
 ${buildPhaseSection(cfg, currentPhase, booking)}
 
 ${buildScoreSection(satisfactionScore, booking)}
-${convincementSection ? `\n${convincementSection}\n` : ""}${momentumSection ? `\n${momentumSection}\n` : ""}${objectionStateSection ? `\n${objectionStateSection}\n` : ""}
+${tuningSection ? `\n${tuningSection}\n` : ""}${convincementSection ? `\n${convincementSection}\n` : ""}${momentumSection ? `\n${momentumSection}\n` : ""}${objectionStateSection ? `\n${objectionStateSection}\n` : ""}
 YOUR PERSONA-SPECIFIC BEHAVIOUR BY PHASE:
 ${persona.behaviourPrompt}
 
@@ -427,7 +470,7 @@ ${personalitySection}
 
 ${registerRefSection}
 ${tangentSection ? `\n${tangentSection}\n` : ""}
-${buildCourseFaqSection(cfg, course)}
+${buildCourseFaqSection(cfg, course, currentPhase)}
 ${turnVerbositySection ? `\n${turnVerbositySection}\n` : ""}
 ${EMOTION_INSTRUCTION}
 
@@ -474,14 +517,26 @@ export function composeForInspection(session) {
 
 // Resolve the convincement config (thresholds + effortTurns) for a difficulty,
 // fail-soft to the medium defaults. Difficulty comes from the scenario snapshot.
-export function convincementParamsFor(difficulty) {
+export function convincementParamsFor(difficulty, hesitancy = 3) {
   const cfg = getPromptConfig();
   const conv = cfg.convincement || {};
   const thresholds = conv.thresholds || { easy: 55, medium: 60, hard: 70 };
   const effortTurns = conv.effortTurns || { easy: 2, medium: 3, hard: 5 };
   const d = (difficulty === "easy" || difficulty === "hard") ? difficulty : "medium";
-  const threshold = typeof thresholds[d] === "number" ? thresholds[d] : 60;
-  const effort = typeof effortTurns[d] === "number" ? effortTurns[d] : 3;
+  let threshold = typeof thresholds[d] === "number" ? thresholds[d] : 60;
+  let effort = typeof effortTurns[d] === "number" ? effortTurns[d] : 3;
+
+  // The hesitancy slider (1-5, neutral 3) shifts how hard it is to reach "ready":
+  // a hesitant prospect needs a higher score and more good turns; an eager one,
+  // less. Deltas are configurable (fail-soft to ±6 per step on the threshold and
+  // ±1 per step on the effort). The threshold is clamped to a sane 35-95 band.
+  const hes = clamp15(hesitancy);
+  if (hes !== 3) {
+    const thrStep = typeof conv.hesitancyThresholdStep === "number" ? conv.hesitancyThresholdStep : 6;
+    const effStep = typeof conv.hesitancyEffortStep === "number" ? conv.hesitancyEffortStep : 1;
+    threshold = Math.min(95, Math.max(35, threshold + (hes - 3) * thrStep));
+    effort = Math.max(1, effort + Math.round((hes - 3) * effStep));
+  }
   return { difficulty: d, threshold, effortTurns: effort };
 }
 
@@ -496,7 +551,7 @@ export function convincementParamsFor(difficulty) {
 export function computeConvincementHint(session) {
   if (!session) return "resistant";
   const { satisfactionScore = 50, scenarioSnapshot, objectionState = [] } = session;
-  const { threshold, effortTurns } = convincementParamsFor(scenarioSnapshot?.difficulty);
+  const { threshold, effortTurns } = convincementParamsFor(scenarioSnapshot?.difficulty, scenarioSnapshot?.hesitancy);
 
   const state = Array.isArray(objectionState) ? objectionState : [];
   const open = openObjections(state);
@@ -512,7 +567,13 @@ export function computeConvincementHint(session) {
 
   const totalRaised = state.length;
   const halfAddressed = totalRaised > 0 && addressed.length >= Math.ceil(totalRaised / 2);
-  if (satisfactionScore >= threshold - 10 || halfAddressed) return "warming";
+  // (#10) Real-progress guard: warming at score=50 on turn 1 is too early.
+  // Require either (a) the score has genuinely moved above 50, or (b) at least
+  // one good counsellor turn, OR (c) half the raised objections are addressed.
+  const warmingByScore =
+    satisfactionScore >= threshold - 10 &&
+    (satisfactionScore > 50 || goodTurns >= 1);
+  if (warmingByScore || halfAddressed) return "warming";
 
   return "resistant";
 }

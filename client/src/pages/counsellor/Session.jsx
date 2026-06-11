@@ -32,6 +32,42 @@ function ConnectingScreen() {
   );
 }
 
+// ── Voice-loading gate (S7) ───────────────────────────────────────────────────
+// Full-screen overlay while the TTS/STT pipeline downloads/initialises. Blocks
+// all call interaction until voice.status leaves 'loading'. Shows a progress ring.
+function VoiceLoadingScreen({ pct = 0 }) {
+  const clamped = Math.max(0, Math.min(100, Math.round(pct)));
+  const R = 34;
+  const C = 2 * Math.PI * R;
+  const dash = (clamped / 100) * C;
+  return (
+    <div className="flex h-screen flex-col items-center justify-center gap-6 bg-stage">
+      <svg width="88" height="88" viewBox="0 0 88 88" style={{ transform: "rotate(-90deg)" }}>
+        <circle cx="44" cy="44" r={R} fill="none" stroke="#262a36" strokeWidth="6" />
+        <circle
+          cx="44"
+          cy="44"
+          r={R}
+          fill="none"
+          stroke="#6366f1"
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray={`${dash} ${C}`}
+          style={{ transition: "stroke-dasharray 250ms ease" }}
+        />
+      </svg>
+      <div className="text-center">
+        <p className="text-base font-semibold text-stage-text">
+          Preparing the call… {clamped}%
+        </p>
+        <p className="mt-1 text-sm text-stage-muted">
+          Loading the voice models — this happens once, then they&apos;re cached.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ── Ended session screen ──────────────────────────────────────────────────────
 function EndedScreen({ onViewReports, onBack }) {
   return (
@@ -199,7 +235,7 @@ export default function Session() {
   const { user } = useAuth();
 
   // ── State machine ──────────────────────────────────────────────────────────
-  // "greenroom" → "connecting" → "live"
+  // "greenroom" → "connecting" → ("voice-loading" →) "live"
   const isNewRoute = !sessionId;
   const [uiState, setUiState] = useState(isNewRoute ? "greenroom" : "live");
 
@@ -226,6 +262,18 @@ export default function Session() {
   const [activeSessionId, setActiveSessionId] = useState(sessionId || null);
   const [timerStart, setTimerStart] = useState(null);
   const [studentVoiceId, setStudentVoiceId] = useState(null);
+
+  // ── Info panel data (course facts / scenario / blind-mode flag) ─────────────
+  const [course, setCourse] = useState(null);
+  const [scenario, setScenario] = useState(null);
+  const [leadCard, setLeadCard] = useState(null);
+  const [revealPersona, setRevealPersona] = useState(true);
+
+  // ── Thinking mode (S1): default OFF; an in-call toggle flips it. Threaded into
+  // the message body so the student reply call re-enables MiniMax reasoning. ────
+  const [thinkingOn, setThinkingOn] = useState(false);
+  const thinkingOnRef = useRef(false);
+  useEffect(() => { thinkingOnRef.current = thinkingOn; }, [thinkingOn]);
 
   const [sending, setSending] = useState(false);
   const [ending, setEnding] = useState(false);
@@ -342,7 +390,7 @@ export default function Session() {
           counsellorId: user?.id,
         });
       } else {
-        const { personaId, courseId, scenario: sc } = state;
+        const { personaId, courseId, profileId, scenario: sc } = state;
 
         let resolvedPersona = null;
         if (personaId) {
@@ -367,6 +415,7 @@ export default function Session() {
           counsellorId: user?.id,
           personaId: personaId || undefined,
           courseId: courseId || undefined,
+          profileId: profileId || undefined,
           scenario: sc || undefined,
         });
       }
@@ -393,7 +442,13 @@ export default function Session() {
     setUiState("connecting");
 
     try {
-      const res = await api.startSession(grPayload);
+      // S6: counsellor opens the call (no student-first opening message).
+      // S1: thinking defaults OFF for the live conversation.
+      const res = await api.startSession({
+        ...grPayload,
+        counsellorFirst: true,
+        thinkingMode: "off",
+      });
       const newId = res.sessionId;
       setActiveSessionId(newId);
       navigate(`/app/session/${newId}`, {
@@ -426,13 +481,31 @@ export default function Session() {
         }
         // Resolve persona snapshot, masking name for blind assignments.
         let resolvedPersona = s.personaSnapshot || null;
+        // S8: course facts + scenario for the persistent info panel (snapshotted
+        // at session start so library edits don't rewrite the live brief).
+        setCourse(s.courseSnapshot || null);
+        setScenario(s.scenarioSnapshot || null);
+        setLeadCard(s.leadCard || null);
+        // revealPersona: prefer the session snapshot; fall back to the assignment.
+        const sessionReveal =
+          typeof s.revealPersona === "boolean" ? s.revealPersona : null;
+        if (sessionReveal !== null) setRevealPersona(sessionReveal);
+
         const assignmentFetch = s.assignmentId
           ? api.getAssignment(s.assignmentId).catch(() => null)
           : Promise.resolve(null);
 
         assignmentFetch.then((asn) => {
           if (!alive) return;
-          if (asn && asn.revealPersona === false && resolvedPersona) {
+          // Fall back to the assignment's revealPersona when the session lacks one.
+          const blind =
+            sessionReveal !== null
+              ? sessionReveal === false
+              : asn?.revealPersona === false;
+          if (sessionReveal === null && asn) {
+            setRevealPersona(asn.revealPersona !== false);
+          }
+          if (blind && resolvedPersona) {
             resolvedPersona = { ...resolvedPersona, name: "Prospective student" };
           }
           setPersona(resolvedPersona);
@@ -481,8 +554,13 @@ export default function Session() {
     };
   }, [sessionId, isNewRoute]);
 
-  // ── Auto-enable voice after join ───────────────────────────────────────────
+  // ── Auto-enable voice after join (S7: hold on a load gate) ─────────────────
+  // When the counsellor joined WITH voice, enable the pipeline and HOLD on a
+  // full-screen loading overlay (voice.loadPct) so they can't interact before
+  // the TTS/STT models are ready. Text-only joins skip straight to live.
   const autoVoiceHandled = useRef(false);
+  const voiceGatePending = useRef(false);
+  const voiceGateSawLoading = useRef(false);
   useEffect(() => {
     if (isNewRoute) return;
     if (autoVoiceHandled.current) return;
@@ -490,11 +568,35 @@ export default function Session() {
     if (!autoVoice) return;
     if (loading) return;
     autoVoiceHandled.current = true;
+    voiceGatePending.current = true;
+    voiceGateSawLoading.current = false;
     setTimerStart((t) => t || Date.now());
-    voice.enable().catch(() => {});
+    // Gate on the loading overlay until the pipeline is ready (handled below).
+    setUiState("voice-loading");
+    voice.enable().catch(() => {
+      // Enable failed — drop the gate and let the counsellor proceed text-first.
+      voiceGatePending.current = false;
+      setUiState("live");
+    });
     // Clear the autoVoice flag so back-navigation doesn't re-trigger it.
     navigate(location.pathname, { replace: true, state: {} });
   }, [isNewRoute, loading, location.state]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Release the voice load gate once the pipeline finishes loading. enable()
+  // flips status to 'loading' then 'idle' on success, or back to 'off' on error.
+  // We wait until we've SEEN 'loading' (so the initial 'off' before enable's
+  // state flush doesn't release us prematurely), then go live on the next status.
+  useEffect(() => {
+    if (!voiceGatePending.current) return;
+    if (voice.status === "loading") {
+      voiceGateSawLoading.current = true;
+      return;
+    }
+    if (!voiceGateSawLoading.current && voice.status === "off") return;
+    // 'idle' (ready) or 'off' (enable failed) after loading → release the gate.
+    voiceGatePending.current = false;
+    setUiState("live");
+  }, [voice.status]);
 
   // ── Send a message ─────────────────────────────────────────────────────────
   async function submit(raw, meta) {
@@ -519,7 +621,12 @@ export default function Session() {
     if (deliveryMetrics) setLastDeliveryMetrics(deliveryMetrics);
 
     const sid = activeSessionId || sessionId;
-    const body = deliveryMetrics ? { message: text, deliveryMetrics } : { message: text };
+    // S1: thread the thinking flag into BOTH paths. The server reads body.thinking
+    // ('on'|'off') and persists session.thinkingMode before generating the reply.
+    const thinkingFlag = thinkingOnRef.current ? "on" : "off";
+    const body = deliveryMetrics
+      ? { message: text, deliveryMetrics, thinking: thinkingFlag }
+      : { message: text, thinking: thinkingFlag };
 
     // Stable id for the progressively-rendered student bubble. While streaming we
     // mutate this single message in place; on `done` we overwrite its text/emotion
@@ -562,8 +669,10 @@ export default function Session() {
       if (streamCtx?.spoke) {
         if (norm(streamCtx.streamedText) === norm(reply)) {
           // Same reply: flush any trailing remainder, then finalize the utterance.
+          // #25: flush the CANONICAL reply (not the streamed text) so the tail
+          // sentence matches exactly what's displayed/persisted.
           if (voice.enabled && reply) {
-            for (const sentence of streamCtx.chunker.flush(streamCtx.streamedText)) {
+            for (const sentence of streamCtx.chunker.flush(reply)) {
               voice.speakChunk(sentence, newEmotion);
             }
           }
@@ -678,7 +787,7 @@ export default function Session() {
       } else {
         // Transport/fetch-level failure: retry once via the non-streaming path.
         try {
-          const res = await api.sendMessage(sid, text, deliveryMetrics || undefined);
+          const res = await api.sendMessage(sid, text, deliveryMetrics || undefined, thinkingFlag);
           applyDone({
             reply: res?.reply,
             emotion: res?.emotion,
@@ -853,6 +962,13 @@ export default function Session() {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
+  // ── Render: Voice load gate (S7) ──────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+  if (uiState === "voice-loading") {
+    return <VoiceLoadingScreen pct={voice.loadPct} />;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
   // ── Render: Ended session ─────────────────────────────────────────────────
   // ══════════════════════════════════════════════════════════════════════════
   if (uiState === "ended") {
@@ -922,14 +1038,24 @@ export default function Session() {
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
       {/* ── Call stage (takes remaining space) ── */}
       <CallStage
-        personaName={persona?.name}
+        personaName={leadCard?.name || persona?.voiceName || persona?.name}
         phase={phase}
         emotion={emotion}
         satisfaction={score}
+        // ── Info panel (S8) ──
+        course={course}
+        scenario={scenario}
+        persona={persona}
+        leadCard={leadCard}
+        revealPersona={revealPersona}
+        // ── Thinking toggle (S1) ──
+        thinkingOn={thinkingOn}
+        onToggleThinking={() => setThinkingOn((t) => !t)}
         getAnalyser={voice.getAnalyser}
         orbState={orbState}
         subtitle={subtitle}
         awaitingReply={awaitingReply}
+        hasMessages={messages.length > 0}
         voice={voice}
         onToggleMic={handleToggleMic}
         micLatched={micLatched}

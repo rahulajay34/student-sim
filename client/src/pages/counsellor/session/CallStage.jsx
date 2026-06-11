@@ -319,6 +319,154 @@ function StageHintChip({ cue, onOpenCoach, onDismiss }) {
   );
 }
 
+// ── Info panel (S8): persistent, collapsible top-left brief ───────────────────
+// Shows ONLY the realistic lead-card details a counsellor would actually have in
+// front of them (name, age, current job or school/college, city) plus the course
+// they are selling. No situation prose / coaching narrative. Sits BELOW the
+// top-left pills so it never overlaps them.
+function rupee(n) {
+  return typeof n === "number" && Number.isFinite(n)
+    ? "₹" + n.toLocaleString("en-IN")
+    : null;
+}
+
+function InfoRow({ label, value }) {
+  if (value == null || value === "") return null;
+  return (
+    <div style={{ display: "flex", gap: 6, fontSize: "0.7rem", lineHeight: 1.5 }}>
+      <span style={{ color: "#8b90a8", flexShrink: 0 }}>{label}:</span>
+      <span style={{ color: "#cdd2e4" }}>{value}</span>
+    </div>
+  );
+}
+
+function InfoPanel({ course, persona, leadCard, revealPersona }) {
+  const [open, setOpen] = useState(true);
+
+  // The student's real name (from the chosen lead profile), falling back to the
+  // voice name for bare-persona sessions.
+  const studentName = leadCard?.name || persona?.voiceName || persona?.name || null;
+  const age = typeof leadCard?.age === "number" ? leadCard.age : null;
+  // What they're doing now: current job if working, else current school/college
+  // if studying, else the persona category as a soft fallback.
+  const occupation = leadCard?.occupation || null;
+  const education = leadCard?.education || null;
+  const fallbackType =
+    persona?.name && persona.name !== studentName ? persona.name : null;
+  const city = leadCard?.city || null;
+
+  // "Age · City" sub-line, only the parts we actually have.
+  const metaLine = [age != null ? `${age} yrs` : null, city].filter(Boolean).join(" · ");
+
+  // EMI / placement facts may live under a few possible snapshot keys; show what's there.
+  const emi = course?.emi || course?.emiText || null;
+  const placement = course?.placement || course?.placementText || null;
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: 64,
+        left: 20,
+        zIndex: 4,
+        width: "min(78vw, 256px)",
+        borderRadius: 14,
+        background: "rgba(18,21,31,0.86)",
+        backdropFilter: "blur(10px)",
+        border: "1px solid #262a36",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.28)",
+        overflow: "hidden",
+      }}
+    >
+      {/* Header / collapse toggle */}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        title={open ? "Collapse brief" : "Expand brief"}
+        style={{
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
+          padding: "8px 12px",
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          color: "#c7d2fe",
+          fontSize: "0.68rem",
+          fontWeight: 700,
+          letterSpacing: "0.06em",
+          textTransform: "uppercase",
+        }}
+      >
+        <span>Call brief</span>
+        <span style={{ color: "#8b90a8", transform: open ? "rotate(180deg)" : "none", transition: "transform 150ms ease" }}>
+          ⌄
+        </span>
+      </button>
+
+      {open && (
+        <div style={{ padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 12 }}>
+          {/* Student */}
+          <div>
+            <p style={{ margin: "0 0 3px", fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "#6f7590" }}>
+              Student
+            </p>
+            {revealPersona === false ? (
+              <p style={{ margin: 0, fontSize: "0.74rem", color: "#a8b0c8", fontStyle: "italic" }}>
+                Blind call — student hidden
+              </p>
+            ) : (
+              <>
+                {studentName && (
+                  <p style={{ margin: 0, fontSize: "0.8rem", fontWeight: 600, color: "#e7e9f4" }}>
+                    {studentName}
+                  </p>
+                )}
+                {metaLine && (
+                  <p style={{ margin: "1px 0 0", fontSize: "0.66rem", color: "#8b90a8" }}>
+                    {metaLine}
+                  </p>
+                )}
+                {occupation && <InfoRow label="Works as" value={occupation} />}
+                {!occupation && education && <InfoRow label="Studying" value={education} />}
+                {!occupation && !education && fallbackType && (
+                  <p style={{ margin: "1px 0 0", fontSize: "0.66rem", color: "#8b90a8" }}>
+                    {fallbackType}
+                  </p>
+                )}
+                {!studentName && !metaLine && !occupation && !education && (
+                  <p style={{ margin: 0, fontSize: "0.72rem", color: "#8b90a8" }}>—</p>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Course facts — always shown (even in blind mode) */}
+          {course && (
+            <div>
+              <p style={{ margin: "0 0 3px", fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "#6f7590" }}>
+                Course
+              </p>
+              {course.name && (
+                <p style={{ margin: "0 0 3px", fontSize: "0.78rem", fontWeight: 600, color: "#e7e9f4" }}>
+                  {course.name}
+                </p>
+              )}
+              <InfoRow label="Fee" value={rupee(course.feeTotal)} />
+              <InfoRow label="Seat block" value={rupee(course.feeBooking)} />
+              <InfoRow label="Duration" value={course.duration} />
+              <InfoRow label="EMI" value={emi} />
+              <InfoRow label="Placement" value={placement} />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main CallStage ─────────────────────────────────────────────────────────────
 export default function CallStage({
   // session info
@@ -326,11 +474,20 @@ export default function CallStage({
   phase,
   emotion,
   satisfaction,
+  // info panel (S8)
+  course,
+  persona,
+  leadCard,
+  revealPersona,
+  // thinking toggle (S1)
+  thinkingOn,
+  onToggleThinking,
   // orb
   getAnalyser,
   orbState,
   subtitle,
   awaitingReply,
+  hasMessages,
   // voice
   voice,
   onToggleMic,
@@ -395,12 +552,17 @@ export default function CallStage({
       }}
     >
       {/* ── Top-left pills ─────────────────────────────────────────────── */}
-      <div style={{ position: "absolute", top: 20, left: 20, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        {/* Phase */}
+      <div style={{ position: "absolute", top: 20, left: 20, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", maxWidth: "calc(100% - 40px)" }}>
+        {/* Phase: current → next (S5) */}
         <Pill>
           <span style={{ color: "#818cf8", fontWeight: 600 }}>
             {PHASE_LABELS[phase] || `Phase ${phase}`}
           </span>
+          {PHASE_LABELS[phase + 1] && (
+            <span style={{ color: "#5b6178" }}>
+              → Next: {PHASE_LABELS[phase + 1]}
+            </span>
+          )}
         </Pill>
 
         {/* Emotion */}
@@ -413,6 +575,39 @@ export default function CallStage({
         <Pill>
           <span style={{ fontVariantNumeric: "tabular-nums" }}>{timer}</span>
         </Pill>
+
+        {/* Thinking toggle (S1) */}
+        <button
+          type="button"
+          onClick={onToggleThinking}
+          title="Thinking on = more deliberate student, slower replies."
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            borderRadius: 9999,
+            padding: "4px 12px",
+            fontSize: "0.75rem",
+            color: thinkingOn ? "#fcd9a5" : "#8b90a8",
+            background: "rgba(22,26,38,0.80)",
+            backdropFilter: "blur(8px)",
+            border: `1px solid ${thinkingOn ? "rgba(245,158,11,0.45)" : "#262a36"}`,
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+            transition: "border-color 150ms ease, color 150ms ease",
+          }}
+        >
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: "50%",
+              flexShrink: 0,
+              background: thinkingOn ? "#f59e0b" : "#4b5167",
+            }}
+          />
+          {thinkingOn ? "Thinking on" : "Thinking off"}
+        </button>
 
         {/* Cue chips toggle */}
         <button
@@ -447,6 +642,14 @@ export default function CallStage({
           {cuesEnabled ? "Cues on" : "Cues off"}
         </button>
       </div>
+
+      {/* ── Info panel (S8): persistent brief below the pills ───────────── */}
+      <InfoPanel
+        course={course}
+        persona={persona}
+        leadCard={leadCard}
+        revealPersona={revealPersona}
+      />
 
       {/* ── Top-right: satisfaction pill ───────────────────────────────── */}
       <div style={{ position: "absolute", top: 20, right: 20 }}>
@@ -514,6 +717,20 @@ export default function CallStage({
               }}
             >
               {subtitle}
+            </p>
+          ) : !hasMessages ? (
+            // S6 counsellor-first: nothing has been said yet — prompt the counsellor
+            // to open the call. Their first typed/spoken message starts it.
+            <p
+              style={{
+                color: "rgba(168,176,200,0.95)",
+                fontSize: "0.9375rem",
+                lineHeight: 1.6,
+                margin: 0,
+                animation: "fadeup 0.3s ease-out",
+              }}
+            >
+              You&apos;re connected — greet the student to begin.
             </p>
           ) : null}
         </div>

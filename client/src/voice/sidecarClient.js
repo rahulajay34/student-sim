@@ -57,24 +57,37 @@ export function sidecarStatus() {
   return probed;
 }
 
+// Timeout for sidecar TTS requests. The sidecar can stall on first model load;
+// 12 s is generous enough for a warm model but tight enough that callers (synthInto
+// in useVoiceConversation) fall back to browser Kokoro before the user notices.
+const SIDECAR_TTS_TIMEOUT_MS = 12_000;
+
 /**
  * POST /tts — returns ArrayBuffer (WAV bytes).
+ * Aborts after SIDECAR_TTS_TIMEOUT_MS to let callers fall back to browser TTS.
  * @param {string} text
  * @param {string} [emotion="neutral"]
  * @param {string|null} [voice=null] - ElevenLabs voice ID override (per-session student voice)
  * @returns {Promise<ArrayBuffer>}
  */
 export async function sidecarTts(text, emotion = "neutral", voice = null) {
-  const res = await fetch(`${BASE}/tts`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, emotion, ...(voice ? { voice } : {}) }),
-  });
-  if (!res.ok) {
-    const msg = await res.text().catch(() => res.status);
-    throw new Error(`sidecar /tts failed: ${msg}`);
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), SIDECAR_TTS_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${BASE}/tts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, emotion, ...(voice ? { voice } : {}) }),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) {
+      const msg = await res.text().catch(() => res.status);
+      throw new Error(`sidecar /tts failed: ${msg}`);
+    }
+    return res.arrayBuffer();
+  } finally {
+    clearTimeout(timer);
   }
-  return res.arrayBuffer();
 }
 
 /**

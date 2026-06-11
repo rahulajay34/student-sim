@@ -6556,5 +6556,2169 @@
       }
     ],
     "generatedAt": "2026-06-10T22:29:00.962Z"
+  },
+  {
+    "id": "rep-1f1a7b03",
+    "sessionId": "ses-4f11e316",
+    "assignmentId": "asn-ff07bd0e",
+    "counsellorId": "counsellor-2",
+    "counsellorName": "Rohan Verma",
+    "personaName": "Recent Graduate (Not Working)",
+    "scenarioTitle": "now1",
+    "overall": {
+      "percent": 34,
+      "band": "Needs Work",
+      "outcome": "Not Converted",
+      "outcomeDetail": "Student never agreed to pay the ₹3,000 seat-block — the counsellor made no payment ask, ended with factual errors (IIM/3-month) that likely damaged trust, and left the student's campus-immersion question unanswered."
+    },
+    "rubric": [
+      {
+        "key": "rapport",
+        "label": "Rapport & Opening",
+        "weight": 10,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Anchors 3 — Counsellor greets by name (\"Hei Vikram, How are you doing?\"), confirms context, and states the purpose of the session, but moves straight to business with no personal connection to the student's situation."
+      },
+      {
+        "key": "discovery",
+        "label": "Needs Discovery",
+        "weight": 15,
+        "score": 2,
+        "level": "Developing",
+        "justification": "Anchors between 1 and 3 — Counsellor only asks surface-level qualification (course name, how the test went, what info they have) and never probes the student's real situation despite the explicit signal in turn 3 (\"matlab main bas soch raha tha ki abhi kya karna hai\") that he is directionless after graduation."
+      },
+      {
+        "key": "presentation",
+        "label": "Programme Presentation",
+        "weight": 15,
+        "score": 1,
+        "level": "Poor",
+        "justification": "Anchors 1 — After the student explicitly said in turn 9 they have no information, the counsellor delivers a single vague sentence with no curriculum modules, no projects, and no structure, simply \"we'll be driving it through some IIMs… flexible course… around three months.\""
+      },
+      {
+        "key": "objections",
+        "label": "Objection Handling",
+        "weight": 20,
+        "score": 2,
+        "level": "Developing",
+        "justification": "Anchors between 1 and 3 — No objections were pre-empted; when the student raised a soft question about campus immersion in turn 15, the counsellor never responded in the transcript, missing a chance to convert curiosity into commitment."
+      },
+      {
+        "key": "knowledge",
+        "label": "Product Knowledge & Accuracy",
+        "weight": 15,
+        "score": 1,
+        "level": "Poor",
+        "justification": "Anchors 1 — Counsellor brands the programme as from \"IIMs\" (it is XLRI) and quotes duration as \"around three months\" (real duration is 6 months) in turn 10, both being explicit contradictions of ground-truth course facts."
+      },
+      {
+        "key": "closing",
+        "label": "Closing & Payment Ask",
+        "weight": 10,
+        "score": 1,
+        "level": "Poor",
+        "justification": "Anchors 1 — No payment ask was made, no next step was anchored, and the transcript ends mid-conversation with the student still asking an unanswered question about campus immersion, well before the 78% benchmark point for the ask."
+      },
+      {
+        "key": "communication",
+        "label": "Communication & Empathy",
+        "weight": 10,
+        "score": 2,
+        "level": "Developing",
+        "justification": "Anchors between 1 and 3 — Tone is mostly warm but the response in turn 14 is garbled and fragmented (\"Yes, exactly. I - no if you are facing any other challenges - no\"), and the counsellor never validates the student's expressed confusion about his post-graduation direction."
+      },
+      {
+        "key": "voice_delivery",
+        "label": "Voice Delivery",
+        "weight": 5,
+        "score": 2,
+        "level": "Developing",
+        "justification": "Anchors between 1 and 3 — Turn 0 opens tense at 304 wpm with 0.541 pauses (disjointed first impression) and turn 14 is disfluent and unfinished, even though middle turns (10, 12) are warm and intelligible."
+      }
+    ],
+    "phaseBreakdown": [
+      {
+        "phase": 1,
+        "name": "Opening",
+        "summary": "Opening — Counsellor greeted Vikram by name and asked how he was, then immediately moved to ask which course he was interested in. No personal connection was made; typo in greeting (\"Hei\") and tense opening tone weakened the first impression.",
+        "didWell": "Confirmed the student's name and stated the session's purpose early.",
+        "toImprove": "Hand the wheel to the student, ask about his current situation before pitching, and fix the typo / opening tone to set a warmer frame."
+      },
+      {
+        "phase": 2,
+        "name": "Discovery",
+        "summary": "Discovery — Counsellor asked which course, how the qualifier test went, and what info the student already had. Never explored why the student wants entrepreneurship, his current job search, or family/financial context.",
+        "didWell": "Confirmed the course the student is interested in and acknowledged he had qualified the test.",
+        "toImprove": "Probe the \"abhi kya karna hai\" sentiment — current activity, financial runway, family situation, target outcomes — before any pitch."
+      },
+      {
+        "phase": 3,
+        "name": "Presentation",
+        "summary": "Presentation — Counsellor delivered a one-sentence overview that wrongly attributed the programme to IIMs and quoted a 3-month duration (real: XLRI, 6 months). No modules, projects, capstone, or outcomes were shared despite the student saying he had zero information.",
+        "didWell": "Did not jump straight to fees; attempted a top-line framing before going deeper.",
+        "toImprove": "Walk through the 7 modules briefly, name the institute correctly as XLRI, state 6 months, and tie each module to the student's stated need."
+      },
+      {
+        "phase": 4,
+        "name": "Objections & Negotiation",
+        "summary": "Objections & Negotiation — No objections were raised or pre-empted. Counsellor answered the flexibility question (weekend classes, recordings) but the transcript ends with the student's campus-immersion question unanswered.",
+        "didWell": "Gave a clean, accurate answer on weekend scheduling and recording access in turn 12.",
+        "toImprove": "Pre-empt common concerns (fees, EMI, placement/career support, time commitment) and finish answering the campus-immersion question before moving on."
+      },
+      {
+        "phase": 5,
+        "name": "Close",
+        "summary": "Close — No payment ask, no urgency, no next step. The conversation simply stopped with the student mid-question, far short of the 78% benchmark for the ask.",
+        "didWell": "Did not apply coercive pressure or false scarcity.",
+        "toImprove": "Anchor a specific follow-up time, explain the ₹3,000 seat-block vs ₹63,000 fee structure, and place the payment ask around the 78% mark of the call."
+      }
+    ],
+    "strengths": [
+      {
+        "point": "Polite, professional opening that confirmed the student's name and acknowledged the qualifier test.",
+        "quote": "Okay, so this will be our entrepreneurship launchpad program"
+      },
+      {
+        "point": "Gave a clear, accurate explanation of the weekend-classes format and recording backup.",
+        "quote": "most of the classes are held in the weekends only… we also provide you recordings so that you can watch them in your free time"
+      }
+    ],
+    "improvements": [
+      {
+        "point": "Multiple factual errors in the very first pitch sentence undermined trust from the start.",
+        "quote": "driving it through some IIMs where you will be getting faculty from IIMs only, and it will be a flexible course and will last around three months",
+        "suggestion": "Pre-call drill: memorise the exact institute (XLRI x Masai), 6-month duration, online + campus-immersion format, and the 7 module names so the opening pitch is error-free."
+      },
+      {
+        "point": "Failed to walk the student through the curriculum even after he said he had no information, leaving the discovery-to-payment bridge broken.",
+        "quote": "Honestly sir, bas naam pata hai.",
+        "suggestion": "When the student says they have no info, immediately offer a 60-second module tour (Founder's Mindset → Problem-Solving → AI for Startups → Prototyping → Marketing → Business Models/Fundraising → Demo Day) before touching fees."
+      },
+      {
+        "point": "Call ended without any payment ask or anchored next step, so the ₹3,000 seat-block was never even mentioned.",
+        "quote": "(no payment ask made in the transcript)",
+        "suggestion": "Plan the ask to land at ~78% of the call: recap value, surface objections, then transition to \"shall we go ahead and block your seat with the ₹3,000 today, and the ₹63,000 by [date]?\""
+      }
+    ],
+    "keyMoments": [
+      {
+        "turn": 9,
+        "type": "miss",
+        "note": "Student explicitly said \"bas naam pata hai\" — a clear green light for a structured curriculum walkthrough that the counsellor never delivered."
+      },
+      {
+        "turn": 10,
+        "type": "miss",
+        "note": "First (and only) pitch sentence contained two factual errors: \"IIMs\" instead of XLRI and \"three months\" instead of 6 months — both direct contradictions of the course facts."
+      },
+      {
+        "turn": 15,
+        "type": "miss",
+        "note": "Student asked about campus immersion, signalling genuine engagement; the transcript ends without an answer, so an opening to deepen interest and move toward close was lost."
+      }
+    ],
+    "drills": [
+      {
+        "title": "One-Sentence Pitch Accuracy Drill",
+        "focusCriterion": "knowledge",
+        "objectionCategory": "trust_legitimacy",
+        "instruction": "Stand in front of a mirror or record yourself and deliver a 30-second opener that includes, in this exact order: institute (XLRI x Masai), duration (6 months), format (online + campus immersion), and the 7 module names. Repeat 10 times until it is word-perfect; any slip triggers a restart."
+      },
+      {
+        "title": "Late-Call Payment Ask Roleplay",
+        "focusCriterion": "closing",
+        "objectionCategory": "fee",
+        "instruction": "Pair with a coach and run a 10-minute mock where the coach will deliberately keep steering back to content questions. Your job is to (a) keep answering briefly, (b) watch the clock, and (c) place the ₹3,000 seat-block ask between minutes 7 and 8 of a 10-minute call, anchored to a specific next step."
+      },
+      {
+        "title": "Discovery-on-Confusion Drill",
+        "focusCriterion": "discovery",
+        "objectionCategory": "competing_priorities",
+        "instruction": "When a student says \"I don't know what to do,\" practice five follow-up probes in order: (1) What did you study and when did you finish? (2) Have you been interviewing or applying? (3) What does your family think you should be doing? (4) Financially, how long can you wait before earning? (5) What would \"success\" look like 12 months from now?"
+      }
+    ],
+    "benchmarks": {
+      "sessionMinutes": 5.9,
+      "medianPaidMinutes": 25.1,
+      "paymentAskSeen": false,
+      "paymentAskNormPct": 87
+    },
+    "scoreArc": [
+      {
+        "turn": 0,
+        "score": 50
+      },
+      {
+        "turn": 1,
+        "score": 50
+      },
+      {
+        "turn": 2,
+        "score": 50
+      },
+      {
+        "turn": 3,
+        "score": 50
+      },
+      {
+        "turn": 4,
+        "score": 50
+      },
+      {
+        "turn": 5,
+        "score": 50
+      },
+      {
+        "turn": 6,
+        "score": 48
+      },
+      {
+        "turn": 7,
+        "score": 50
+      },
+      {
+        "turn": 8,
+        "score": 49
+      }
+    ],
+    "transcript": [
+      {
+        "role": "counsellor",
+        "text": "Hei Vikram, How are you doing?",
+        "phase": 1,
+        "turnType": "question",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T11:47:50.894Z",
+        "deliveryMetrics": {
+          "tone": "tense",
+          "energy": "high",
+          "wpm": 304.1,
+          "pitchVarSemitones": 6.35,
+          "pauseRatio": 0.541,
+          "energyCv": 1.426,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "hot",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Ordinary opening greeting in Phase 1 — a warm check-in with no substantive content yet, which is the expected default."
+      },
+      {
+        "role": "student",
+        "text": "Haan sir, hello, main theek hoon. Aap batao?",
+        "emotion": "neutral",
+        "phase": 1,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T11:47:59.811Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "(techno music) Okay, so we can start with your counseling session. So may I know where you are seeking help, uh-",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T11:48:23.546Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 175,
+          "pitchVarSemitones": 3.85,
+          "pauseRatio": 0.084,
+          "energyCv": 0.769,
+          "verdicts": {
+            "pace": "good",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Opening discovery question asking where the student is seeking help is a routine, expected move in the discovery phase."
+      },
+      {
+        "role": "student",
+        "text": "Umm, matlab main bas soch raha tha ki abhi kya karna hai, course ke baare mein thoda guidance chahiye tha.",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T11:48:30.317Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Ok, so which course you are looking into so that I can help you?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T11:48:41.487Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 218.8,
+          "pitchVarSemitones": 3.42,
+          "pauseRatio": 0,
+          "energyCv": 0.771,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Ordinary discovery question asking the student which course they're looking into, which is appropriate for Phase 2 but nothing more."
+      },
+      {
+        "role": "student",
+        "text": "Haan sir, woh Entrepreneurship Launchpad wala, XLRI aur Masai ka. Maine qualifier test bhi diya tha.",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T11:48:48.172Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "अच्छा और आपका टेस्ट कैसा रहा? जैसे, क्या वह आपके लिए मुश्किल था या आपके लिए आसान था?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T11:49:03.112Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 179.5,
+          "pitchVarSemitones": 4.15,
+          "pauseRatio": 0.017,
+          "energyCv": 0.701,
+          "verdicts": {
+            "pace": "good",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Ordinary discovery question about the qualifier test experience, appropriate for the discovery phase."
+      },
+      {
+        "role": "student",
+        "text": "Umm, theek tha sir, manage ho gaya. Matlab easy nahi tha but qualify kar liya.",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T11:49:09.091Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Okay, then you are looking for Entrepreneurship Launchpad course. So may I know till now what information do you have regarding that?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T11:49:27.493Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 161.1,
+          "pitchVarSemitones": 4.27,
+          "pauseRatio": 0.136,
+          "energyCv": 0.7,
+          "verdicts": {
+            "pace": "good",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Ordinary discovery question asking what information the student already has about the course, which is a reasonable way to let the student talk and gauge their knowledge level."
+      },
+      {
+        "role": "student",
+        "text": "Honestly sir, bas naam pata hai. Test clear kiya tha toh socha details sun loon.",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T11:49:33.820Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Okay, so this will be our entrepreneurship launchpad program and we'll be driving it through some IIMs where you will be getting faculty from IIMs only, and it will be a flexible course and will last around three months.",
+        "phase": 2,
+        "turnType": "statement",
+        "scoreAfter": 48,
+        "ts": "2026-06-11T11:50:05.245Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 133.7,
+          "pitchVarSemitones": 3.8,
+          "pauseRatio": 0.083,
+          "energyCv": 0.7,
+          "verdicts": {
+            "pace": "good",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Student said they only know the name and want to hear details, but the counsellor launched into a brochure-style info dump (IIM faculty, flexible, 3 months) instead of asking discovery questions like goals, current work, or why they applied."
+      },
+      {
+        "role": "student",
+        "text": "Achha, okay. Matlab sir, IIM faculty sikhayenge isme, that sounds decent. Aur yeh flexible kaise hai exactly?",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 48,
+        "ts": "2026-06-11T11:50:11.333Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "So by flexible, I mean most of the classes are held in the weekends only, so that even the working professionals can attend the live classes. Even if, uh, you are not able to attend the live sessions, we also provide you recordings so that you can watch them in your free time.",
+        "phase": 3,
+        "turnType": "statement",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T11:51:17.543Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 186.1,
+          "pitchVarSemitones": 3.63,
+          "pauseRatio": 0.044,
+          "energyCv": 0.758,
+          "verdicts": {
+            "pace": "good",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Directly answers the student's question about 'flexible' with concrete specifics: weekend classes, live sessions, and recordings — a concrete relevant answer to the flexibility question."
+      },
+      {
+        "role": "student",
+        "text": "Okay sir, woh toh achha hai. Weekends mein hota hai toh manageable rahega.",
+        "emotion": "neutral",
+        "phase": 3,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T11:51:23.522Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "यस, एक्जेक्टली। मैं- नो इफ् यू आर फेसिंग अन्य अदर चैलेंजेस- नो",
+        "phase": 3,
+        "turnType": "statement",
+        "scoreAfter": 49,
+        "ts": "2026-06-11T11:51:38.085Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 117.8,
+          "pitchVarSemitones": 4.3,
+          "pauseRatio": 0.172,
+          "energyCv": 0.798,
+          "verdicts": {
+            "pace": "good",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Incoherent half-sentence filler ('no if you are facing any other challenges- no') that doesn't actually communicate anything to the student."
+      },
+      {
+        "role": "student",
+        "text": "Haan sir, weekends theek hai. Aur yeh campus immersion kya hota hai, woh bhi batayenge?",
+        "emotion": "neutral",
+        "phase": 3,
+        "scoreAfter": 49,
+        "ts": "2026-06-11T11:51:43.989Z"
+      }
+    ],
+    "generatedAt": "2026-06-11T11:53:28.616Z"
+  },
+  {
+    "id": "rep-e49fb2b6",
+    "sessionId": "ses-13f287fb",
+    "assignmentId": "asn-95a48765",
+    "counsellorId": "counsellor-2",
+    "counsellorName": "Rohan Verma",
+    "personaName": "Working Professional — Same Field",
+    "scenarioTitle": "",
+    "overall": {
+      "percent": 47,
+      "band": "Needs Work",
+      "outcome": "Converted",
+      "outcomeDetail": "Student paid the ₹4,000 seat-block fee in turn 35 after the counsellor sent a payment link, agreeing to the GenAI programme despite the initial cybersecurity/GenAI mismatch."
+    },
+    "rubric": [
+      {
+        "key": "rapport",
+        "label": "Rapport & Opening",
+        "weight": 10,
+        "score": 1,
+        "level": "Poor",
+        "justification": "Opens with 'हाय प्रशांत' (wrong name — student is Paulomi) and closes with 'thank you very much, uh, Palme' (a third mispronunciation), matching the anchor for breaking trust in the first minute and persisting with a confused, disjointed start."
+      },
+      {
+        "key": "discovery",
+        "label": "Needs Discovery",
+        "weight": 15,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Covered the standard checklist — work role (associate business analyst at Infosys, 2 years), tools (SQL, Power BI), and goal (GenAI for automation) — but never probed the 'why' behind her GenAI interest, expected package jump, or decision context, matching the 3-anchor of accurate but surface-level qualification."
+      },
+      {
+        "key": "presentation",
+        "label": "Programme Presentation",
+        "weight": 15,
+        "score": 2,
+        "level": "Developing",
+        "justification": "Delivered only fragments — 'six months program', 'weekend live sessions', '9-10 hours per week' — with no module-by-module walkthrough, no project mention, and no tie-back to her analytics work, falling between anchors 1 and 3: present but too thin to count as a structured overview."
+      },
+      {
+        "key": "objections",
+        "label": "Objection Handling",
+        "weight": 20,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Reacted to the two raised objections (EMI hidden charges in turn 25 and certificate authenticity in turn 29) with factual answers, matching the 3-anchor of reacting well but never anticipating concerns like time commitment, family buy-in, or career relevance."
+      },
+      {
+        "key": "knowledge",
+        "label": "Product Knowledge & Accuracy",
+        "weight": 15,
+        "score": 1,
+        "level": "Poor",
+        "justification": "Stated the ₹4,000 seat-block fee is 'fully refundable in case you change your mind' — directly contradicting the ground truth that it is non-refundable — and labelled the EMI 'interest-free' without verification, both clear factual errors matching the 1-anchor of stating things that are simply false."
+      },
+      {
+        "key": "closing",
+        "label": "Closing & Payment Ask",
+        "weight": 10,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Made a timely payment ask around turn 28 (~72% in) and successfully sent a link the student used, matching the 3-anchor of a plain, effective ask that closes but leaves the next step (balance payment timeline, batch start logistics) entirely open-ended."
+      },
+      {
+        "key": "communication",
+        "label": "Communication & Empathy",
+        "weight": 10,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Polite, clear, and patient throughout, and handled the cybersecurity/GenAI pivot without judgment, but offered no real validation of Paulomi's situation beyond procedural courtesy, matching the 3-anchor of emotionally flat professionalism."
+      },
+      {
+        "key": "voice_delivery",
+        "label": "Voice Delivery",
+        "weight": 5,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Warm tone and intelligible pace (mostly 170-220 wpm) with clear enunciation, but fragmented phrasing like 'you are- you have obtained in cybersecurity and ethical hacking with applied AI' and the techno-music stings interrupt flow, matching the 3-anchor of clear and steady but functional rather than inviting."
+      }
+    ],
+    "phaseBreakdown": [
+      {
+        "phase": 1,
+        "name": "Opening",
+        "summary": "Opening with Hindi-mixed greeting and immediate name error 'Prashant' for student Paulomi.",
+        "didWell": "Confirmed audio connectivity and warm tone.",
+        "toImprove": "Verify the student's name from CRM/qualifier data before the call starts; never open with a wrong first name as it sets a trust deficit for the entire session."
+      },
+      {
+        "phase": 2,
+        "name": "Discovery",
+        "summary": "Light discovery covering role, tenure, and tools, then pivoting off the cybersecurity track when the student flagged interest in GenAI.",
+        "didWell": "Caught the misalignment in turn 8 and offered the GenAI alternative in turn 10 without forcing the wrong product.",
+        "toImprove": "Go deeper — ask what manual reporting tasks she wants automated, what her 12-month outcome looks like, and whether her employer supports upskilling, to ground value in her world."
+      },
+      {
+        "phase": 3,
+        "name": "Presentation",
+        "summary": "Programme overview covering IIT Roorkee association, 6-month duration, weekend live + recorded format, and 9-10 hours/week load.",
+        "didWell": "Addressed her 'beginner vs advanced' concern by positioning the course as foundation-to-advanced.",
+        "toImprove": "Walk through the actual curriculum modules, capstone, and campus immersion explicitly; tie a module to her Power BI/SQL background to make it concrete."
+      },
+      {
+        "phase": 4,
+        "name": "Objections & Negotiation",
+        "summary": "Two objections handled: EMI transparency (turn 25) and certificate issuer/format (turn 29).",
+        "didWell": "Confirmed zero hidden charges and the physical IIT Roorkee certificate with optional campus visit — a genuine value-add she responded to warmly.",
+        "toImprove": "Pre-empt the obvious objections (time vs. weekend workload, family/manager buy-in, career switch credibility) instead of waiting for them."
+      },
+      {
+        "phase": 5,
+        "name": "Close",
+        "summary": "Payment link sent in turn 34, ₹4,000 received, batch start confirmed as '20 days from now'.",
+        "didWell": "Secured the conversion cleanly with a single ask and a fast link drop.",
+        "toImprove": "Anchor the next step — give a specific balance-payment deadline, a calendar invite for orientation, and confirm the start date in writing rather than the vague '20 days from now'."
+      }
+    ],
+    "strengths": [
+      {
+        "point": "Responsive product pivot when the student's interest did not match the offered programme",
+        "quote": "We also have our Gen AI programs. If you are interested in them, I can give you a brief around that."
+      },
+      {
+        "point": "Clear, warm tone that put a confused student at ease after the cybersecurity/GenAI mismatch",
+        "quote": "So all of our program are designed in such a way that we start from very foundation al- foundation only"
+      },
+      {
+        "point": "Closed the seat-block payment in a single, low-friction ask",
+        "quote": "Surely I can send you a payment link on which you can do the payment. Once you are done with the payment, please confirm with me."
+      }
+    ],
+    "improvements": [
+      {
+        "point": "Never call the ₹4,000 seat-block fee refundable — it is non-refundable per policy and this is a material misrepresentation",
+        "quote": "this amount will be fully refundable in case you change your mind going forward",
+        "suggestion": "Memorise the exact refund policy: 'The ₹4,000 seat-block and ₹56,000 programme fee are both non-refundable; the ₹4,000 is adjustable against the ₹56,000 balance.' If unsure, say 'let me confirm with my team' rather than improvise."
+      },
+      {
+        "point": "Verify the student's name on the CRM tab before dialling — two name errors in one call (Prashant at open, Palme at close) signal carelessness",
+        "quote": "हाय प्रशांत",
+        "suggestion": "Open every call by reading the CRM header silently, then greet with the exact name on file. If pronunciation is uncertain, ask 'Am I saying your name right?' in the first 10 seconds."
+      },
+      {
+        "point": "Do not label the EMI 'interest-free' without checking the actual EMI total against the upfront fee",
+        "quote": "you can give this on EMI as well, which is interest-free",
+        "suggestion": "Quote the exact EMI number (9 × ₹7,156 = ₹64,404 plus 18% GST) and say 'no third-party interest' rather than 'interest-free' if any processing component is bundled in."
+      }
+    ],
+    "keyMoments": [
+      {
+        "turn": 0,
+        "type": "miss",
+        "note": "Wrong name 'Prashant' on a student named Paulomi — instant trust break in the first 10 seconds."
+      },
+      {
+        "turn": 10,
+        "type": "best",
+        "note": "Clean, non-defensive pivot off the cybersecurity pitch onto GenAI after the student flagged confusion — saved the call from derailing."
+      },
+      {
+        "turn": 24,
+        "type": "miss",
+        "note": "Stated the ₹4,000 seat-block is 'fully refundable' when policy says it is non-refundable — a material factual error that could trigger a refund dispute later."
+      },
+      {
+        "turn": 36,
+        "type": "miss",
+        "note": "Second name error in the same call — 'Palme' instead of 'Paulomi' — reinforcing the impression of inattention even after conversion."
+      }
+    ],
+    "drills": [
+      {
+        "title": "Refund-Policy Role Play",
+        "focusCriterion": "knowledge",
+        "objectionCategory": "trust_legitimacy",
+        "instruction": "Pair with a coach who plays Paulomi and asks 'If I change my mind after paying 4,000, do I get it back?' Drill the exact policy line: 'The ₹4,000 seat-block is non-refundable but fully adjustable against the ₹56,000 balance, so you don't lose the money — you just apply it to the programme fee.' Record and review for the word 'non-refundable' being used clearly."
+      },
+      {
+        "title": "First-Ten-Seconds Name Drill",
+        "focusCriterion": "rapport",
+        "objectionCategory": "other",
+        "instruction": "Run 10 cold-call role plays where the student's name is deliberately tricky (e.g. Paulomi, Sreeram, Xinyi). Before dialling, read the CRM header aloud; greet within 3 seconds using the exact spelling. Self-score each call on whether the name was used correctly, and replay any miss."
+      },
+      {
+        "title": "EMI Transparency Drill",
+        "focusCriterion": "knowledge",
+        "objectionCategory": "emi_affordability",
+        "instruction": "Practise quoting both payment paths in one breath: '₹60,000 upfront or ₹7,156 × 9 = ₹64,404 via EMI, plus 18% GST on either option.' Coach plays a price-sensitive student who asks 'Is there really no interest?' Train the response: 'No third-party loan interest, but the EMI total is ₹4,404 higher than upfront to cover the instalment processing.'"
+      }
+    ],
+    "benchmarks": {
+      "sessionMinutes": 13.5,
+      "medianPaidMinutes": 25.1,
+      "paymentAskSeen": true,
+      "paymentAskNormPct": 87
+    },
+    "scoreArc": [
+      {
+        "turn": 0,
+        "score": 50
+      },
+      {
+        "turn": 1,
+        "score": 50
+      },
+      {
+        "turn": 2,
+        "score": 50
+      },
+      {
+        "turn": 3,
+        "score": 50
+      },
+      {
+        "turn": 4,
+        "score": 50
+      },
+      {
+        "turn": 5,
+        "score": 50
+      },
+      {
+        "turn": 6,
+        "score": 52
+      },
+      {
+        "turn": 7,
+        "score": 52
+      },
+      {
+        "turn": 8,
+        "score": 54
+      },
+      {
+        "turn": 9,
+        "score": 56
+      },
+      {
+        "turn": 10,
+        "score": 56
+      },
+      {
+        "turn": 11,
+        "score": 58
+      },
+      {
+        "turn": 12,
+        "score": 60
+      },
+      {
+        "turn": 13,
+        "score": 64
+      },
+      {
+        "turn": 14,
+        "score": 67
+      },
+      {
+        "turn": 15,
+        "score": 67
+      },
+      {
+        "turn": 16,
+        "score": 69
+      },
+      {
+        "turn": 17,
+        "score": 71
+      },
+      {
+        "turn": 18,
+        "score": 71
+      },
+      {
+        "turn": 19,
+        "score": 71
+      },
+      {
+        "turn": 20,
+        "score": 73
+      }
+    ],
+    "transcript": [
+      {
+        "role": "counsellor",
+        "text": "क्या भाई ? हाय प्रशांत। अमी ऑडिबल टू यु ?",
+        "phase": 1,
+        "turnType": "question",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T12:30:03.605Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 189.4,
+          "pitchVarSemitones": 6.38,
+          "pauseRatio": 0.074,
+          "energyCv": 0.801,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Opening turn with a casual greeting and audibility check — a routine, expected move in Phase 1 with no prior context to work with."
+      },
+      {
+        "role": "student",
+        "text": "yeah yeah I can hear you, just stepped out for a bit so um... go ahead sir.",
+        "emotion": "neutral",
+        "phase": 1,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T12:30:12.878Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Okay, so before we go ahead, can you give me a little brief about yourself?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T12:30:25.005Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 216.3,
+          "pitchVarSemitones": 3.2,
+          "pauseRatio": 0.076,
+          "energyCv": 0.738,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Ordinary discovery question asking the student to introduce themselves — appropriate for phase 2."
+      },
+      {
+        "role": "student",
+        "text": "yeah sure... I'm Paulomi, working as an associate business analyst at Infosys, been around two years now. mostly into SQL, Power BI, dashboards, that kind of stuff.",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T12:30:31.203Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Okay. So what kind of course you are looking, uh, in here at Masai?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T12:30:48.439Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 188.8,
+          "pitchVarSemitones": 5.12,
+          "pauseRatio": 0.117,
+          "energyCv": 0.769,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Ordinary discovery question asking what course the student is interested in, appropriate for this phase."
+      },
+      {
+        "role": "student",
+        "text": "um honestly I'm not fully sure yet, I cleared the qualifier test and that's about it... I was kinda looking at what fits with my current analytics work, you know, GenAI and stuff that's coming in.",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T12:30:54.556Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Okay, so according to where you work today and your day-to-day tasks, where you can think, uh, your Gen AI will help you out?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T12:31:45.954Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 166.1,
+          "pitchVarSemitones": 4.36,
+          "pauseRatio": 0.074,
+          "energyCv": 0.789,
+          "verdicts": {
+            "pace": "good",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Ordinary discovery question asking the student to articulate where GenAI would help in their current workflow — a reasonable, expected probe in the Discovery phase."
+      },
+      {
+        "role": "student",
+        "text": "yeah so like right now I spend a lot of time on manual reporting and dashboard updates, and I feel like GenAI or agentic AI could automate a lot of that... instead of me working manually on it, you know.",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T12:31:51.983Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Okay, so but uh, you are- you have obtained in cybersecurity and ethical hacking with applied AI. Is that what you're looking for?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T12:32:16.646Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 169.1,
+          "pitchVarSemitones": 3.99,
+          "pauseRatio": 0.155,
+          "energyCv": 0.731,
+          "verdicts": {
+            "pace": "good",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Routine discovery question confirming the programme the student applied for, appropriate for the phase."
+      },
+      {
+        "role": "student",
+        "text": "wait, I was looking at the analytics or AI track mainly, I didn't really go for cyber security... um, is that what this program is about?",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T12:32:23.468Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "(techno music) Okay, Paulomi. We also have our Gen AI programs. If you are interested in them, I can give you a brief around that.",
+        "phase": 2,
+        "turnType": "statement",
+        "scoreAfter": 52,
+        "ts": "2026-06-11T12:33:15.085Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 212.1,
+          "pitchVarSemitones": 4.46,
+          "pauseRatio": 0.281,
+          "energyCv": 0.826,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Directly and relevantly addresses the student's course-fit concern by acknowledging the GenAI track exists and offering a brief on it, which is a concrete response to what was just asked."
+      },
+      {
+        "role": "student",
+        "text": "oh okay no yeah, I was actually confused for a sec... yes please, the GenAI one is what I want to know more about, go ahead.",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 52,
+        "ts": "2026-06-11T12:33:21.322Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Okay, so this is our program, uh, which we are associated with IIT Roorkee. So this will be a six months program and if you want to go ahead with that, I can give you a brief around it.",
+        "phase": 3,
+        "turnType": "statement",
+        "scoreAfter": 52,
+        "ts": "2026-06-11T12:33:49.449Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 167.3,
+          "pitchVarSemitones": 4.67,
+          "pauseRatio": 0.182,
+          "energyCv": 0.825,
+          "verdicts": {
+            "pace": "good",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Plain factual statement introducing the program (IIT Roorkee, six months) with no link to what the student said in discovery, but ordinary for the Presentation phase."
+      },
+      {
+        "role": "student",
+        "text": "okay got it, six months with IIT Roorkee... yeah please continue.",
+        "emotion": "neutral",
+        "phase": 3,
+        "scoreAfter": 52,
+        "ts": "2026-06-11T12:33:55.623Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Okay, sure. Uh, so this course is majorly designed around the people who are working professional. So most of our sessions will be on the weekend only and these will be live sessions, not recordings. But if somehow you are not able to attend the live sessions, we also provide you recordings as well, which you can watch in your free time. And along with this, we also provide you other content like assignments and all, which also have a flexible deadline, which you can do in your free times only.",
+        "phase": 3,
+        "turnType": "statement",
+        "scoreAfter": 54,
+        "ts": "2026-06-11T12:34:37.485Z",
+        "scoreReason": "Counsellor proactively addressed the time-commitment/schedule concern (working professional, weekend live sessions with recordings as backup) with specific, relevant details before the student had to ask."
+      },
+      {
+        "role": "student",
+        "text": "okay that works actually, weekends are fine for me... um, but is it like beginner level or is it for people already in analytics, that's what I want to know.",
+        "emotion": "neutral",
+        "phase": 3,
+        "scoreAfter": 54,
+        "ts": "2026-06-11T12:34:45.057Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Sure. So all of our program are designed in such a way that we start from very foundation al- foundation only, so that even if you are not having background there, uh, we- you can start with that, uh, and gradually when the module, uh, goes... Then we, uh, move ahead with more technical stuff because we already built the foundation. So it will be no issues for you to begin with this program.",
+        "phase": 3,
+        "turnType": "statement",
+        "scoreAfter": 56,
+        "ts": "2026-06-11T12:35:31.285Z",
+        "scoreReason": "Directly answered the student's question about beginner vs. experienced level by explaining the foundation-to-advanced structure, though without specific module details or examples."
+      },
+      {
+        "role": "student",
+        "text": "okay that makes sense... so it starts from basics and then builds up, got it.",
+        "emotion": "neutral",
+        "phase": 3,
+        "scoreAfter": 56,
+        "ts": "2026-06-11T12:35:37.102Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Yes. Uhh, may I know if you have any other queries?",
+        "phase": 3,
+        "turnType": "invite",
+        "scoreAfter": 56,
+        "ts": "2026-06-11T12:35:47.362Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 192.8,
+          "pitchVarSemitones": 5.13,
+          "pauseRatio": 0.229,
+          "energyCv": 0.853,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Ordinary check-in question at the end of a presentation segment; nothing asked, nothing of substance delivered, but a routine question is neutral in this phase."
+      },
+      {
+        "role": "student",
+        "text": "um yeah just one thing... like the ML and AI part, is that more theoretical or actual hands-on projects, because I don't really want another lecture-only thing.",
+        "emotion": "neutral",
+        "phase": 3,
+        "scoreAfter": 56,
+        "ts": "2026-06-11T12:35:55.232Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Sure. Uh, we give you assignments along with each session, so most of the assignments are hands-on only. And to help you out with them, we also give you tutorial sessions where we will provide you a teaching assistant. And to that, you can actually ask your doubts in the live session only.",
+        "phase": 3,
+        "turnType": "statement",
+        "scoreAfter": 58,
+        "ts": "2026-06-11T12:36:30.712Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 180.4,
+          "pitchVarSemitones": 3.2,
+          "pauseRatio": 0.104,
+          "energyCv": 0.737,
+          "verdicts": {
+            "pace": "good",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "The counsellor directly answered the student's question about hands-on vs theoretical content by specifying assignments are hands-on and that teaching assistants are available for support, which is a concrete, relevant answer to the raised concern."
+      },
+      {
+        "role": "student",
+        "text": "okay that's good to hear, hands-on with TA support makes sense... um, how many hours a week does it actually need though, like roughly?",
+        "emotion": "neutral",
+        "phase": 3,
+        "scoreAfter": 58,
+        "ts": "2026-06-11T12:36:37.736Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "So majorly every week you need to give around 9 to 10 hours and it is including your assignments also. Let me know if you want to know something else.",
+        "phase": 3,
+        "turnType": "question",
+        "scoreAfter": 60,
+        "ts": "2026-06-11T12:37:00.529Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 169.9,
+          "pitchVarSemitones": 3.84,
+          "pauseRatio": 0.076,
+          "energyCv": 0.741,
+          "verdicts": {
+            "pace": "good",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Concrete, specific answer to the student's question about weekly hours, including that it covers assignments."
+      },
+      {
+        "role": "student",
+        "text": "yeah 9-10 hours is doable I think... so what does the fee look like for the whole program?",
+        "emotion": "neutral",
+        "phase": 3,
+        "scoreAfter": 60,
+        "ts": "2026-06-11T12:37:05.358Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Okay, so currently you are done with your entrance test of 99 rupees. Now to secure your seat into our program of Gen AI, you need to pay around 4,000 rupees to secure your seat here and this amount will be fully refundable in case you change your mind going forward. And the fees, uh, for the program will be 60,000 rupees. This you can do one-shot payment as well and you can give this on EMI as well, which is interest-free.",
+        "phase": 4,
+        "turnType": "statement",
+        "scoreAfter": 64,
+        "ts": "2026-06-11T12:37:48.934Z",
+        "scoreReason": "Counsellor decomposed the fee (4000 refundable seat block + 60,000 total), mentioned interest-free EMI option, and explained refundability — directly addressing the fee objection with specifics."
+      },
+      {
+        "role": "student",
+        "text": "okay so 60k total, refundable 4k for the seat... um, the EMI is actually zero interest, no hidden charges or anything?",
+        "emotion": "neutral",
+        "phase": 4,
+        "scoreAfter": 64,
+        "ts": "2026-06-11T12:37:56.883Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Yes, you got that right. Uh, this four thousand rupees is also adjustable into your sixty thousand. So if you secure your seat today, you need to pay around, around, uh, fifty six thousand only going forward.",
+        "phase": 5,
+        "turnType": "statement",
+        "scoreAfter": 67,
+        "ts": "2026-06-11T12:38:20.295Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 197.6,
+          "pitchVarSemitones": 2.51,
+          "pauseRatio": 0.025,
+          "energyCv": 0.628,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Counsellor substantively addressed the EMI/affordability concern by decomposing the fee into a refundable 4k seat-block with the balance 56k going forward, directly answering the student's affordability question with a concrete breakdown."
+      },
+      {
+        "role": "student",
+        "text": "okay that's clear, 56k remaining after the 4k adjustment, interest-free EMI... got it.",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 67,
+        "ts": "2026-06-11T12:38:31.798Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Okay. Let me know if you have any other questions as well. Otherwise we can proceed to the payment-",
+        "phase": 5,
+        "turnType": "invite",
+        "scoreAfter": 67,
+        "ts": "2026-06-11T12:38:41.252Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 222.7,
+          "pitchVarSemitones": 3.09,
+          "pauseRatio": 0,
+          "energyCv": 0.697,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Routine close prompt inviting questions and offering to proceed to payment; no new specifics or pressure, but also no substantive engagement with the open EMI concern."
+      },
+      {
+        "role": "student",
+        "text": "um one last thing... the certificate, is that a physical copy or digital, like does IIT Roorkee actually issue it or is it from Masai?",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 67,
+        "ts": "2026-06-11T12:38:48.996Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Yeah, one last thing I forgot to mention. After the end of each program, you will get an opportunity to go to IIT Roorkee and meet with your faculty, and you will be given the physical copy of your certificate there. Or else, if you are not opting to come to IIT Roorkee, we will deliver your physical certificate to your home.",
+        "phase": 5,
+        "turnType": "statement",
+        "scoreAfter": 69,
+        "ts": "2026-06-11T12:39:20.274Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 206.5,
+          "pitchVarSemitones": 3.41,
+          "pauseRatio": 0.059,
+          "energyCv": 0.699,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Gave a concrete answer to the student's question about the certificate — physical copy from IIT Roorkee, either in-person or delivered to home — which is a specific, relevant response."
+      },
+      {
+        "role": "student",
+        "text": "oh nice, physical copy from IIT Roorkee itself, that's actually a good value add... okay so how do I go ahead with the 4k payment?",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 69,
+        "ts": "2026-06-11T12:39:27.058Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Surely I can send you a payment link on which you can do the payment. Once you are done with the payment, please confirm with me.",
+        "phase": 5,
+        "turnType": "statement",
+        "scoreAfter": 71,
+        "ts": "2026-06-11T12:39:46.744Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 216.7,
+          "pitchVarSemitones": 3.83,
+          "pauseRatio": 0.137,
+          "energyCv": 0.695,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Counsellor offered a concrete next step by sending a payment link and asked for confirmation, directly answering the student's question about how to proceed with the 4k payment."
+      },
+      {
+        "role": "student",
+        "text": "okay yeah send it over, I'll do the payment now.",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 71,
+        "ts": "2026-06-11T12:39:59.722Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "(techno music) Okay. I have sent in the chat box. You can do the payment now and confirm once the payment is done.",
+        "phase": 5,
+        "turnType": "statement",
+        "scoreAfter": 71,
+        "ts": "2026-06-11T12:40:12.285Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 280,
+          "pitchVarSemitones": 2.9,
+          "pauseRatio": 0.022,
+          "energyCv": 0.525,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Routine close: confirms payment link was sent and asks student to confirm after payment — ordinary procedural step with no substantive objection handling needed at this moment."
+      },
+      {
+        "role": "student",
+        "text": "yeah done, paid the 4k just now... thanks for clarifying everything sir, this helped clear up a lot.",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 71,
+        "ts": "2026-06-11T12:40:20.187Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Okay, thank you very much, uh, Palme. It was nice to talk to you. Looking forward into the course and your admission.",
+        "phase": 5,
+        "turnType": "statement",
+        "scoreAfter": 71,
+        "ts": "2026-06-11T12:40:38.701Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 153.3,
+          "pitchVarSemitones": 3.54,
+          "pauseRatio": 0.056,
+          "energyCv": 0.809,
+          "verdicts": {
+            "pace": "good",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Routine closing acknowledgement after the student has already paid and thanked the counsellor; no objection or question to address at this point."
+      },
+      {
+        "role": "student",
+        "text": "yeah same here sir, thanks... um, when does the batch start btw, just so I can plan?",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 71,
+        "ts": "2026-06-11T12:40:48.308Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "So it will be starting 20 days from now.",
+        "phase": 5,
+        "turnType": "statement",
+        "scoreAfter": 73,
+        "ts": "2026-06-11T12:40:58.134Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 210.9,
+          "pitchVarSemitones": 5.17,
+          "pauseRatio": 0.129,
+          "energyCv": 0.777,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Counsellor gave a concrete answer to the student's question about batch start date."
+      },
+      {
+        "role": "student",
+        "text": "oh okay got it, 20 days is fine... thanks again, talk soon.",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 73,
+        "ts": "2026-06-11T12:41:08.352Z"
+      }
+    ],
+    "generatedAt": "2026-06-11T12:43:09.472Z"
+  },
+  {
+    "id": "rep-eaca0c53",
+    "sessionId": "ses-f0a7a2c6",
+    "assignmentId": null,
+    "counsellorId": "counsellor-2",
+    "counsellorName": "Rohan Verma",
+    "personaName": "Recent Graduate (Not Working)",
+    "scenarioTitle": "Free practice",
+    "overall": {
+      "percent": 60,
+      "band": "Good",
+      "outcome": "Not Converted",
+      "outcomeDetail": "Report generation failed — neutral placeholder."
+    },
+    "rubric": [
+      {
+        "key": "rapport",
+        "label": "Rapport & Opening",
+        "weight": 10,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Report generation failed — neutral placeholder."
+      },
+      {
+        "key": "discovery",
+        "label": "Needs Discovery",
+        "weight": 15,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Report generation failed — neutral placeholder."
+      },
+      {
+        "key": "presentation",
+        "label": "Programme Presentation",
+        "weight": 15,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Report generation failed — neutral placeholder."
+      },
+      {
+        "key": "objections",
+        "label": "Objection Handling",
+        "weight": 20,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Report generation failed — neutral placeholder."
+      },
+      {
+        "key": "knowledge",
+        "label": "Product Knowledge & Accuracy",
+        "weight": 15,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Report generation failed — neutral placeholder."
+      },
+      {
+        "key": "closing",
+        "label": "Closing & Payment Ask",
+        "weight": 10,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Report generation failed — neutral placeholder."
+      },
+      {
+        "key": "communication",
+        "label": "Communication & Empathy",
+        "weight": 10,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Report generation failed — neutral placeholder."
+      },
+      {
+        "key": "voice_delivery",
+        "label": "Voice Delivery",
+        "weight": 5,
+        "score": 3,
+        "level": "Competent",
+        "justification": "Report generation failed — neutral placeholder."
+      }
+    ],
+    "phaseBreakdown": [
+      {
+        "phase": 1,
+        "name": "Opening",
+        "summary": "Report generation failed — neutral placeholder.",
+        "didWell": "",
+        "toImprove": ""
+      },
+      {
+        "phase": 2,
+        "name": "Discovery",
+        "summary": "Report generation failed — neutral placeholder.",
+        "didWell": "",
+        "toImprove": ""
+      },
+      {
+        "phase": 3,
+        "name": "Presentation",
+        "summary": "Report generation failed — neutral placeholder.",
+        "didWell": "",
+        "toImprove": ""
+      },
+      {
+        "phase": 4,
+        "name": "Objections & Negotiation",
+        "summary": "Report generation failed — neutral placeholder.",
+        "didWell": "",
+        "toImprove": ""
+      },
+      {
+        "phase": 5,
+        "name": "Close",
+        "summary": "Report generation failed — neutral placeholder.",
+        "didWell": "",
+        "toImprove": ""
+      }
+    ],
+    "strengths": [],
+    "improvements": [],
+    "keyMoments": [],
+    "drills": [],
+    "benchmarks": {
+      "sessionMinutes": 16.8,
+      "medianPaidMinutes": 25.1,
+      "paymentAskSeen": true,
+      "paymentAskNormPct": 87
+    },
+    "scoreArc": [
+      {
+        "turn": 0,
+        "score": 50
+      },
+      {
+        "turn": 1,
+        "score": 50
+      },
+      {
+        "turn": 2,
+        "score": 50
+      },
+      {
+        "turn": 3,
+        "score": 50
+      },
+      {
+        "turn": 4,
+        "score": 50
+      },
+      {
+        "turn": 5,
+        "score": 50
+      },
+      {
+        "turn": 6,
+        "score": 50
+      },
+      {
+        "turn": 7,
+        "score": 52
+      },
+      {
+        "turn": 8,
+        "score": 52
+      },
+      {
+        "turn": 9,
+        "score": 56
+      },
+      {
+        "turn": 10,
+        "score": 59
+      },
+      {
+        "turn": 11,
+        "score": 62
+      },
+      {
+        "turn": 12,
+        "score": 64
+      },
+      {
+        "turn": 13,
+        "score": 62
+      },
+      {
+        "turn": 14,
+        "score": 65
+      },
+      {
+        "turn": 15,
+        "score": 68
+      },
+      {
+        "turn": 16,
+        "score": 70
+      },
+      {
+        "turn": 17,
+        "score": 73
+      },
+      {
+        "turn": 18,
+        "score": 73
+      },
+      {
+        "turn": 19,
+        "score": 73
+      },
+      {
+        "turn": 20,
+        "score": 73
+      },
+      {
+        "turn": 21,
+        "score": 75
+      },
+      {
+        "turn": 22,
+        "score": 75
+      }
+    ],
+    "fallback": true,
+    "regenerable": true,
+    "transcript": [
+      {
+        "role": "counsellor",
+        "text": "(click) Hi, Jay. Am I audible to you? (click)",
+        "phase": 1,
+        "turnType": "question",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T13:11:23.370Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 312.5,
+          "pitchVarSemitones": 5.58,
+          "pauseRatio": 0.345,
+          "energyCv": 0.911,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Standard opening audibility check at the start of the call, which is expected and ordinary."
+      },
+      {
+        "role": "student",
+        "text": "Yeah hi sir, I can hear you.",
+        "emotion": "neutral",
+        "phase": 1,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T13:11:41.452Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Okay, so hi Jaya, I am Rahul. I will be your counselor for the day. I will help you out with the course info and all. But first I want you to give me a brief info about yourself and what are you looking for?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T13:12:03.944Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 203.3,
+          "pitchVarSemitones": 4.44,
+          "pauseRatio": 0.149,
+          "energyCv": 0.825,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Standard discovery opener asking the student to share background and goals — ordinary and expected for Phase 2."
+      },
+      {
+        "role": "student",
+        "text": "Sure sir. So I just finished my 12th from Punjab, and I'm about to start a five-year integrated MBA program in like two months. I'm not doing anything right now, so I just wanted to pick up some useful skill before college starts.",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T13:12:11.831Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Sure, sir. I heard you. And can you tell me what kind of courses you are looking for and what have you done till now?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T13:12:36.122Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 236.7,
+          "pitchVarSemitones": 4.12,
+          "pauseRatio": 0.134,
+          "energyCv": 0.685,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Ordinary discovery question asking about the student's interests and background, appropriate for this phase."
+      },
+      {
+        "role": "student",
+        "text": "Um honestly I'm kind of new to all this, I just know about this one because I paid for a qualifier test recently. I'm mainly looking for something that actually helps me get a job later, not just a random certificate.",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T13:12:42.381Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Sure. So you have registered a new age software engineering program. So let me tell you what it is all about and how we can proceed further. So this whole course will be, uh, about for the seven-month duration, w-where we will start with the foundational skills. So even if, if you are having no background in, in technology and all, you can start with us. And once we proceed with the modules, we will also learn some technical stuff, which you will grab eventually and you can use in your day-to-day life and you can upscale yourself as well.",
+        "phase": 3,
+        "turnType": "statement",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T13:13:38.690Z",
+        "scoreReason": "Ordinary presentation-phase explaining of the program duration and structure; no specifics tied to the student's stated goals of job-readiness, but plain explanation is the expected default here."
+      },
+      {
+        "role": "student",
+        "text": "Okay, got it. Seven months, starting from basics.",
+        "emotion": "neutral",
+        "phase": 3,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T13:13:44.397Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Yes, you heard that right. And let me know if you have any... Job goals you are looking for after doing this course and what is there in your mind? You said you are not interested in just random certificate. Can you explain it a little further?",
+        "phase": 3,
+        "turnType": "question",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T13:14:12.168Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 177.7,
+          "pitchVarSemitones": 4.05,
+          "pauseRatio": 0.136,
+          "energyCv": 0.84,
+          "verdicts": {
+            "pace": "good",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Routine discovery question asking the student to elaborate on job goals, appropriate for Presentation phase but no concrete answer or objection handling since none was raised yet."
+      },
+      {
+        "role": "student",
+        "text": "Yeah I mean like, I want something that actually helps me get placed or at least an internship. My friend did a similar course somewhere and didn't really get a job out of it, so I just don't want to end up like that, you know.",
+        "emotion": "neutral",
+        "phase": 3,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T13:14:18.972Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Okay, so got it. Uh, so mostly you are looking for something that can help you get placed after that course, and you will get some value as well. So don't worry regarding that. We provide you placement support after this program which will help you out finding the next job that you are looking for.",
+        "phase": 3,
+        "turnType": "statement",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T13:15:02.774Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 193.4,
+          "pitchVarSemitones": 4.64,
+          "pauseRatio": 0.272,
+          "energyCv": 0.928,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "The counsellor acknowledged the student's placement concern but gave only a vague reassurance ('we provide placement support') with no specifics like stats, mechanics, or proof — not substantive enough to score positive, but not a clear negative either."
+      },
+      {
+        "role": "student",
+        "text": "Okay, placement support... um but like can I know what kind of roles people usually get after this?",
+        "emotion": "neutral",
+        "phase": 3,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T13:15:10.718Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "So this will be your new age soft-software devel-- uh, engineering program. Here, you will learn the foundation of engineering and you will also learn new tools which are AI tools, which are going on right now, that you can use in your next job and day-to-day stuff as well. And mostly, you will be getting hired as a Gen AI developer or an AI developer, then you will be automating stuff for the companies.",
+        "phase": 3,
+        "turnType": "statement",
+        "scoreAfter": 52,
+        "ts": "2026-06-11T13:15:58.229Z",
+        "scoreReason": "Concrete, relevant answer to the student's question about roles, naming Gen AI developer and AI developer roles directly tied to placement outcome they asked about."
+      },
+      {
+        "role": "student",
+        "text": "Okay AI developer, got it. That sounds interesting actually.",
+        "emotion": "neutral",
+        "phase": 4,
+        "scoreAfter": 52,
+        "ts": "2026-06-11T13:16:05.854Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "So let me give you a real story. There was a person that, uh, took our last batch program. He was a non-tech person coming from a MBA background, so he was interested in up-skilling himself. So he registered in the same course that you are looking up to, and currently sh-he is hired in Microsoft company. So I just want to tell you that even if you are not having any technical background, you can actually do good here.",
+        "phase": 4,
+        "turnType": "statement",
+        "scoreAfter": 52,
+        "ts": "2026-06-11T13:17:03.993Z",
+        "scoreReason": "The counsellor shares a success story about an MBA-background student placed at Microsoft, which is relevant to placement concerns but is a generic anecdote rather than a concrete, specific answer to the student's placement question — it's a soft pitch, not substantive objection handling with specifics."
+      },
+      {
+        "role": "student",
+        "text": "That's good to hear, the Microsoft part is solid. But like, one person is just one person right... what's the average placement like?",
+        "emotion": "neutral",
+        "phase": 4,
+        "scoreAfter": 52,
+        "ts": "2026-06-11T13:17:12.241Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "So there is a criteria. If a student is scoring seven plus CGPA at the end of the program, then on average around 90% of the student got placed within a month of their completion of the certification, and the other 10% are most likely to get employed as well.",
+        "phase": 4,
+        "turnType": "statement",
+        "scoreAfter": 56,
+        "ts": "2026-06-11T13:17:47.248Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 156.8,
+          "pitchVarSemitones": 3.84,
+          "pauseRatio": 0.136,
+          "energyCv": 0.828,
+          "verdicts": {
+            "pace": "good",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Directly addresses the placement scepticism concern raised by the student, providing a concrete statistic (90% placement within a month) tied to a specific eligibility criterion (7+ CGPA), which is substantive and specific."
+      },
+      {
+        "role": "student",
+        "text": "90 percent is a big number, um but that 7 CGPA criteria, what if someone doesn't hit that?",
+        "emotion": "neutral",
+        "phase": 4,
+        "scoreAfter": 56,
+        "ts": "2026-06-11T13:17:52.847Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "So if you are not hitting seven plus CGPA at the end of the course, uh, we still provide you some of the placement opportunity, and we will definitely help you out regarding your resume building or your portfolio building so that, uh, you can apply on your own as well.",
+        "phase": 4,
+        "turnType": "statement",
+        "scoreAfter": 59,
+        "ts": "2026-06-11T13:18:24.420Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 189.4,
+          "pitchVarSemitones": 3.71,
+          "pauseRatio": 0.123,
+          "energyCv": 0.696,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Directly addresses the student's CGPA/placement concern with specific support (resume and portfolio building) and reassurance of continued placement help, showing empathy and substantive engagement."
+      },
+      {
+        "role": "student",
+        "text": "Okay that helps, so it's not like a hard cutoff.",
+        "emotion": "neutral",
+        "phase": 4,
+        "scoreAfter": 59,
+        "ts": "2026-06-11T13:18:31.102Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Yeah, it's not a passing criteria. It is just for your placement support. Your passing criteria will be only three plus CGPA.",
+        "phase": 4,
+        "turnType": "statement",
+        "scoreAfter": 62,
+        "ts": "2026-06-11T13:18:46.034Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 177,
+          "pitchVarSemitones": 3.46,
+          "pauseRatio": 0.093,
+          "energyCv": 0.651,
+          "verdicts": {
+            "pace": "good",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Directly addresses the student's concern about the 7 CGPA criteria by clarifying it's for placement support, not passing, and gives the actual passing threshold (3+ CGPA) — concrete, specific, and reassuring."
+      },
+      {
+        "role": "student",
+        "text": "Alright, um and one thing, what about the certificate, is it from IIT Roorkee?",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 62,
+        "ts": "2026-06-11T13:18:54.708Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Yes, the certification will be provided you, uh, with the IIT Roorkee authentication and it will be provided to you at the end of the program when you are passing it.",
+        "phase": 5,
+        "turnType": "statement",
+        "scoreAfter": 64,
+        "ts": "2026-06-11T13:19:19.075Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 169.5,
+          "pitchVarSemitones": 4.41,
+          "pauseRatio": 0.208,
+          "energyCv": 0.803,
+          "verdicts": {
+            "pace": "good",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Directly answered the student's question about IIT Roorkee certification with a concrete, relevant confirmation and noted it comes at program end upon passing."
+      },
+      {
+        "role": "student",
+        "text": "Got it, IIT Roorkee one. That actually matters on a resume.",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 64,
+        "ts": "2026-06-11T13:19:25.985Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Okay, Jay, uh, if you have any other queries, you can ask me. Otherwise, we can proceed to the payment.",
+        "phase": 5,
+        "turnType": "invite",
+        "scoreAfter": 62,
+        "ts": "2026-06-11T13:19:52.517Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 204.9,
+          "pitchVarSemitones": 4.31,
+          "pauseRatio": 0.18,
+          "energyCv": 0.83,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Closing turn uses light pressure ('proceed to the payment') without offering a low-pressure next step, dashboard walkthrough, or follow-up option, and doesn't address any open objection."
+      },
+      {
+        "role": "student",
+        "text": "Um yeah, what about the fees, like total how much and is there an EMI option?",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 62,
+        "ts": "2026-06-11T13:20:00.248Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Okay, so, uh, it is having some process. So, for blocking the seat into the program, you need to pay 4,000 rupees now, and the total fee of this program will be 60,000, which you can do in one-shot payment as well or you can opt in to choose EMI as well. And those EMI will be from third-party banks and which will be having some interest rate of around 10 to 11% per annum.",
+        "phase": 5,
+        "turnType": "statement",
+        "scoreAfter": 65,
+        "ts": "2026-06-11T13:20:42.884Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 174.3,
+          "pitchVarSemitones": 3.01,
+          "pauseRatio": 0.096,
+          "energyCv": 0.742,
+          "verdicts": {
+            "pace": "good",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Counsellor decomposed the fee (4,000 seat-block + 60,000 total), gave concrete EMI availability with a specific ~10-11% interest rate, and answered the student's direct fee/EMI question with specifics."
+      },
+      {
+        "role": "student",
+        "text": "Okay 62,000 total, and the 4,000 is just to block the seat right... does that adjust in the total or is it extra?",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 65,
+        "ts": "2026-06-11T13:20:50.727Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "So the four thousand rupees you are paying now will be adjusted in the whole programme fee of sixty thousand. So next time you only need to pay six-- fifty-six thousand.",
+        "phase": 5,
+        "turnType": "statement",
+        "scoreAfter": 68,
+        "ts": "2026-06-11T13:21:12.617Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 163.7,
+          "pitchVarSemitones": 4.5,
+          "pauseRatio": 0.049,
+          "energyCv": 0.76,
+          "verdicts": {
+            "pace": "good",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Directly and specifically addresses the student's fee clarification question by confirming the 4,000 adjusts into the 60,000 total and stating the remaining balance of 56,000 — concrete numbers answering the exact concern raised."
+      },
+      {
+        "role": "student",
+        "text": "That's fair. And if I pay the 4000 now, is there any deadline for the remaining amount?",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 68,
+        "ts": "2026-06-11T13:21:20.539Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Yes, if you are paying the four thousand rupees now- Nice. You need to pay around, uh, the other remaining fees, uh, in the next seven days.",
+        "phase": 5,
+        "turnType": "statement",
+        "scoreAfter": 70,
+        "ts": "2026-06-11T13:21:41.718Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 207.5,
+          "pitchVarSemitones": 3.52,
+          "pauseRatio": 0.252,
+          "energyCv": 0.938,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Gave a concrete answer to the student's question about the deadline for the remaining 56,000 (within 7 days), which is a direct, specific response to a fee-related question."
+      },
+      {
+        "role": "student",
+        "text": "Seven days, okay. And like, if I pay the 4000 and then change my mind, is there a refund option?",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 70,
+        "ts": "2026-06-11T13:21:48.696Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Yes, this amount is fully refundable, uh, within 24 hours. If you change your mind or something, uh, you can get a full refund of this. (clicks tongue)",
+        "phase": 5,
+        "turnType": "statement",
+        "scoreAfter": 73,
+        "ts": "2026-06-11T13:22:05.154Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 207.5,
+          "pitchVarSemitones": 3.36,
+          "pauseRatio": 0.029,
+          "energyCv": 0.739,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Directly addresses the student's refund concern with a specific, concrete answer (fully refundable within 24 hours), which is a substantive objection-handling move."
+      },
+      {
+        "role": "student",
+        "text": "Okay, 24 hours refund, that's good to know.",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 73,
+        "ts": "2026-06-11T13:22:11.829Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "(Clicking) Okay, so I'll just send you a payment link. Uh, can you do the payment now? (clicking)",
+        "phase": 5,
+        "turnType": "question",
+        "scoreAfter": 73,
+        "ts": "2026-06-11T13:22:24.910Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 226.5,
+          "pitchVarSemitones": 4.57,
+          "pauseRatio": 0.164,
+          "energyCv": 0.743,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Ordinary close attempt: sending a payment link and asking if the student can pay now is a routine, low-pressure next step with no objection or concern to address."
+      },
+      {
+        "role": "student",
+        "text": "Yeah um okay, share the link. I'll pay it now.",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 73,
+        "ts": "2026-06-11T13:22:31.186Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "I have shared you the link and just confirm once you are done with the payment.",
+        "phase": 5,
+        "turnType": "statement",
+        "scoreAfter": 73,
+        "ts": "2026-06-11T13:22:41.355Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 229,
+          "pitchVarSemitones": 3.24,
+          "pauseRatio": 0.03,
+          "energyCv": 0.704,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Routine follow-up asking the student to confirm payment after sharing the link — ordinary closing action with no specific objection or concern being addressed."
+      },
+      {
+        "role": "student",
+        "text": "Done, paid the 4000. I can see the confirmation.",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 73,
+        "ts": "2026-06-11T13:22:47.322Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Received, Jay. Thank you so much. If there is anything I can help you with, you can tell me otherwise we can close this call.",
+        "phase": 5,
+        "turnType": "question",
+        "scoreAfter": 73,
+        "ts": "2026-06-11T13:23:01.132Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 228.7,
+          "pitchVarSemitones": 3.52,
+          "pauseRatio": 0.049,
+          "energyCv": 0.634,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Ordinary closing turn after the student has already paid; offers help and a clean close without pressure, which is appropriate for this phase."
+      },
+      {
+        "role": "student",
+        "text": "Yeah um one last thing, when does the batch actually start?",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 73,
+        "ts": "2026-06-11T13:23:07.560Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "याह, सो द बैच इस स्टार्टिंग फ्रॉम फर्स्ट ऑफ अगस्त ट्वेंटी ट्वेंटी सिक्स।",
+        "phase": 5,
+        "turnType": "statement",
+        "scoreAfter": 75,
+        "ts": "2026-06-11T13:23:20.097Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 201.4,
+          "pitchVarSemitones": 5.19,
+          "pauseRatio": 0.193,
+          "energyCv": 0.839,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Counsellor gave a concrete, specific answer to the student's question about batch start date (1st August 2026), which is a clear factual response to what was just asked."
+      },
+      {
+        "role": "student",
+        "text": "Okay August 1st, that's good, gives me time. Thanks sir, you can close it.",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 75,
+        "ts": "2026-06-11T13:23:28.340Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "श्योर, थैंक यू जय। नाइस टू टॉक टू यू।",
+        "phase": 5,
+        "turnType": "statement",
+        "scoreAfter": 75,
+        "ts": "2026-06-11T13:23:35.677Z",
+        "deliveryMetrics": {
+          "tone": "warm",
+          "energy": "medium",
+          "wpm": 281.2,
+          "pitchVarSemitones": 4.17,
+          "pauseRatio": 0.158,
+          "energyCv": 0.892,
+          "verdicts": {
+            "pace": "fast",
+            "energy": "good",
+            "pitchVariation": "good"
+          }
+        },
+        "scoreReason": "Routine closing acknowledgement after the student said the call could be closed; no question was asked and no objection was raised."
+      },
+      {
+        "role": "student",
+        "text": "Yeah you too sir, thanks. Bye.",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 75,
+        "ts": "2026-06-11T13:23:41.331Z"
+      }
+    ],
+    "generatedAt": "2026-06-11T13:27:45.565Z"
   }
 ]

@@ -20,7 +20,7 @@ import { getPromptConfig } from "./promptConfig.js";
 import { composeForInspection } from "./prompt.js";
 import { pickStudentVoice } from "./voices.js";
 import { rollSessionFlavour, DEFAULT_PERSONALITY } from "./personality.js";
-import { writeFileSync } from "fs";
+import { writeFileSync, readFileSync } from "fs";
 
 const PROMPT_CONFIG_PATH = join(__dirname, "data", "prompt-config.json");
 
@@ -31,6 +31,38 @@ app.use(cors());
 app.use(express.json());
 
 const publicUser = (u) => u && { id: u.id, name: u.name, email: u.email, role: u.role, avatarColor: u.avatarColor };
+
+// --- Per-session serialization lock (#7 data-loss) -------------------------
+// The store does a full-object write at the end of each turn, so two overlapping
+// POST /message (or /end vs /message) for the SAME session would have the slower
+// ~45s turn clobber the other's transcript/scoreHistory/objectionState. Chain
+// work per session id through a promise so same-session writes run sequentially.
+// try/finally releases on error so a failed turn never deadlocks the next one.
+const sessionLocks = new Map();
+function withSessionLock(sessionId, fn) {
+  const prev = sessionLocks.get(sessionId) || Promise.resolve();
+  // Swallow the previous turn's rejection here so one failure doesn't reject the
+  // whole chain; the previous caller already handled its own error.
+  const run = prev.catch(() => {}).then(() => fn());
+  // Keep the chain pointer alive until this unit settles, then prune if we're last.
+  const tail = run.catch(() => {}).finally(() => {
+    if (sessionLocks.get(sessionId) === tail) sessionLocks.delete(sessionId);
+  });
+  sessionLocks.set(sessionId, tail);
+  return run;
+}
+
+// Wrap a locked async handler for Express: serialize per session id and ensure an
+// unexpected throw outside the handler's own try/catch still yields a 500 instead
+// of an unhandled rejection / hung request.
+function lockedHandler(fn) {
+  return (req, res) => {
+    withSessionLock(req.params.id, () => fn(req, res)).catch((err) => {
+      console.error("Error in locked session handler:", err?.message);
+      if (!res.headersSent) res.status(500).json({ error: err?.message || "internal error" });
+    });
+  };
+}
 
 // --- Per-turn verbosity roll -----------------------------------------------
 // Rolls turnVerbosity ('open' | 'short') so consecutive student turns vary in
@@ -230,6 +262,59 @@ app.delete("/api/rubric-templates/:id", (req, res) => {
   res.json({ ok: true });
 });
 
+// --- Lead profiles (read-only; used by the profile dropdown in Practice + AssignmentCreate) ---
+// Loads the full v2 records (id, category, name, gender, age, occupation,
+// education, city, label, description). Returns [] fail-soft if the file is
+// missing/corrupt so callers can degrade gracefully.
+function loadLeadProfiles() {
+  try {
+    const data = JSON.parse(readFileSync(join(__dirname, "data", "leadProfiles.json"), "utf-8"));
+    return Array.isArray(data?.profiles) ? data.profiles : [];
+  } catch (err) {
+    console.error("Error reading leadProfiles.json:", err.message);
+    return null;
+  }
+}
+function loadLeadProfile(id) {
+  if (!id) return null;
+  const profiles = loadLeadProfiles();
+  return Array.isArray(profiles) ? profiles.find((p) => p.id === id) || null : null;
+}
+
+// Clamp a 1-5 tuning slider, defaulting to the neutral middle (3) for anything
+// missing or out of range.
+function clampTuning(v) {
+  const n = Math.round(Number(v));
+  if (!Number.isFinite(n)) return 3;
+  return Math.min(5, Math.max(1, n));
+}
+
+// Normalize an incoming scenario object: preserve the text fields and coerce the
+// two student-tuning sliders (pushiness, hesitancy) to integers in 1-5 (default
+// 3). Used at both assignment-create and session-start so the snapshot is always
+// well-formed regardless of client version.
+function normalizeScenario(scenario) {
+  const s = scenario && typeof scenario === "object" ? scenario : {};
+  return {
+    title: s.title || "",
+    difficulty: s.difficulty || "medium",
+    situation: s.situation || "",
+    contextNotes: s.contextNotes || "",
+    pushiness: clampTuning(s.pushiness),
+    hesitancy: clampTuning(s.hesitancy),
+  };
+}
+
+app.get("/api/lead-profiles", (req, res) => {
+  const profiles = loadLeadProfiles();
+  if (profiles === null) return res.status(500).json({ error: "Could not load lead profiles" });
+  let out = profiles.map(({ id, category, name, gender, age, occupation, education, city, label, description }) => ({
+    id, category, name, gender, age, occupation, education, city, label, description,
+  }));
+  if (req.query.category) out = out.filter((p) => p.category === req.query.category);
+  res.json(out);
+});
+
 // --- Assignments -----------------------------------------------------------
 function enrichAssignment(a) {
   const persona = store.getById("personas", a.personaId);
@@ -245,7 +330,7 @@ app.get("/api/assignments", (req, res) => {
 });
 
 app.post("/api/assignments", (req, res) => {
-  const { counsellorId, personaId, courseId, personaPromptOverride, scenario, createdBy, rubricTemplateId } = req.body || {};
+  const { counsellorId, personaId, courseId, personaPromptOverride, scenario, createdBy, rubricTemplateId, profileId } = req.body || {};
   if (!counsellorId || !personaId) return res.status(400).json({ error: "counsellorId and personaId are required" });
   const course = store.getById("courses", courseId);
   if (!course) return res.status(400).json({ error: "courseId is required and must exist" });
@@ -258,7 +343,10 @@ app.post("/api/assignments", (req, res) => {
     id: store.newId("asn"),
     counsellorId, personaId, courseId,
     personaPromptOverride: personaPromptOverride || null,
-    scenario: scenario || { title: "", difficulty: "medium", situation: "", contextNotes: "" },
+    // The lead profile chosen at assignment time, so the session can resolve the
+    // student's real name + structured lead card at start. null = bare persona.
+    profileId: profileId || null,
+    scenario: normalizeScenario(scenario),
     rubricTemplateId: rubricTemplateId || null,
     revealPersona: revealPersona !== false,
     status: "assigned",
@@ -283,13 +371,21 @@ app.delete("/api/assignments/:id", (req, res) => {
 // --- Sessions --------------------------------------------------------------
 app.post("/api/sessions/start", async (req, res) => {
   try {
-    const { mode, counsellorId, assignmentId, personaId, scenario, courseId, rubricTemplateId: bodyRubricTemplateId } = req.body || {};
+    const { mode, counsellorId, assignmentId, personaId, scenario, courseId, rubricTemplateId: bodyRubricTemplateId, profileId } = req.body || {};
     if (!counsellorId) return res.status(400).json({ error: "counsellorId is required" });
+
+    // Counsellor-first (default): the counsellor opens the call (typed/spoken) and
+    // the student replies as normal. When false, keep the legacy student-opening flow.
+    const counsellorFirst = req.body?.counsellorFirst !== false;
+    // Thinking mode for the live conversation: default 'off' (faster). The in-call
+    // toggle flips this per turn on POST /message.
+    const thinkingMode = req.body?.thinkingMode === "on" ? "on" : "off";
 
     let personaId2 = personaId;
     let scenario2 = scenario || { title: "Free practice", difficulty: "medium", situation: "", contextNotes: "" };
     let override = null;
     let assignment = null;
+    let profileId2 = profileId || null;
 
     if (mode === "assigned") {
       assignment = store.getById("assignments", assignmentId);
@@ -297,15 +393,39 @@ app.post("/api/sessions/start", async (req, res) => {
       personaId2 = assignment.personaId;
       scenario2 = assignment.scenario;
       override = assignment.personaPromptOverride;
+      // The profile chosen at assignment time wins over anything in the body.
+      if (assignment.profileId) profileId2 = assignment.profileId;
     }
+
+    // Normalize the scenario (coerces pushiness/hesitancy sliders to 1-5).
+    scenario2 = normalizeScenario(scenario2);
 
     const persona = store.getById("personas", personaId2);
     if (!persona) return res.status(404).json({ error: "Persona not found" });
 
-    // Assign the student's voice up front so the prompt (name/gender) and the
-    // TTS voice agree for the whole session.
+    // Resolve the chosen lead profile (if any) into a CRM-style "lead card": the
+    // real name + structured background the counsellor would actually have. This
+    // drives the student's display name, gender (hence the voice), and the brief
+    // panel. Bare-persona sessions (no profile) leave leadCard null.
     const sessionId = store.newId("ses");
-    const voice = pickStudentVoice(sessionId);
+    const profile = loadLeadProfile(profileId2);
+    const leadCard = profile
+      ? {
+          profileId: profile.id,
+          name: profile.name || null,
+          gender: profile.gender || inferGenderFromName(profile.name) || null,
+          age: typeof profile.age === "number" ? profile.age : null,
+          occupation: profile.occupation || null,
+          education: profile.education || null,
+          city: profile.city || null,
+        }
+      : null;
+
+    // Pick a voice whose gender matches the student's name/identity when we know
+    // it, so the prospect sounds like who they are. Falls back to the full
+    // rotation when there is no lead profile.
+    const studentGender = leadCard?.gender || null;
+    const voice = pickStudentVoice(sessionId, studentGender);
 
     // Roll per-session personality flavour. Fails soft to DEFAULT_PERSONALITY when
     // the persona predates the personality field or has a malformed value.
@@ -319,7 +439,11 @@ app.post("/api/sessions/start", async (req, res) => {
     const personaSnapshot = {
       name: persona.name, category: persona.category, label: persona.label,
       coreAnxiety: persona.coreAnxiety, behaviourPrompt: override || persona.behaviourPrompt,
-      voiceName: voice.name, voiceGender: voice.gender,
+      // The student goes by their lead-profile name when one was chosen; the
+      // voice matches that name's gender. Bare personas fall back to the voice's
+      // own name/gender so older flows are unchanged.
+      voiceName: leadCard?.name || voice.name,
+      voiceGender: studentGender || voice.gender,
       personality: resolvedPersonality,
     };
 
@@ -344,7 +468,18 @@ app.post("/api/sessions/start", async (req, res) => {
     if (!tpl) tpl = allTemplates.find((t) => t.isDefault) || null;
     const rubricSnapshot = tpl ? { templateId: tpl.id, name: tpl.name, criteria: tpl.criteria } : null;
 
-    const { text: firstMessage, emotion: firstEmotion } = await getFirstMessage(personaSnapshot, scenario2, courseSnapshot, personalityFlavour);
+    // Whether the counsellor may see the masked student identity. Snapshot at start
+    // so later assignment edits don't rewrite history; practice mode (no assignment)
+    // reveals by default.
+    const revealPersona = assignment ? (assignment.revealPersona !== false) : true;
+
+    // Counsellor-first: skip the student opening entirely (empty transcript, null
+    // firstMessage). Legacy student-first path keeps today's behaviour.
+    const firstTurn = counsellorFirst
+      ? { text: null, emotion: null }
+      : await getFirstMessage(personaSnapshot, scenario2, courseSnapshot, personalityFlavour);
+    const firstMessage = firstTurn.text;
+    const firstEmotion = firstTurn.emotion;
     const now = new Date().toISOString();
     // Composed student system prompt at session start, for transparency/auditing.
     const promptSnapshot = composeForInspection({
@@ -362,6 +497,9 @@ app.post("/api/sessions/start", async (req, res) => {
       rubricSnapshot,
       promptSnapshot,
       personalityFlavour,
+      leadCard,
+      revealPersona,
+      thinkingMode,
       voice,
       currentPhase: 1,
       satisfactionScore: 50,
@@ -369,7 +507,11 @@ app.post("/api/sessions/start", async (req, res) => {
       milestones: initMilestones(),
       objectionState: initObjectionState(),
       scoreHistory: [{ turn: 0, score: 50, adjustment: 0, reason: "start" }],
-      transcript: [{ role: "student", text: firstMessage, emotion: firstEmotion, phase: 1, scoreAfter: 50, ts: now }],
+      // Counsellor-first → empty transcript (no student bubble); the counsellor's
+      // first message opens the call. Student-first → seed the opening student turn.
+      transcript: counsellorFirst
+        ? []
+        : [{ role: "student", text: firstMessage, emotion: firstEmotion, phase: 1, scoreAfter: 50, ts: now }],
       status: "active",
       startedAt: now, endedAt: null,
     };
@@ -377,7 +519,10 @@ app.post("/api/sessions/start", async (req, res) => {
 
     if (assignment) store.update("assignments", assignment.id, { status: "in_progress", sessionId: session.id });
 
-    res.json({ sessionId: session.id, firstMessage, emotion: firstEmotion, currentPhase: 1, satisfactionScore: 50, milestones: session.milestones, voice });
+    res.json({
+      sessionId: session.id, firstMessage, emotion: firstEmotion,
+      currentPhase: 1, satisfactionScore: 50, milestones: session.milestones, voice, revealPersona, leadCard,
+    });
   } catch (err) {
     console.error("Error in /sessions/start:", err.message);
     res.status(500).json({ error: err.message });
@@ -425,13 +570,22 @@ function sanitizeDeliveryMetrics(raw) {
 // object as the non-SSE response (reply, emotion, currentPhase, satisfactionScore,
 // scoreReason, turnType, milestones). `error` events carry { error } (incl.
 // LLM_TIMEOUT). Plain requests keep today's JSON response shape exactly.
-app.post("/api/sessions/:id/message", async (req, res) => {
+app.post("/api/sessions/:id/message", lockedHandler(async (req, res) => {
+  // Read the session INSIDE the lock so we see the latest persisted state after any
+  // prior same-session turn's full-object write (prevents the #7 data-loss clobber).
   const session = store.getById("sessions", req.params.id);
   if (!session) return res.status(404).json({ error: "Session not found. Please start a new session." });
   // 409 ended-session guard FIRST — before any SSE headers are written.
   if (session.status === "ended") return res.status(409).json({ error: "This session has ended." });
   const { message, deliveryMetrics: rawDeliveryMetrics } = req.body || {};
   if (!message) return res.status(400).json({ error: "message is required" });
+
+  // Per-turn thinking toggle: if the client sent body.thinking ('on'|'off'),
+  // update session.thinkingMode BEFORE the reply is generated so the student
+  // reply call uses it. Persisted with the rest of the turn's store.update below.
+  if (req.body?.thinking === "on" || req.body?.thinking === "off") {
+    session.thinkingMode = req.body.thinking;
+  }
 
   // Fail-soft: sessions started before objection tracking existed have no
   // objectionState. Seed an empty one so the lifecycle calls below are safe.
@@ -571,7 +725,7 @@ app.post("/api/sessions/:id/message", async (req, res) => {
       res.json(payload);
     }
   } catch (err) {
-    console.error("Error in /sessions/message:", err.message);
+    console.error("Error in /sessions/message:", err.stack || err.message);
     if (send) {
       send("error", { error: err.message });
       res.end();
@@ -579,9 +733,11 @@ app.post("/api/sessions/:id/message", async (req, res) => {
       res.status(500).json({ error: err.message });
     }
   }
-});
+}));
 
-app.post("/api/sessions/:id/end", async (req, res) => {
+app.post("/api/sessions/:id/end", lockedHandler(async (req, res) => {
+  // Serialized against /message for the same session so an end can't interleave
+  // with a ~45s turn's full-object write (#7). Read inside the lock for freshness.
   const session = store.getById("sessions", req.params.id);
   if (!session) return res.status(404).json({ error: "Session not found" });
 
@@ -633,7 +789,7 @@ app.post("/api/sessions/:id/end", async (req, res) => {
     console.error("Error in /sessions/end:", err.message);
     return res.status(502).json({ error: "Report generation failed — please try ending the session again." });
   }
-});
+}));
 
 app.get("/api/sessions/:id", (req, res) => {
   const s = store.getById("sessions", req.params.id);

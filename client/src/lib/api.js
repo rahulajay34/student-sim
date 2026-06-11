@@ -41,7 +41,7 @@ export const api = {
 
   // sessions
   startSession: (payload) => req("/sessions/start", { method: "POST", body: payload }),
-  sendMessage: (id, message, deliveryMetrics) => req(`/sessions/${id}/message`, { method: "POST", body: deliveryMetrics ? { message, deliveryMetrics } : { message } }),
+  sendMessage: (id, message, deliveryMetrics, thinking) => req(`/sessions/${id}/message`, { method: "POST", body: { message, ...(deliveryMetrics ? { deliveryMetrics } : {}), ...(thinking ? { thinking } : {}) } }),
   endSession: (id) => req(`/sessions/${id}/end`, { method: "POST" }),
   getSession: (id) => req(`/sessions/${id}`),
   getSessionCue: (id) => req(`/sessions/${id}/cue`, { method: "POST" }),
@@ -55,6 +55,9 @@ export const api = {
   createRubricTemplate: (data) => req("/rubric-templates", { method: "POST", body: data }),
   updateRubricTemplate: (id, data) => req(`/rubric-templates/${id}`, { method: "PUT", body: data }),
   deleteRubricTemplate: (id) => req(`/rubric-templates/${id}`, { method: "DELETE" }),
+
+  // lead profiles (read-only; used by profile dropdown)
+  getLeadProfiles: (category) => req("/lead-profiles" + (category ? "?category=" + encodeURIComponent(category) : "")),
 
   // analytics
   getAdminAnalytics: () => req("/analytics/admin"),

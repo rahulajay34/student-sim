@@ -134,7 +134,10 @@ function sanitizeObjectionCategory(raw) {
 // ─── LLM call options ───────────────────────────────────────────────────────
 // Single model per contract (nemotron-3-nano:30b or OLLAMA_MODEL override).
 // 120 second timeout for the longer report generation call.
-const REPORT_OPTIONS = { ...DETERMINISTIC_SAMPLING, timeoutMs: 120_000 };
+// thinking:adaptive per the shared contract: report quality > latency, and
+// the adaptive reasoning budget helps ground rubric justifications in specific
+// transcript evidence. DETERMINISTIC_SAMPLING + timeoutMs are preserved.
+const REPORT_OPTIONS = { ...DETERMINISTIC_SAMPLING, timeoutMs: 120_000, thinking: { type: "adaptive" } };
 
 // ─── Retry helper ───────────────────────────────────────────────────────────
 // Tries fn() up to maxAttempts times. Returns {ok:true, value} or {ok:false, error}.

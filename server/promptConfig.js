@@ -4,7 +4,7 @@
 // below if the file is missing, unreadable, or corrupt, so a bad edit in the
 // admin UI can never take the simulation down. prompt.js reads everything it
 // renders through getPromptConfig().
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -141,15 +141,29 @@ function mergeConfig(base, override) {
   return out;
 }
 
-// Reads + merges the file on every call (the file is tiny). Any failure logs
-// once-ish and returns the built-in defaults so the sim never breaks.
+// (#23) Module-level cache keyed on the file's mtime. The config is re-parsed
+// only when the file changes on disk; same-mtime calls return the cached merged
+// object without any I/O. Fail-soft: any error (stat, read, parse) falls through
+// to the built-in defaults exactly as before.
+let _cache = null; // { mtimeMs: number, config: object }
 let warned = false;
+
 export function getPromptConfig() {
   try {
+    let mtimeMs;
+    try {
+      mtimeMs = statSync(CONFIG_PATH).mtimeMs;
+    } catch {
+      // File absent — return defaults (warned below if needed).
+      throw new Error("ENOENT");
+    }
+    if (_cache && _cache.mtimeMs === mtimeMs) return _cache.config;
     const raw = readFileSync(CONFIG_PATH, "utf8");
     const parsed = JSON.parse(raw);
     warned = false;
-    return mergeConfig(DEFAULT_PROMPT_CONFIG, parsed);
+    const config = mergeConfig(DEFAULT_PROMPT_CONFIG, parsed);
+    _cache = { mtimeMs, config };
+    return config;
   } catch (err) {
     if (!warned) {
       console.warn(`[promptConfig] using built-in defaults (${err.code || err.message})`);

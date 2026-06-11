@@ -132,5 +132,65 @@
     "createdAt": "2026-06-10T21:21:57.660Z",
     "sessionId": "ses-39e80263",
     "reportId": "rep-1fceda95"
+  },
+  {
+    "id": "asn-7e2725c3",
+    "counsellorId": "counsellor-1",
+    "personaId": "persona-graduate",
+    "courseId": "course-44c0c2e1",
+    "personaPromptOverride": null,
+    "scenario": {
+      "title": "Desparate Darshan",
+      "difficulty": "medium",
+      "situation": "Wants to know everything in detail",
+      "contextNotes": ""
+    },
+    "rubricTemplateId": "rt-grounded-v2",
+    "revealPersona": true,
+    "status": "in_progress",
+    "createdBy": "admin-1",
+    "createdAt": "2026-06-11T08:31:35.157Z",
+    "sessionId": "ses-4fe39c73",
+    "reportId": null
+  },
+  {
+    "id": "asn-ff07bd0e",
+    "counsellorId": "counsellor-2",
+    "personaId": "persona-graduate",
+    "courseId": "course-8f950cc3",
+    "personaPromptOverride": null,
+    "scenario": {
+      "title": "now1",
+      "difficulty": "medium",
+      "situation": "",
+      "contextNotes": ""
+    },
+    "rubricTemplateId": "rt-grounded-v2",
+    "revealPersona": true,
+    "status": "completed",
+    "createdBy": "admin-1",
+    "createdAt": "2026-06-11T11:47:18.506Z",
+    "sessionId": "ses-4f11e316",
+    "reportId": "rep-1f1a7b03"
+  },
+  {
+    "id": "asn-95a48765",
+    "counsellorId": "counsellor-2",
+    "personaId": "persona-same-field",
+    "courseId": "course-1acee5f4",
+    "personaPromptOverride": null,
+    "scenario": {
+      "title": "",
+      "difficulty": "medium",
+      "situation": "This is Paulomi from Kolkata, currently based in Pune. She's a 2023 computer engineering grad who started in cloud operations and is now an associate business analyst at Infosys on 7.5 LPA, sometimes stuck on the bench and actively looking to switch. She's engaged and thoughtful — the type to push back on whether a BA really needs deep Python — and has her eye on product-based companies and an eventual product owner role. She won't put money down on anything without checking with her dad first.",
+      "contextNotes": ""
+    },
+    "rubricTemplateId": "rt-grounded-v2",
+    "revealPersona": true,
+    "status": "completed",
+    "createdBy": "admin-1",
+    "createdAt": "2026-06-11T12:29:21.032Z",
+    "sessionId": "ses-13f287fb",
+    "reportId": "rep-e49fb2b6"
   }
 ]

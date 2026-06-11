@@ -151,11 +151,17 @@ export function raiseObjection(state, category, turn) {
 // parents_family/fee by the regexes but scored as job_guarantee_placement. These
 // groups let resolveObjection() defuse a sibling open objection when no exact
 // match exists, so the addressed-objection loop actually closes.
+// (#22) Groups intentionally SPLIT so addressing a money concern (fee/EMI) does
+// NOT auto-close need-time/parents/schedule concerns (and vice versa).
+// Exact-match resolve is unchanged; only the sibling fuzzy-close path uses these.
 const RELATED_GROUPS = [
-  ["fee", "emi_affordability", "competing_priorities"],
+  // Money concerns cluster together (fee ↔ EMI affordability only).
+  ["fee", "emi_affordability"],
+  // Need-time / family / schedule cluster (no longer joined with fee/EMI).
+  ["competing_priorities", "parents_family", "time_commitment"],
+  // Trust / quality cluster.
   ["job_guarantee_placement", "trust_legitimacy", "course_fit_relevance"],
-  ["parents_family", "competing_priorities"],
-  ["time_commitment", "competing_priorities"],
+  // Access / fit cluster.
   ["tech_access", "course_fit_relevance"],
   ["language_english", "course_fit_relevance"],
 ];

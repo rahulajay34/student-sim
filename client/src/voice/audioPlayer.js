@@ -26,8 +26,24 @@ export class StreamingAudioPlayer {
       this.analyser.fftSize = 256;
       this.analyser.connect(this.ctx.destination);
     }
+    // Fire-and-forget resume for synchronous callers (existing behaviour).
+    // _ensureCtxAsync() below awaits it properly before scheduling audio.
     if (this.ctx.state === "suspended") this.ctx.resume();
     return this.ctx;
+  }
+
+  /**
+   * Async variant: ensures the context exists AND waits for any in-progress
+   * resume() to complete.  Use before scheduling time-sensitive audio (e.g.
+   * enqueue) so the first sentence doesn't stutter after the tab regains focus.
+   */
+  async _ensureCtxAsync() {
+    const ctx = this._ensureCtx();
+    if (ctx.state === "suspended") {
+      // May still be suspended if _ensureCtx's fire-and-forget hasn't resolved.
+      await ctx.resume().catch(() => {});
+    }
+    return ctx;
   }
 
   // Returns the AnalyserNode for level-metering, or null before the context
@@ -41,8 +57,12 @@ export class StreamingAudioPlayer {
   }
 
   // float32: mono samples in [-1, 1]; sampleRate e.g. 24000 (Kokoro output).
-  enqueue(float32, sampleRate) {
-    const ctx = this._ensureCtx();
+  // Returns a Promise so callers can await before scheduling the next chunk,
+  // though in practice callers don't need to — the scheduling is self-chaining
+  // via nextStartTime.  The async resume ensures no first-sentence stutter when
+  // the tab regains focus from a suspended state.
+  async enqueue(float32, sampleRate) {
+    const ctx = await this._ensureCtxAsync();
     const buffer = ctx.createBuffer(1, float32.length, sampleRate);
     buffer.copyToChannel(float32, 0);
 

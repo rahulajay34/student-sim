@@ -72,9 +72,17 @@ export function advancePhase(session, role, msg) {
   }
 
   switch (session.currentPhase) {
-    case 1: // Opening -> Discovery: after greetings settle (2+ exchanges) or discovery probing starts
-      c.phase1Msgs += 1;
-      if (c.phase1Msgs >= 4 || (role === "counsellor" && DISCOVERY_RE.test(text))) session.currentPhase = 2;
+    case 1: // Opening -> Discovery: after greetings settle (~2 counsellor turns) or discovery probing starts
+      // (#19) Only count COUNSELLOR turns so the threshold is not diluted by
+      // the student's mirroring replies. With counsellor-first sessions the
+      // student's first message is turn 2; without the fix a 4-way total counter
+      // advanced on every message, so Opening lasted only ~2 total turns instead
+      // of ~2 counsellor turns (i.e. ~4 total). Threshold stays at 2 counsellor
+      // turns so Opening lasts the intended 1-2 exchange window.
+      if (role === "counsellor") {
+        c.phase1Msgs += 1;
+        if (c.phase1Msgs >= 2 || DISCOVERY_RE.test(text)) session.currentPhase = 2;
+      }
       break;
     case 2: // Discovery -> Presentation: counsellor starts presenting programme specifics
       if (role === "counsellor") {

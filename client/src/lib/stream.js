@@ -40,13 +40,21 @@ export function stripStreamingEmotionTag(fullText) {
   let text = String(fullText).replace(EMOTION_TAG_GLOBAL, "");
 
   // An unterminated "[emotion:..." with no closing "]" — withhold from the open bracket.
+  // Only withhold when the trailing tail is a NON-EMPTY proper prefix of "[emotion:" with
+  // no ']' present.  A bare "[" or a "[something" that clearly cannot become "[emotion:..."
+  // should NOT be suppressed — it would hold back speech for the entire streaming window.
   const openIdx = text.lastIndexOf("[");
   if (openIdx !== -1) {
     const tail = text.slice(openIdx);
-    // tail is a prefix of "[emotion:..." (the opener) OR a started-but-unclosed tag.
     const lower = tail.toLowerCase();
-    if (TAG_OPENER.startsWith(lower) || lower.startsWith(TAG_OPENER)) {
-      return { display: text.slice(0, openIdx), pending: tail };
+    // Require: tail has length > 1 (not a bare "["), contains no "]",
+    // AND is a proper non-empty prefix of the opener string OR has already
+    // passed the opener (started-but-unclosed tag).
+    const hasClose = tail.includes("]");
+    if (!hasClose && tail.length > 1) {
+      if (TAG_OPENER.startsWith(lower) || lower.startsWith(TAG_OPENER)) {
+        return { display: text.slice(0, openIdx), pending: tail };
+      }
     }
   }
   return { display: text, pending: "" };
@@ -55,52 +63,118 @@ export function stripStreamingEmotionTag(fullText) {
 // ── Sentence chunker for incremental TTS ───────────────────────────────────────
 // Splits a progressively-growing (emotion-tag-suppressed) display string into
 // speakable sentences so the student can start talking on the first sentence
-// instead of after the whole reply. Boundaries: . ! ? or the Devanagari danda
-// (।/॥) followed by whitespace (or end-of-input on flush). A minimum chunk length
-// (~25 chars) coalesces tiny fragments ("Okay.", "Haan.") so we don't fire
-// micro-chunks at the TTS engine.
+// instead of after the whole reply.
+//
+// Hard boundaries: . ! ? or the Devanagari danda (।/॥) — must be followed by
+// whitespace (or end-of-input on flush) to avoid splitting "5.5" or "Dr.Smith".
+//
+// Soft boundaries: , ; or ' — ' — only eligible once the pending tail is >= SOFT_MIN
+// chars.  They let comma-chain Hinglish replies ("haan, sahi keh rahe ho, lekin...")
+// start speaking mid-stream instead of waiting for the whole reply.
+//
+// MAX_CHUNK_LEN force-flush: if the pending tail grows past ~110 chars with no
+// boundary at all, we emit at the last soft boundary before the cap; if none, we
+// snap to a whitespace boundary at/before the cap.  This prevents the "first
+// sentence then silence then burst" problem on long comma-only replies.
+//
+// MIN_CHUNK_LEN coalesces tiny fragments ("Okay.", "Haan.").
 //
 // Usage: create one per reply. Call push(fullDisplaySoFar) on every token update
 // — it returns an array of any NEWLY-complete sentences. Call flush() on `done`
 // to emit whatever remains. Returns whitespace-trimmed, non-empty sentences only.
 const SENTENCE_BOUNDARY = /[.!?।॥]/;
+const SOFT_BOUNDARY = /[,;]/;  // comma / semicolon
+const DASH_BOUNDARY = / — /;   // em-dash with spaces (3 chars)
 const MIN_CHUNK_LEN = 25;
+const SOFT_MIN = 40;       // minimum pending chars before a soft boundary fires
+const MAX_CHUNK_LEN = 110; // force-flush threshold when no boundary found
 
 export function createSentenceChunker({ minChunkLen = MIN_CHUNK_LEN } = {}) {
   let emittedLen = 0; // chars of the display string already emitted as sentences
+
+  // Find the best split point in `pending` for a forced flush at `cap`.
+  // Prefers the last soft boundary (comma/semicolon) before cap; falls back to
+  // the last whitespace at or before cap.
+  function forceSplitAt(pending, cap) {
+    // Look for last comma/semicolon followed by whitespace before cap.
+    let best = -1;
+    for (let i = Math.min(cap - 1, pending.length - 1); i >= 0; i--) {
+      if (SOFT_BOUNDARY.test(pending[i])) {
+        const next = pending[i + 1];
+        if (next === undefined || /\s/.test(next)) { best = i + 1; break; }
+      }
+    }
+    if (best > 0) return best;
+    // Fallback: last whitespace at or before cap.
+    for (let i = Math.min(cap, pending.length - 1); i >= 0; i--) {
+      if (/\s/.test(pending[i])) return i + 1;
+    }
+    // Hard fallback: exactly at cap.
+    return Math.min(cap, pending.length);
+  }
 
   // Scan `pending` (the not-yet-emitted tail) for boundary positions; emit a
   // sentence each time the accumulated length since the last cut is >= minChunkLen.
   function take(fullText, isFinal) {
     const out = [];
     let pending = fullText.slice(emittedLen);
-    let localBase = 0; // index within `pending` where the current sentence starts
 
-    for (let i = 0; i < pending.length; i++) {
-      const ch = pending[i];
-      if (!SENTENCE_BOUNDARY.test(ch)) continue;
-      // A boundary char must be followed by whitespace (or, on flush, end) to count
-      // — avoids splitting decimals ("5.5"), abbreviations mid-token, etc.
-      const next = pending[i + 1];
-      const atEnd = i === pending.length - 1;
-      const boundaryConfirmed = next === undefined ? isFinal : /\s/.test(next);
-      if (!boundaryConfirmed && !(atEnd && isFinal)) continue;
+    // Outer loop: keep emitting until no more boundaries (or force-flush) found.
+    for (;;) {
+      let emitEnd = -1; // index in `pending` just after the character to include
 
-      const candidate = pending.slice(localBase, i + 1);
-      if (candidate.trim().length < minChunkLen && !(atEnd && isFinal)) {
-        // Too short — keep accumulating into the next boundary.
-        continue;
+      // 1. Check hard-sentence boundaries.
+      for (let i = 0; i < pending.length; i++) {
+        const ch = pending[i];
+        if (!SENTENCE_BOUNDARY.test(ch)) continue;
+        const next = pending[i + 1];
+        const atEnd = i === pending.length - 1;
+        const confirmed = next === undefined ? isFinal : /\s/.test(next);
+        if (!confirmed && !(atEnd && isFinal)) continue;
+        const candidate = pending.slice(0, i + 1);
+        if (candidate.trim().length < minChunkLen && !(atEnd && isFinal)) continue;
+        emitEnd = i + 1;
+        break;
       }
-      const sentence = candidate.trim();
+
+      // 2. Soft boundary (comma/semicolon/em-dash): only when pending >= SOFT_MIN.
+      //    Only use it if it fires BEFORE a hard boundary (or no hard boundary found).
+      if (emitEnd === -1 && pending.length >= SOFT_MIN) {
+        // Check em-dash pattern first (3-char sequence).
+        let softIdx = -1;
+        const dashM = DASH_BOUNDARY.exec(pending);
+        if (dashM && dashM.index >= SOFT_MIN) softIdx = dashM.index + 3; // after " — "
+        else if (dashM) softIdx = dashM.index + 3;
+
+        for (let i = 0; i < pending.length; i++) {
+          if (SOFT_BOUNDARY.test(pending[i])) {
+            const next = pending[i + 1];
+            if (/\s/.test(next)) {
+              // Only emit at the soft boundary if we have SOFT_MIN chars before it.
+              if (i + 1 >= SOFT_MIN) { softIdx = i + 1; break; }
+            }
+          }
+        }
+        if (softIdx > 0) emitEnd = softIdx;
+      }
+
+      // 3. MAX_CHUNK_LEN force-flush: pending has grown too large, no boundary found.
+      if (emitEnd === -1 && !isFinal && pending.length > MAX_CHUNK_LEN) {
+        emitEnd = forceSplitAt(pending, MAX_CHUNK_LEN);
+      }
+
+      if (emitEnd <= 0) break; // nothing to emit right now
+
+      const sentence = pending.slice(0, emitEnd).trim();
       if (sentence) out.push(sentence);
-      // Advance past this sentence + any trailing whitespace.
-      let j = i + 1;
+
+      // Advance past emitted chars + any following whitespace.
+      let j = emitEnd;
       while (j < pending.length && /\s/.test(pending[j])) j++;
-      emittedLen += j; // consumed from the start of `pending`
+      emittedLen += j;
       pending = fullText.slice(emittedLen);
-      localBase = 0;
-      i = -1; // restart scan over the new pending tail
     }
+
     return out;
   }
 

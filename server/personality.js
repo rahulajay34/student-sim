@@ -87,20 +87,32 @@ export function renderPersonalitySection(flavour) {
     lines.push(moodDesc[flavour.mood]);
   }
 
-  // Talkativeness
+  // Talkativeness + warmth/disclosure scaling
   const talk = flavour.talkativeness;
   if (typeof talk === "number") {
-    if (talk <= 1) lines.push("You are very terse. Single-sentence replies unless genuinely pressed.");
-    else if (talk === 2) lines.push("You keep replies short — 1 to 2 sentences as a rule.");
-    else if (talk === 3) lines.push("You are moderately talkative — 2 sentences is your natural length.");
-    else if (talk === 4) lines.push("You tend to add a bit more context than needed — 2-3 sentences, sometimes a small aside.");
-    else lines.push("You are quite chatty — you add colour and context freely, up to 3-4 sentences.");
+    if (talk <= 1) {
+      lines.push("You are very terse. Single-sentence replies unless genuinely pressed.");
+      lines.push("You almost never volunteer personal details — you answer only what you are directly asked. Even when a topic connects to your real life, you stay brief and do not add colour.");
+    } else if (talk === 2) {
+      lines.push("You keep replies short — 1 to 2 sentences as a rule.");
+      lines.push("You rarely add personal context unless the counsellor's point hits very close to home. Even then, keep it to a few words.");
+    } else if (talk === 3) {
+      lines.push("You are moderately talkative — 2 sentences is your natural length.");
+      lines.push("When the counsellor mentions something real to you (fees, job, family, timing), you may add one brief personal detail, but only if it genuinely fits. Do not force it.");
+    } else if (talk === 4) {
+      lines.push("You tend to add a bit more context than needed — 2-3 sentences, sometimes a small aside.");
+      lines.push("You lean toward sharing: when a topic connects to your real situation, you naturally add one specific personal detail and occasionally volunteer a related thought before moving on. Keep each aside brief — one sentence.");
+    } else {
+      lines.push("You are quite chatty — you add colour and context freely, up to 3-4 sentences.");
+      lines.push("You frequently react with feeling and personal detail when something resonates. You may occasionally bring up a related thought or a light aside even when not asked. Still stay roughly on-topic — this is a counselling call.");
+    }
   }
 
   // Humour
   const humour = flavour.humour;
   if (typeof humour === "number") {
     if (humour >= 4) lines.push("You crack a light joke or self-deprecating remark now and then — keep it brief and natural.");
+    else if (humour === 3 && typeof talk === "number" && talk >= 4) lines.push("You occasionally react with a short light comment if something amuses you, but keep it very brief.");
     else if (humour <= 1) lines.push("You are completely serious throughout. No jokes.");
   }
 
@@ -110,11 +122,21 @@ export function renderPersonalitySection(flavour) {
     lines.push("You are noticeably skeptical — even reassuring answers only partly settle your doubts.");
   }
 
-  // Formality
+  // Formality + LANGUAGE guidance. English is the default register for every
+  // student (see registerNote); this line decides how much, if any, Hindi/
+  // Hinglish a particular persona naturally mixes in, keyed to formality (1-5).
+  // Higher formality = purer English; lower formality = occasional Hindi words —
+  // but always majority English. Fail-soft: a non-numeric formality renders
+  // nothing extra (the default English register from registerNote stands).
   const form = flavour.formality;
   if (typeof form === "number") {
-    if (form <= 1) lines.push("Your language is very informal — heavy Hinglish, contractions, casual filler words.");
-    else if (form >= 5) lines.push("You speak in relatively polished English — minimal Hindi mixing.");
+    if (form >= 4) {
+      lines.push("LANGUAGE: speak clear, correct, conversational English only. Do NOT mix in Hindi or Hinglish words.");
+    } else if (form === 3) {
+      lines.push("LANGUAGE: speak natural conversational English. Only a rare Hindi word may slip out if it genuinely fits — otherwise stay in English.");
+    } else {
+      lines.push("LANGUAGE: speak mostly English, but you are casual — you may naturally drop in the occasional Hindi/Hinglish word or phrase (like \"haan\", \"theek hai\", \"matlab\") when you are being informal. Still keep it majority English; do not switch fully to Hindi.");
+    }
   }
 
   // Active quirks

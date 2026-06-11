@@ -19,8 +19,18 @@ const OBJECTION_TO_PERSONA = {
   time_commitment: "persona-same-field",
 };
 
-function drillPersonaId(objectionCategory) {
-  return OBJECTION_TO_PERSONA[objectionCategory] ?? "persona-studying";
+// Default fallback persona — a seeded persona that always exists.
+const DEFAULT_DRILL_PERSONA = "persona-studying";
+
+// Resolve a drill's persona: prefer an explicit personaId on the analytics
+// payload, else map the objection category, else the safe default. Returns null
+// only when none of these yield a usable (non-empty) id — the caller guards on it.
+function drillPersonaId(drill) {
+  const explicit = typeof drill?.personaId === "string" ? drill.personaId.trim() : "";
+  if (explicit) return explicit;
+  const mapped = OBJECTION_TO_PERSONA[drill?.objectionCategory];
+  if (mapped) return mapped;
+  return DEFAULT_DRILL_PERSONA || null;
 }
 
 // ---------------------------------------------------------------------------
@@ -388,11 +398,19 @@ export default function Dashboard() {
 
   function handleStartDrill() {
     if (!recommendedDrill) return;
+    // #20: a missing/unresolvable persona would start a broken null-persona
+    // session. Resolve (payload personaId → objection map → default) and surface
+    // a clear error instead of navigating when nothing usable comes back.
+    const personaId = drillPersonaId(recommendedDrill);
+    if (!personaId) {
+      setError("Couldn't start this drill — no practice persona is available for it.");
+      return;
+    }
     navigate("/app/session/new", {
       state: {
         mode: "practice",
         drill: true,
-        personaId: drillPersonaId(recommendedDrill.objectionCategory),
+        personaId,
         scenario: {
           title: recommendedDrill.title,
           difficulty: "hard",
@@ -450,7 +468,10 @@ export default function Dashboard() {
                   className="text-5xl font-extrabold tabular-nums"
                   style={{ color: TOKEN_HEX.brand }}
                 >
-                  {Math.round(avgPercent)}%
+                  {/* #24: a null avgPercent must render '—', not NaN%/0%. */}
+                  {avgPercent == null || !Number.isFinite(avgPercent)
+                    ? "—"
+                    : `${Math.round(avgPercent)}%`}
                 </span>
                 {lastBand && (
                   <Badge color={bandColor(lastBand)} className="mb-1.5">

@@ -6,6 +6,7 @@ import Button from "../../ui/Button";
 import Input from "../../ui/Input";
 import Textarea from "../../ui/Textarea";
 import Select from "../../ui/Select";
+import Slider from "../../ui/Slider";
 import Spinner from "../../ui/Spinner";
 import EmptyState from "../../ui/EmptyState";
 import Badge from "../../ui/Badge";
@@ -17,11 +18,20 @@ const DIFFICULTY_OPTIONS = [
   { value: "hard", label: "Hard" },
 ];
 
+const ARCHETYPE_TO_CATEGORY = {
+  studying: "studying",
+  graduate: "non-working",
+  "same-field": "same-field",
+  "diff-field": "diff-field",
+  "non-working": "non-working",
+};
+
 export default function Practice() {
   const navigate = useNavigate();
 
   const [personas, setPersonas] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
@@ -31,6 +41,11 @@ export default function Practice() {
   const [difficulty, setDifficulty] = useState("medium");
   const [situation, setSituation] = useState("");
   const [contextNotes, setContextNotes] = useState("");
+  const [pushiness, setPushiness] = useState(3);
+  const [hesitancy, setHesitancy] = useState(3);
+
+  const [profileId, setProfileId] = useState("");
+  const [profileChoices, setProfileChoices] = useState([]);
 
   const [touched, setTouched] = useState(false);
 
@@ -38,12 +53,13 @@ export default function Practice() {
     let active = true;
     setLoading(true);
     setLoadError("");
-    Promise.all([api.getPersonas(), api.getCourses(true)])
-      .then(([personaData, courseData]) => {
+    Promise.all([api.getPersonas(), api.getCourses(true), api.getLeadProfiles()])
+      .then(([personaData, courseData, profileData]) => {
         if (!active) return;
         setPersonas(Array.isArray(personaData) ? personaData : []);
         const crs = Array.isArray(courseData) ? courseData : [];
         setCourses(crs);
+        setProfiles(Array.isArray(profileData) ? profileData : []);
         // Default to IIM Ranchi BA course if present, else first course
         const defaultCourse =
           crs.find((c) => c.slug === "iim-ranchi/business-analytics-ai-sop") || crs[0] || null;
@@ -71,7 +87,41 @@ export default function Practice() {
     [personas]
   );
 
+  const selectedProfile = profileChoices.find((p) => p.id === profileId) || null;
+
   const personaMissing = touched && !personaId;
+
+  // Draw 10 random profiles for a given persona category. Called from event handlers
+  // so the randomness is outside the render path (avoids the eslint purity rule).
+  function drawProfiles(persona, allProfiles) {
+    const cat = ARCHETYPE_TO_CATEGORY[persona?.category];
+    if (!cat) return [];
+    const matching = allProfiles.filter((p) => p.category === cat);
+    const shuffled = [...matching].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 10);
+  }
+
+  function handlePersonaChange(id) {
+    setPersonaId(id);
+    // Reset profile selection when persona changes so stale choices don't persist.
+    setProfileId("");
+    setSituation("");
+    const persona = personas.find((p) => p.id === id) || null;
+    setProfileChoices(drawProfiles(persona, profiles));
+  }
+
+  function handleProfileChange(id) {
+    setProfileId(id);
+    // Pre-fill the situation text box with the selected profile's description.
+    const prof = profileChoices.find((p) => p.id === id) || null;
+    setSituation(prof ? prof.description : "");
+  }
+
+  function handleReshuffle() {
+    setProfileId("");
+    setSituation("");
+    setProfileChoices(drawProfiles(selectedPersona, profiles));
+  }
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -83,11 +133,14 @@ export default function Practice() {
         mode: "practice",
         personaId,
         courseId: courseId || undefined,
+        profileId: profileId || undefined,
         scenario: {
           title: title.trim() || "Free practice",
           difficulty,
-          situation: situation.trim(),
+          situation: selectedProfile?.description || situation.trim(),
           contextNotes: contextNotes.trim(),
+          pushiness,
+          hesitancy,
         },
       },
     });
@@ -161,7 +214,7 @@ export default function Practice() {
                 label="Student persona"
                 placeholder="Select a persona…"
                 value={personaId}
-                onChange={(e) => setPersonaId(e.target.value)}
+                onChange={(e) => handlePersonaChange(e.target.value)}
                 options={personaOptions}
                 error={personaMissing ? "Please choose a persona to practice against." : undefined}
               />
@@ -182,6 +235,35 @@ export default function Practice() {
                 </div>
               )}
             </div>
+
+            {/* Lead profile dropdown — shown when a persona is selected and matching profiles exist */}
+            {selectedPersona && profileChoices.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <Select
+                      label="Student profile (from real calls)"
+                      value={profileId}
+                      onChange={(e) => handleProfileChange(e.target.value)}
+                      options={profileChoices.map((p) => ({ value: p.id, label: p.label }))}
+                      placeholder="— pick a profile (optional) —"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleReshuffle}
+                    title="Show different profiles"
+                  >
+                    Reshuffle
+                  </Button>
+                </div>
+                {selectedProfile && (
+                  <p className="text-xs text-muted leading-relaxed">{selectedProfile.description}</p>
+                )}
+              </div>
+            )}
 
             <div className="h-px bg-line" />
 
@@ -217,6 +299,26 @@ export default function Practice() {
                 onChange={(e) => setContextNotes(e.target.value)}
                 placeholder="Any background, constraints, or specifics you want the student to keep in mind."
               />
+
+              {/* Student tuning — how the AI student carries itself on the call */}
+              <div className="grid grid-cols-1 gap-5 rounded-xl border border-line bg-canvas/60 p-4 sm:grid-cols-2">
+                <Slider
+                  label="How pushy"
+                  value={pushiness}
+                  onChange={setPushiness}
+                  lowLabel="Easy-going"
+                  highLabel="Very pushy"
+                  hint="How hard they challenge and demand specifics."
+                />
+                <Slider
+                  label="How hesitant to buy"
+                  value={hesitancy}
+                  onChange={setHesitancy}
+                  lowLabel="Ready to commit"
+                  highLabel="Very reluctant"
+                  hint="How much convincing they need before saying yes."
+                />
+              </div>
             </div>
 
             <div className="flex flex-col-reverse items-stretch gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">

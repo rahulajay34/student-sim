@@ -40,6 +40,7 @@ function withEmotion(text, emotion = "neutral") {
 // preceding user turn, so we inject a synthetic trigger to keep roles alternating.
 function transcriptToMessages(transcript) {
   const msgs = [];
+  if (!Array.isArray(transcript)) return msgs; // defensive: never throw on a bad/undefined transcript
   if (transcript.length > 0 && transcript[0].role === "student") {
     msgs.push({ role: "user", content: "Start the conversation. Please introduce yourself briefly." });
   }
@@ -75,13 +76,24 @@ export async function getFirstMessage(persona, scenario, course, flavour = null)
 // reply always carries an [emotion:X] tag re-attached at the end.
 
 // Free structural screen: word/phrase loops ("the, the, the") and runaway length.
+// The length cap is decoupled from coherence: a genuine 2-4 sentence "open" reply
+// can legitimately run well past 60 words, so only obviously runaway output (>150
+// words) is treated as broken — otherwise valid verbose turns get swapped for a
+// canned 4-word ack. Word-loop garble is still caught regardless of length.
 const WORD_LOOP_RE = /(\b\w+(?:\s+\w+)?\b)(?:[,.\s]+\1\b){2,}/i;
-function structurallyBroken(text) {
-  return WORD_LOOP_RE.test(text) || text.split(/\s+/).filter(Boolean).length > 60;
+const RUNAWAY_WORD_CAP = 150;
+// Exported for unit testing — pure function of its input.
+export function structurallyBroken(text) {
+  return WORD_LOOP_RE.test(text) || text.split(/\s+/).filter(Boolean).length > RUNAWAY_WORD_CAP;
 }
 
+// Tighter timeout for the coherence gate so a slow verifier can't stall the
+// SSE 'done' event for the full default 45s — the gate fails open on timeout.
+const COHERENCE_TIMEOUT_MS = 8_000;
+
 // LLM coherence check (small near-deterministic call). Fails OPEN: if the
-// verifier itself errors, the reply stands — never block a session on the gate.
+// verifier itself errors (or times out), the reply stands — never block a
+// session on the gate. This call keeps the default thinking mode (disabled).
 async function makesSense(counsellorMsg, replyText) {
   if (structurallyBroken(replyText)) return false;
   try {
@@ -93,7 +105,7 @@ Counsellor said: "${counsellorMsg}"
 Student replied: "${replyText}"
 
 Is the student's reply coherent and logically sensible as a response (not garbled, not half-finished nonsense, not answering something never asked)? Reply with exactly one word: VALID or INVALID.`,
-    }], DETERMINISTIC_SAMPLING);
+    }], { ...DETERMINISTIC_SAMPLING, timeoutMs: COHERENCE_TIMEOUT_MS });
     return !/\bINVALID\b/i.test(verdict);
   } catch (e) {
     console.warn("[engine] coherence check failed open:", e.message);
@@ -190,7 +202,19 @@ function prepareReply(session) {
     turnHint, personalityFlavour, convincementHint, objectionState, turnVerbosity, lastAdjustment,
   );
   const messages = [{ role: "system", content: systemPrompt }, ...transcriptToMessages(transcript)];
-  return { last, turnHint, systemPrompt, messages };
+  // `transcript` is needed by gateReply/guardLoop for the regeneration + anti-loop
+  // paths (transcriptToMessages + maxLoopSimilarity). Without it those paths saw
+  // `undefined` and threw on transcript.length (incoherent question/invite regen).
+  return { last, turnHint, systemPrompt, messages, transcript };
+}
+
+// Per-session thinking control for the STUDENT reply call only. session.thinkingMode
+// is 'on' | 'off' (default 'off'); 'on' re-enables M3's reasoning block for the
+// reply (quality > latency), 'off' keeps it disabled. The coherence/anti-loop regen
+// calls deliberately keep the default (disabled) — they never read this.
+function studentSampling(session) {
+  const thinking = session?.thinkingMode === "on" ? { type: "adaptive" } : { type: "disabled" };
+  return { ...STUDENT_SAMPLING, thinking };
 }
 
 // Anti-loop guard: a coherent reply still gets rejected if it is >0.8 similar to
@@ -233,7 +257,9 @@ async function gateReply({ text, emotion }, { last, turnHint, systemPrompt, tran
     if (structurallyBroken(retry.text) || !retry.text) {
       return { text: DOUBLE_FAILURE_LINE, emotion: "neutral" };
     }
-    return retry;
+    // A coherent regeneration can still be a near-verbatim repeat — run it through
+    // the anti-loop guard before accepting (#21).
+    return guardLoop(retry, { systemPrompt, transcript });
   }
 
   // Statement turn -> rotating canned Hinglish acknowledgement (neutral emotion).
@@ -247,7 +273,7 @@ async function gateReply({ text, emotion }, { last, turnHint, systemPrompt, tran
 // the SPOKEN text (emotion tag stripped) and emotion is the parsed/defaulted tint.
 export async function getStudentReply(session) {
   const ctx = prepareReply(session);
-  const raw = await chat(ctx.messages, STUDENT_SAMPLING);
+  const raw = await chat(ctx.messages, studentSampling(session));
   const parsed = parseEmotion(raw);
   return gateReply(parsed, ctx);
 }
@@ -261,7 +287,7 @@ export async function getStudentReply(session) {
 export async function* getStudentReplyStream(session) {
   const ctx = prepareReply(session);
   let buf = "";
-  for await (const tok of chatStream(ctx.messages, STUDENT_SAMPLING)) {
+  for await (const tok of chatStream(ctx.messages, studentSampling(session))) {
     buf += tok;
     yield tok;
   }

@@ -7,6 +7,7 @@ import Button from "../../ui/Button";
 import Input from "../../ui/Input";
 import Textarea from "../../ui/Textarea";
 import Select from "../../ui/Select";
+import Slider from "../../ui/Slider";
 import Spinner from "../../ui/Spinner";
 import EmptyState from "../../ui/EmptyState";
 import Badge from "../../ui/Badge";
@@ -17,6 +18,14 @@ const DIFFICULTY_OPTIONS = [
   { value: "medium", label: "Medium" },
   { value: "hard", label: "Hard" },
 ];
+
+const ARCHETYPE_TO_CATEGORY = {
+  studying: "studying",
+  graduate: "non-working",
+  "same-field": "same-field",
+  "diff-field": "diff-field",
+  "non-working": "non-working",
+};
 
 // Small section heading used to break the long form into labelled blocks.
 function Section({ step, title, hint, children }) {
@@ -45,6 +54,7 @@ export default function AssignmentCreate() {
   const [counsellors, setCounsellors] = useState([]);
   const [personas, setPersonas] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [profiles, setProfiles] = useState([]);
 
   const [rubricTemplates, setRubricTemplates] = useState([]);
   const [rubricTemplateId, setRubricTemplateId] = useState("");
@@ -57,6 +67,11 @@ export default function AssignmentCreate() {
   const [difficulty, setDifficulty] = useState("medium");
   const [situation, setSituation] = useState("");
   const [contextNotes, setContextNotes] = useState("");
+  const [pushiness, setPushiness] = useState(3);
+  const [hesitancy, setHesitancy] = useState(3);
+
+  const [profileId, setProfileId] = useState("");
+  const [profileChoices, setProfileChoices] = useState([]);
 
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -68,16 +83,18 @@ export default function AssignmentCreate() {
       try {
         setLoading(true);
         setLoadError("");
-        const [cs, ps, crs, rts] = await Promise.all([
+        const [cs, ps, crs, rts, profs] = await Promise.all([
           api.getCounsellors(),
           api.getPersonas(),
           api.getCourses(true),
           api.getRubricTemplates().catch(() => []),
+          api.getLeadProfiles().catch(() => []),
         ]);
         if (!active) return;
         setCounsellors(cs || []);
         setPersonas(ps || []);
         setCourses(crs || []);
+        setProfiles(Array.isArray(profs) ? profs : []);
         const rtList = Array.isArray(rts) ? rts : [];
         setRubricTemplates(rtList);
         // Default-select the isDefault template
@@ -103,12 +120,41 @@ export default function AssignmentCreate() {
     [counsellors, counsellorId]
   );
 
+  const selectedProfile = profileChoices.find((p) => p.id === profileId) || null;
+
+  // Draw 10 random profiles for a given persona category. Called from event handlers
+  // so the randomness is outside the render path (avoids the eslint purity rule).
+  function drawProfiles(persona, allProfiles) {
+    const cat = ARCHETYPE_TO_CATEGORY[persona?.category];
+    if (!cat) return [];
+    const matching = allProfiles.filter((p) => p.category === cat);
+    const shuffled = [...matching].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 10);
+  }
+
   function handlePersonaChange(id) {
     setPersonaId(id);
     setErrors((prev) => ({ ...prev, personaId: undefined }));
     const persona = personas.find((p) => p.id === id);
     // Prefill the editable prompt with the persona's behaviour prompt for this mock.
     setPersonaPrompt(persona?.behaviourPrompt || "");
+    // Reset profile selection when persona changes.
+    setProfileId("");
+    setSituation("");
+    setProfileChoices(drawProfiles(persona, profiles));
+  }
+
+  function handleProfileChange(id) {
+    setProfileId(id);
+    // Pre-fill the situation text box with the selected profile's description.
+    const prof = profileChoices.find((p) => p.id === id) || null;
+    setSituation(prof ? prof.description : "");
+  }
+
+  function handleReshuffle() {
+    setProfileId("");
+    setSituation("");
+    setProfileChoices(drawProfiles(selectedPersona, profiles));
   }
 
   async function handleSubmit(e) {
@@ -133,12 +179,15 @@ export default function AssignmentCreate() {
         counsellorId,
         personaId,
         personaPromptOverride,
+        profileId: profileId || null,
         rubricTemplateId: rubricTemplateId || null,
         scenario: {
           title: title.trim(),
           difficulty,
-          situation: situation.trim(),
+          situation: selectedProfile?.description || situation.trim(),
           contextNotes: contextNotes.trim(),
+          pushiness,
+          hesitancy,
         },
         createdBy: user?.id,
       });
@@ -341,6 +390,35 @@ export default function AssignmentCreate() {
                 />
               </div>
 
+              {/* Lead profile dropdown — shown when a persona is selected and matching profiles exist */}
+              {selectedPersona && profileChoices.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <Select
+                        label="Student profile (from real calls)"
+                        value={profileId}
+                        onChange={(e) => handleProfileChange(e.target.value)}
+                        options={profileChoices.map((p) => ({ value: p.id, label: p.label }))}
+                        placeholder="— pick a profile (optional) —"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleReshuffle}
+                      title="Show different profiles"
+                    >
+                      Reshuffle
+                    </Button>
+                  </div>
+                  {selectedProfile && (
+                    <p className="text-xs text-muted leading-relaxed">{selectedProfile.description}</p>
+                  )}
+                </div>
+              )}
+
               <Textarea
                 label="Situation"
                 rows={4}
@@ -356,6 +434,26 @@ export default function AssignmentCreate() {
                 onChange={(e) => setContextNotes(e.target.value)}
                 placeholder="Optional — any background that should inform the roleplay."
               />
+
+              {/* Student tuning — how the AI student carries itself on the call */}
+              <div className="grid grid-cols-1 gap-5 rounded-xl border border-line bg-canvas/60 p-4 sm:grid-cols-2">
+                <Slider
+                  label="How pushy"
+                  value={pushiness}
+                  onChange={setPushiness}
+                  lowLabel="Easy-going"
+                  highLabel="Very pushy"
+                  hint="How hard they challenge and demand specifics."
+                />
+                <Slider
+                  label="How hesitant to buy"
+                  value={hesitancy}
+                  onChange={setHesitancy}
+                  lowLabel="Ready to commit"
+                  highLabel="Very reluctant"
+                  hint="How much convincing they need before saying yes."
+                />
+              </div>
             </Section>
 
             {rubricTemplates.length > 0 && (
