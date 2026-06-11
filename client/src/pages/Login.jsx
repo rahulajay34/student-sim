@@ -80,7 +80,7 @@ export default function Login() {
         <div className="pointer-events-none absolute -bottom-32 -right-16 h-80 w-80 rounded-full bg-brand-50/10 blur-3xl" />
 
         <div className="relative flex items-center gap-2.5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-base font-bold backdrop-blur">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-base font-bold shadow-sm ring-1 ring-white/20 backdrop-blur">
             M
           </div>
           <span className="text-sm font-semibold tracking-tight text-white/90">Masai</span>
@@ -113,7 +113,7 @@ export default function Login() {
         <div className="w-full max-w-md">
           {/* Mobile brand mark */}
           <div className="mb-8 flex items-center gap-2.5 lg:hidden">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-base font-bold text-white">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-base font-bold text-white shadow-sm">
               M
             </div>
             <div className="leading-tight">
@@ -122,7 +122,7 @@ export default function Login() {
             </div>
           </div>
 
-          <h2 className="text-2xl font-bold tracking-tight text-ink">Welcome back</h2>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Welcome back</h1>
           <p className="mt-1.5 text-sm text-muted">
             Sign in to continue to your training workspace.
           </p>
@@ -179,7 +179,7 @@ export default function Login() {
                   key={acc.email}
                   type="button"
                   onClick={() => fillDemo(acc)}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-200"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-brand-600" />
                   {acc.label}

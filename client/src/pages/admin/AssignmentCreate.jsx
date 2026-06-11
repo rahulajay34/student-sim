@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth.jsx";
@@ -77,39 +77,43 @@ export default function AssignmentCreate() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        setLoading(true);
-        setLoadError("");
-        const [cs, ps, crs, rts, profs] = await Promise.all([
-          api.getCounsellors(),
-          api.getPersonas(),
-          api.getCourses(true),
-          api.getRubricTemplates().catch(() => []),
-          api.getLeadProfiles().catch(() => []),
-        ]);
-        if (!active) return;
-        setCounsellors(cs || []);
-        setPersonas(ps || []);
-        setCourses(crs || []);
-        setProfiles(Array.isArray(profs) ? profs : []);
-        const rtList = Array.isArray(rts) ? rts : [];
-        setRubricTemplates(rtList);
-        // Default-select the isDefault template
-        const defaultTpl = rtList.find((t) => t.isDefault);
-        if (defaultTpl) setRubricTemplateId(defaultTpl.id);
-      } catch (e) {
-        if (active) setLoadError(e.message || "Failed to load data.");
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      setLoadError("");
+      const [cs, ps, crs, rts, profs] = await Promise.all([
+        api.getCounsellors(),
+        api.getPersonas(),
+        api.getCourses(true),
+        api.getRubricTemplates().catch(() => []),
+        api.getLeadProfiles().catch(() => []),
+      ]);
+      setCounsellors(cs || []);
+      setPersonas(ps || []);
+      setCourses(crs || []);
+      setProfiles(Array.isArray(profs) ? profs : []);
+      const rtList = Array.isArray(rts) ? rts : [];
+      setRubricTemplates(rtList);
+      // Default-select the isDefault template
+      const defaultTpl = rtList.find((t) => t.isDefault);
+      if (defaultTpl) setRubricTemplateId(defaultTpl.id);
+    } catch (e) {
+      setLoadError(e.message || "Failed to load data.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    // Defer so the effect body doesn't call setState synchronously.
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) load();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [load]);
 
   const selectedPersona = useMemo(
     () => personas.find((p) => p.id === personaId) || null,
@@ -121,6 +125,21 @@ export default function AssignmentCreate() {
   );
 
   const selectedProfile = profileChoices.find((p) => p.id === profileId) || null;
+
+  // Slim progress reflecting the numbered sections of the form.
+  const hasRubricStep = rubricTemplates.length > 0;
+  const steps = useMemo(() => {
+    const base = [
+      { label: "Course", done: !!courseId },
+      { label: "Counsellor", done: !!counsellorId },
+      { label: "Persona", done: !!personaId },
+      { label: "Scenario", done: !!(title.trim() || situation.trim() || profileId) },
+    ];
+    if (hasRubricStep) base.push({ label: "Rubric", done: !!rubricTemplateId });
+    return base;
+  }, [courseId, counsellorId, personaId, title, situation, profileId, hasRubricStep, rubricTemplateId]);
+  const doneCount = steps.filter((s) => s.done).length;
+  const progressPct = Math.round((doneCount / steps.length) * 100);
 
   // Draw 10 random profiles for a given persona category. Called from event handlers
   // so the randomness is outside the render path (avoids the eslint purity rule).
@@ -233,7 +252,7 @@ export default function AssignmentCreate() {
             title="Couldn't load assignment data"
             hint={loadError}
             action={
-              <Button variant="secondary" onClick={() => window.location.reload()}>
+              <Button variant="secondary" onClick={load}>
                 Try again
               </Button>
             }
@@ -273,6 +292,46 @@ export default function AssignmentCreate() {
         </Card>
       ) : (
         <Card className="p-6">
+          {/* Slim progress indicator across the numbered sections */}
+          <div className="mb-6">
+            <div className="mb-2 flex items-center justify-between text-xs font-medium text-muted">
+              <span>
+                {doneCount} of {steps.length} sections ready
+              </span>
+              <span className="tabular-nums">{progressPct}%</span>
+            </div>
+            <div
+              className="h-1.5 w-full overflow-hidden rounded-full bg-canvas"
+              role="progressbar"
+              aria-valuenow={progressPct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Assignment setup progress"
+            >
+              <div
+                className="h-full rounded-full bg-brand-600 transition-[width] duration-300 ease-out"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+              {steps.map((s) => (
+                <span
+                  key={s.label}
+                  className={`inline-flex items-center gap-1 text-xs ${
+                    s.done ? "text-brand-700" : "text-muted"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-1.5 w-1.5 rounded-full ${
+                      s.done ? "bg-brand-600" : "bg-line"
+                    }`}
+                  />
+                  {s.label}
+                </span>
+              ))}
+            </div>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-8" noValidate>
             {/* 1. Course */}
             <Section
@@ -480,7 +539,7 @@ export default function AssignmentCreate() {
             )}
 
             {submitError && (
-              <div className="rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-3 text-sm text-danger">
+              <div role="alert" className="rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-3 text-sm text-danger">
                 {submitError}
               </div>
             )}

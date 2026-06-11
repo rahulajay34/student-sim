@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api";
 import Button from "../../ui/Button";
 import Card from "../../ui/Card";
@@ -9,6 +9,9 @@ import Textarea from "../../ui/Textarea";
 import Select from "../../ui/Select";
 import Spinner from "../../ui/Spinner";
 import EmptyState from "../../ui/EmptyState";
+import SearchInput from "../../ui/SearchInput";
+import ConfirmDialog from "../../ui/ConfirmDialog";
+import { useCreateShortcut } from "../../ui/useCreateShortcut";
 
 const CATEGORY_OPTIONS = [
   { value: "analytics-ai", label: "Analytics & AI" },
@@ -70,8 +73,10 @@ export default function Courses() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
+  const [query, setQuery] = useState("");
+  const [confirmTarget, setConfirmTarget] = useState(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -82,18 +87,37 @@ export default function Courses() {
     } finally {
       setLoading(false);
     }
-  }
-
-  useEffect(() => {
-    load();
   }, []);
 
-  function openCreate() {
+  useEffect(() => {
+    // Defer so the effect body doesn't call setState synchronously.
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) load();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [load]);
+
+  const openCreate = useCallback(() => {
     setEditing(null);
     setForm(EMPTY_FORM);
     setFormError("");
     setModalOpen(true);
-  }
+  }, []);
+
+  useCreateShortcut(openCreate, { enabled: !loading && !modalOpen });
+
+  const filteredCourses = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return courses;
+    return courses.filter((c) =>
+      [c.name, c.institute, CATEGORY_LABEL[c.category] || c.category, c.duration, c.format]
+        .filter(Boolean)
+        .some((v) => String(v).toLowerCase().includes(q)),
+    );
+  }, [courses, query]);
 
   function openEdit(course) {
     setEditing(course);
@@ -167,13 +191,16 @@ export default function Courses() {
     }
   }
 
-  async function handleDelete(course) {
-    if (!window.confirm(`Delete course "${course.name}"? This cannot be undone.`)) return;
+  async function confirmDelete() {
+    const course = confirmTarget;
+    if (!course) return;
     try {
       await api.deleteCourse(course.id);
+      setConfirmTarget(null);
       await load();
     } catch (err) {
       setError(err.message || "Could not delete course.");
+      throw err;
     }
   }
 
@@ -191,7 +218,7 @@ export default function Courses() {
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-ink">Course catalog</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-ink">Course catalog</h2>
           <p className="mt-1 text-sm text-muted">
             Programmes counsellors practise selling. Assign a course when creating a mock.
           </p>
@@ -215,7 +242,7 @@ export default function Courses() {
 
       {/* Error banner */}
       {error && (
-        <div className="flex items-start justify-between gap-4 rounded-2xl border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">
+        <div role="alert" className="flex items-start justify-between gap-4 rounded-2xl border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">
           <span>{error}</span>
           <button
             type="button"
@@ -227,6 +254,16 @@ export default function Courses() {
         </div>
       )}
 
+      {/* Search — shown once the catalog grows */}
+      {!loading && courses.length > 8 && (
+        <SearchInput
+          value={query}
+          onChange={setQuery}
+          placeholder="Search courses…"
+          className="max-w-sm"
+        />
+      )}
+
       {/* Body */}
       {loading ? (
         <div className="flex items-center justify-center py-24">
@@ -236,7 +273,7 @@ export default function Courses() {
         <Card className="p-6">
           <EmptyState
             title="No courses yet"
-            hint="Add your first course to the catalog so counsellors can practise selling it."
+            hint="Add your first course to the catalog so counsellors can practise selling it. Tip: press N to add one."
             icon={
               <svg
                 viewBox="0 0 24 24"
@@ -254,9 +291,13 @@ export default function Courses() {
             action={<Button onClick={openCreate}>New course</Button>}
           />
         </Card>
+      ) : filteredCourses.length === 0 ? (
+        <Card className="p-6">
+          <EmptyState title="No matching courses" hint="Try a different search term." />
+        </Card>
       ) : (
         <div className="grid gap-5 md:grid-cols-2">
-          {courses.map((c) => {
+          {filteredCourses.map((c) => {
             const feeStr = c.feeTotal ? fmtINR(c.feeTotal) : "Fee on request";
             const blockStr = c.feeBooking ? ` · block: ${fmtINR(c.feeBooking)}` : "";
             return (
@@ -302,7 +343,7 @@ export default function Courses() {
                     <Button variant="ghost" size="sm" onClick={() => handleToggleActive(c)}>
                       {c.active ? "Deactivate" : "Activate"}
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(c)}>
+                    <Button variant="ghost" size="sm" onClick={() => setConfirmTarget(c)}>
                       <span className="text-danger">Delete</span>
                     </Button>
                   </div>
@@ -438,12 +479,21 @@ export default function Courses() {
           />
 
           {formError && (
-            <div className="rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-2.5 text-sm text-danger">
+            <div role="alert" className="rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-2.5 text-sm text-danger">
               {formError}
             </div>
           )}
         </div>
       </Modal>
+
+      <ConfirmDialog
+        open={!!confirmTarget}
+        onClose={() => setConfirmTarget(null)}
+        onConfirm={confirmDelete}
+        title="Delete course?"
+        confirmLabel="Delete course"
+        body={`Delete course "${confirmTarget?.name}"? This cannot be undone.`}
+      />
     </div>
   );
 }

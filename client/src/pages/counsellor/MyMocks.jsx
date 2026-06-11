@@ -12,6 +12,7 @@ import Spinner from "../../ui/Spinner";
 
 export default function MyMocks() {
   const { user } = useAuth();
+  const userId = user?.id;
   const navigate = useNavigate();
 
   const [assignments, setAssignments] = useState([]);
@@ -22,11 +23,11 @@ export default function MyMocks() {
   const [startingId, setStartingId] = useState(null);
 
   const load = useCallback(async () => {
-    if (!user?.id) return;
+    if (!userId) return;
     setLoading(true);
     setError("");
     try {
-      const data = await api.getAssignments(user.id);
+      const data = await api.getAssignments(userId);
       const raw = Array.isArray(data) ? data : [];
       const ORDER = { assigned: 0, in_progress: 1, completed: 2 };
       raw.sort((a, b) => {
@@ -41,10 +42,17 @@ export default function MyMocks() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [userId]);
 
   useEffect(() => {
-    load();
+    // Defer so the effect body doesn't call setState synchronously.
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) load();
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   function handleStart(assignment) {
@@ -63,7 +71,7 @@ export default function MyMocks() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-ink">My Mocks</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-ink">My Mocks</h2>
           <p className="mt-1 text-sm text-muted">
             Practice calls assigned to you. Start a mock or resume one in progress.
           </p>
@@ -76,7 +84,7 @@ export default function MyMocks() {
       </header>
 
       {error && (
-        <Card className="flex items-center justify-between gap-4 border-danger-soft p-4">
+        <Card role="alert" className="flex items-center justify-between gap-4 border-danger-soft p-4">
           <p className="text-sm text-danger">{error}</p>
           <Button variant="secondary" size="sm" onClick={load}>
             Retry

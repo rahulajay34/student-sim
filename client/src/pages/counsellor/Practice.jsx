@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import Card, { CardHeader } from "../../ui/Card";
@@ -49,33 +49,41 @@ export default function Practice() {
 
   const [touched, setTouched] = useState(false);
 
-  useEffect(() => {
-    let active = true;
+  const load = useCallback(async () => {
     setLoading(true);
     setLoadError("");
-    Promise.all([api.getPersonas(), api.getCourses(true), api.getLeadProfiles()])
-      .then(([personaData, courseData, profileData]) => {
-        if (!active) return;
-        setPersonas(Array.isArray(personaData) ? personaData : []);
-        const crs = Array.isArray(courseData) ? courseData : [];
-        setCourses(crs);
-        setProfiles(Array.isArray(profileData) ? profileData : []);
-        // Default to IIM Ranchi BA course if present, else first course
-        const defaultCourse =
-          crs.find((c) => c.slug === "iim-ranchi/business-analytics-ai-sop") || crs[0] || null;
-        if (defaultCourse) setCourseId(defaultCourse.id);
-      })
-      .catch((err) => {
-        if (!active) return;
-        setLoadError(err.message || "Could not load data.");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
+    try {
+      // Independent fetches run in parallel.
+      const [personaData, courseData, profileData] = await Promise.all([
+        api.getPersonas(),
+        api.getCourses(true),
+        api.getLeadProfiles(),
+      ]);
+      setPersonas(Array.isArray(personaData) ? personaData : []);
+      const crs = Array.isArray(courseData) ? courseData : [];
+      setCourses(crs);
+      setProfiles(Array.isArray(profileData) ? profileData : []);
+      // Default to IIM Ranchi BA course if present, else first course
+      const defaultCourse =
+        crs.find((c) => c.slug === "iim-ranchi/business-analytics-ai-sop") || crs[0] || null;
+      if (defaultCourse) setCourseId(defaultCourse.id);
+    } catch (err) {
+      setLoadError(err.message || "Could not load data.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    // Defer so the effect body doesn't call setState synchronously.
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) load();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [load]);
 
   const selectedPersona = useMemo(
     () => personas.find((p) => p.id === personaId) || null,
@@ -172,7 +180,7 @@ export default function Practice() {
             title="Couldn't load personas"
             hint={loadError}
             action={
-              <Button variant="secondary" size="sm" onClick={() => window.location.reload()}>
+              <Button variant="secondary" size="sm" onClick={load}>
                 Try again
               </Button>
             }

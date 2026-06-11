@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth.jsx";
@@ -6,6 +6,7 @@ import { bandColor, relativeDate, TOKEN_HEX } from "../../lib/format";
 import Card, { CardHeader } from "../../ui/Card";
 import Button from "../../ui/Button";
 import Badge from "../../ui/Badge";
+import CountUp from "../../ui/CountUp";
 import EmptyState from "../../ui/EmptyState";
 
 // ---------------------------------------------------------------------------
@@ -345,30 +346,37 @@ function RadarChart({ criteria, mine, team }) {
 // ---------------------------------------------------------------------------
 export default function Dashboard() {
   const { user } = useAuth();
+  const userId = user?.id;
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [analytics, setAnalytics] = useState(null);
 
-  useEffect(() => {
-    if (!user?.id) return;
-    let alive = true;
+  const load = useCallback(async () => {
+    if (!userId) return;
     setLoading(true);
     setError("");
-    api.getCounsellorAnalytics(user.id)
-      .then((an) => {
-        if (!alive) return;
-        setAnalytics(an ?? null);
-      })
-      .catch((e) => {
-        if (alive) setError(e.message || "Could not load your dashboard.");
-      })
-      .finally(() => {
-        if (alive) setLoading(false);
-      });
-    return () => { alive = false; };
-  }, [user?.id]);
+    try {
+      const an = await api.getCounsellorAnalytics(userId);
+      setAnalytics(an ?? null);
+    } catch (e) {
+      setError(e.message || "Could not load your dashboard.");
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    // Defer so the effect body doesn't call setState synchronously.
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) load();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [load]);
 
   if (loading) return <Skeleton />;
 
@@ -438,8 +446,15 @@ export default function Dashboard() {
       </div>
 
       {error && (
-        <Card className="border-danger/30 bg-danger-soft p-4">
+        <Card role="alert" className="flex items-start justify-between gap-4 border-danger/30 bg-danger-soft p-4">
           <p className="text-sm font-medium text-danger">{error}</p>
+          <button
+            type="button"
+            onClick={load}
+            className="shrink-0 text-sm font-medium text-danger underline-offset-2 hover:underline"
+          >
+            Retry
+          </button>
         </Card>
       )}
 
@@ -469,9 +484,11 @@ export default function Dashboard() {
                   style={{ color: TOKEN_HEX.brand }}
                 >
                   {/* #24: a null avgPercent must render '—', not NaN%/0%. */}
-                  {avgPercent == null || !Number.isFinite(avgPercent)
-                    ? "—"
-                    : `${Math.round(avgPercent)}%`}
+                  {avgPercent == null || !Number.isFinite(avgPercent) ? (
+                    "—"
+                  ) : (
+                    <CountUp value={Math.round(avgPercent)} format={(n) => `${n}%`} />
+                  )}
                 </span>
                 {lastBand && (
                   <Badge color={bandColor(lastBand)} className="mb-1.5">

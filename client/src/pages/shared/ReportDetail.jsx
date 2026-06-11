@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import { bandColor, formatDate } from "../../lib/format";
@@ -14,6 +14,61 @@ import RubricBar from "./RubricBar";
 import ScoreArcChart from "./ScoreArcChart";
 import TranscriptView from "./TranscriptView";
 import PhaseStepper from "./PhaseStepper";
+
+// Poll the report every 2s while it's still generating; give up at 3 minutes.
+const POLL_INTERVAL_MS = 2000;
+const POLL_TIMEOUT_MS = 3 * 60 * 1000;
+
+// Missing status (old reports) is treated as a finished, ready report.
+const statusOf = (report) => report?.status || "ready";
+
+// ─── Skeleton placeholders (shown while LLM sections are generating) ──────────
+function SkeletonLine({ className = "" }) {
+  return <div className={`animate-pulse rounded bg-line/60 ${className}`} />;
+}
+
+function SkeletonBlock({ rows = 3 }) {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="rounded-xl border border-line bg-canvas/60 p-4">
+          <SkeletonLine className="h-3.5 w-1/3" />
+          <SkeletonLine className="mt-2.5 h-3 w-full" />
+          <SkeletonLine className="mt-2 h-3 w-4/5" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Count-up animation (~600ms, requestAnimationFrame) for the hero percent.
+// Runs once when `active` is true; otherwise renders `target` directly. The
+// rAF loop drives every value update asynchronously (no synchronous setState in
+// the effect body), so the count-up never blocks the first paint.
+function useCountUp(target, active, duration = 600) {
+  const end = Number(target) || 0;
+  // When inactive (e.g. fallback report) just show the final number outright.
+  const [value, setValue] = useState(active ? 0 : end);
+  const doneRef = useRef(false);
+
+  useEffect(() => {
+    if (!active || doneRef.current || end <= 0) return undefined;
+    doneRef.current = true;
+    let raf;
+    const start = performance.now();
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / duration);
+      // easeOutCubic
+      const eased = 1 - Math.pow(1 - t, 3);
+      setValue(t < 1 ? Math.round(end * eased) : end);
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [active, end, duration]);
+
+  return active ? value : end;
+}
 
 // Monospace code block with copy button — used in the prompts panel.
 function CodeBlock({ label, value }) {
@@ -121,6 +176,18 @@ function Dot({ color }) {
   return <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: color }} />;
 }
 
+// Hero percent with a one-shot count-up on the first render of the ready state.
+// While generating it shows a dash so it doesn't animate to a stale 0.
+function HeroPercent({ percent, animate }) {
+  const value = useCountUp(percent ?? 0, animate);
+  return (
+    <span className="text-4xl font-bold tabular-nums text-ink">
+      {value}
+      <span className="text-2xl font-semibold text-muted">%</span>
+    </span>
+  );
+}
+
 export default function ReportDetail({ backTo = "/app/reports" }) {
   const { id } = useParams();
   const { user } = useAuth();
@@ -130,11 +197,15 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [promptsOpen, setPromptsOpen] = useState(false);
+  const [pollTimedOut, setPollTimedOut] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
 
+  // Initial load.
   useEffect(() => {
     let active = true;
     setLoading(true);
     setError("");
+    setPollTimedOut(false);
     api
       .getReport(id)
       .then((data) => {
@@ -150,6 +221,50 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
       active = false;
     };
   }, [id]);
+
+  // Poll every 2s while the report is still generating; give up at 3 minutes.
+  const isGenerating = report && statusOf(report) === "generating";
+  useEffect(() => {
+    if (!report || statusOf(report) !== "generating") return;
+    let active = true;
+    const startedAt = Date.now();
+    const timer = setInterval(() => {
+      if (!active) return;
+      if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
+        setPollTimedOut(true);
+        clearInterval(timer);
+        return;
+      }
+      api
+        .getReport(id)
+        .then((data) => {
+          if (active) setReport(data);
+        })
+        .catch(() => {
+          /* transient — keep polling */
+        });
+    }, POLL_INTERVAL_MS);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [id, report, isGenerating]);
+
+  // Regenerate a fallback (or timed-out) report by re-calling /end for the session.
+  async function handleRegenerate() {
+    if (!report?.sessionId || regenerating) return;
+    setRegenerating(true);
+    setPollTimedOut(false);
+    try {
+      await api.regenerateReport(report.sessionId);
+      const fresh = await api.getReport(id);
+      setReport(fresh);
+    } catch (err) {
+      setError(err.message || "Could not regenerate this report.");
+    } finally {
+      setRegenerating(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -186,6 +301,10 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
     );
   }
 
+  const status = statusOf(report);
+  const generating = status === "generating";
+  const isFallback = status === "fallback" || report.fallback === true;
+
   const {
     overall = {},
     rubric = [],
@@ -204,13 +323,60 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
   } = report;
 
   const converted = overall.outcome === "Converted";
-  const finalScore = scoreArc.length ? scoreArc[scoreArc.length - 1].score : null;
+  // Prefer the stub's persisted finalScore; fall back to the last arc point.
+  const finalScore =
+    typeof report.finalScore === "number"
+      ? report.finalScore
+      : scoreArc.length
+        ? scoreArc[scoreArc.length - 1].score
+        : null;
   const reachedPhase = Math.max(1, ...(report.transcript || []).map((t) => t.phase || 1));
 
   const meta = [counsellorName, personaName, scenarioTitle, formatDate(generatedAt)].filter(Boolean);
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
+      {/* GENERATING banner */}
+      {generating && !pollTimedOut && (
+        <div
+          className="flex items-center gap-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-700"
+          aria-live="polite"
+        >
+          <Spinner size={18} />
+          <span>Generating your coaching report… the score and transcript are ready below; coaching detail will fill in shortly.</span>
+        </div>
+      )}
+
+      {/* TIMED-OUT banner (poll gave up after 3 minutes) */}
+      {generating && pollTimedOut && (
+        <div
+          className="flex flex-col gap-3 rounded-xl border border-warn/40 bg-warn-soft/40 px-4 py-3 text-sm text-warn sm:flex-row sm:items-center sm:justify-between"
+          aria-live="polite"
+        >
+          <span className="text-ink/80">
+            This report is taking longer than usual. You can keep waiting, or retry generation.
+          </span>
+          <Button variant="secondary" size="sm" onClick={handleRegenerate} disabled={regenerating}>
+            {regenerating ? "Retrying…" : "Retry"}
+          </Button>
+        </div>
+      )}
+
+      {/* FALLBACK banner — visible amber notice with a working regenerate action */}
+      {isFallback && !generating && (
+        <div
+          className="flex flex-col gap-3 rounded-xl border border-warn/40 bg-warn-soft/40 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+          aria-live="polite"
+        >
+          <span className="text-ink/80">
+            We couldn't fully generate this report, so it shows neutral placeholder scores. Try generating it again.
+          </span>
+          <Button variant="secondary" size="sm" onClick={handleRegenerate} disabled={regenerating}>
+            {regenerating ? "Regenerating…" : "Regenerate report"}
+          </Button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between gap-3">
         <BackLink to={backTo} />
         {isAdmin && (
@@ -250,15 +416,21 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
         <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-3">
-              <span className="text-4xl font-bold tabular-nums text-ink">
-                {overall.percent ?? 0}
-                <span className="text-2xl font-semibold text-muted">%</span>
-              </span>
+              {generating ? (
+                <span className="text-4xl font-bold tabular-nums text-muted/50">
+                  —<span className="text-2xl font-semibold text-muted/40">%</span>
+                </span>
+              ) : (
+                <HeroPercent percent={overall.percent} animate={!isFallback} />
+              )}
               {overall.band && <Badge color={bandColor(overall.band)}>{overall.band}</Badge>}
               {overall.outcome && (
                 <Badge color={converted ? "success" : "slate"}>{overall.outcome}</Badge>
               )}
             </div>
+            {overall.headline && !generating && (
+              <p className="mt-3 text-base font-semibold text-ink">{overall.headline}</p>
+            )}
             {overall.outcomeDetail && (
               <p className="mt-2 text-sm text-muted">{overall.outcomeDetail}</p>
             )}
@@ -288,8 +460,20 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
       {/* RUBRIC */}
       <Card className="p-6">
         <CardHeader title="Rubric breakdown" subtitle="Weighted criteria across the call" />
-        {rubric.length ? (
+        {generating ? (
           <div className="space-y-5">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i}>
+                <div className="mb-2 flex items-center justify-between">
+                  <SkeletonLine className="h-3.5 w-2/5" />
+                  <SkeletonLine className="h-3.5 w-10" />
+                </div>
+                <SkeletonLine className="h-2.5 w-full" />
+              </div>
+            ))}
+          </div>
+        ) : rubric.length ? (
+          <div className="animate-fadeup space-y-5">
             {rubric.map((r) => (
               <RubricBar key={r.key} item={r} />
             ))}
@@ -302,8 +486,10 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
       {/* PHASE BREAKDOWN */}
       <Card className="p-6">
         <CardHeader title="Phase-by-phase" subtitle="How the conversation progressed" />
-        {phaseBreakdown.length ? (
-          <>
+        {generating ? (
+          <SkeletonBlock rows={5} />
+        ) : phaseBreakdown.length ? (
+          <div className="animate-fadeup">
             <div className="mb-5">
               <PhaseStepper current={reachedPhase} />
             </div>
@@ -343,7 +529,7 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
                 </div>
               ))}
             </div>
-          </>
+          </div>
         ) : (
           <EmptyState title="No phase data" hint="Phase-by-phase analysis isn't available." />
         )}
@@ -353,8 +539,10 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card className="p-6">
           <CardHeader title="Strengths" subtitle="What worked in this call" />
-          {strengths.length ? (
-            <ul className="space-y-4">
+          {generating ? (
+            <SkeletonBlock rows={3} />
+          ) : strengths.length ? (
+            <ul className="animate-fadeup space-y-4">
               {strengths.map((s, i) => (
                 <li
                   key={i}
@@ -374,8 +562,10 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
 
         <Card className="p-6">
           <CardHeader title="Areas to improve" subtitle="Where to focus next time" />
-          {improvements.length ? (
-            <ul className="space-y-4">
+          {generating ? (
+            <SkeletonBlock rows={3} />
+          ) : improvements.length ? (
+            <ul className="animate-fadeup space-y-4">
               {improvements.map((m, i) => (
                 <li
                   key={i}
@@ -401,13 +591,21 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
       </div>
 
       {/* KEY MOMENTS */}
-      {Array.isArray(keyMoments) && keyMoments.length > 0 && (
+      {generating ? (
         <Card className="p-6">
           <CardHeader
             title="Key moments"
             subtitle="Highlight and missed opportunity turns from this call"
           />
-          <ul className="space-y-3">
+          <SkeletonBlock rows={3} />
+        </Card>
+      ) : Array.isArray(keyMoments) && keyMoments.length > 0 ? (
+        <Card className="p-6">
+          <CardHeader
+            title="Key moments"
+            subtitle="Highlight and missed opportunity turns from this call"
+          />
+          <ul className="animate-fadeup space-y-3">
             {keyMoments.map((km, i) => (
               <li
                 key={i}
@@ -427,7 +625,7 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
             ))}
           </ul>
         </Card>
-      )}
+      ) : null}
 
       {/* BENCHMARKS VS REAL CALLS */}
       {benchmarks && (
@@ -486,13 +684,21 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
       )}
 
       {/* PRACTICE DRILLS */}
-      {Array.isArray(drills) && drills.length > 0 && (
+      {generating ? (
         <Card className="p-6">
           <CardHeader
             title="Practice drills"
             subtitle="Targeted exercises to improve weak areas from this call"
           />
-          <div className="space-y-4">
+          <SkeletonBlock rows={3} />
+        </Card>
+      ) : Array.isArray(drills) && drills.length > 0 ? (
+        <Card className="p-6">
+          <CardHeader
+            title="Practice drills"
+            subtitle="Targeted exercises to improve weak areas from this call"
+          />
+          <div className="animate-fadeup space-y-4">
             {drills.map((drill, i) => (
               <div
                 key={i}
@@ -514,7 +720,7 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
             ))}
           </div>
         </Card>
-      )}
+      ) : null}
 
       {/* SCORE ARC */}
       <Card className="p-6">

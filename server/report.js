@@ -3,15 +3,28 @@
 // Falls back to the legacy 6-criterion rubric for pre-v2 sessions.
 //
 // Contract decisions:
-//   - Single model: nemotron-3-nano:30b (OLLAMA_MODEL override) for all calls.
-//   - Sampling: DETERMINISTIC_SAMPLING with timeoutMs:120000.
-//   - Retry: 2 attempts on LLM call + JSON parse failure; on final failure a
-//     neutral rubric-v2-shaped fallback report is returned with
-//     {fallback:true, regenerable:true} so the caller can replace it later.
+//   - Model: MiniMax-M3 (MINIMAX_MODEL override) via ./ollama.js chat().
+//   - Parallel fan-out: Call A (rubric + 5-phase phaseBreakdown) and Call B
+//     (strengths/improvements/keyMoments + overall.headline) run via Promise.all;
+//     Call C (drills) runs after A because it needs A's weakest criteria.
+//   - Adaptive thinking ONLY when session.transcript.length > 20 (else disabled).
+//   - Per-call retry: attempt 1 as configured (60s); attempt 2 thinking-disabled (60s).
+//   - If Call A fails entirely → neutral fallback report (fallback:true,
+//     regenerable:true). If only B or C fails → assemble what succeeded, mark
+//     report.partial = true and leave that section to minimal defaults.
 //   - Exported needsRegeneration(report): true when report.fallback === true.
-//   - Exported reportPromptForInspection(session): the exact prompt text.
-import { chat, DETERMINISTIC_SAMPLING, extractJson } from "./ollama.js";
+//   - Exported reportPromptForInspection(session): the Call A prompt text.
+//   - Test seam: _setChatForTests(fn) swaps the chat() implementation.
+import { chat as realChat, DETERMINISTIC_SAMPLING, extractJson } from "./ollama.js";
 import { BENCHMARKS, STRUCTURE } from "./grounding.js";
+
+// ─── Test seam ───────────────────────────────────────────────────────────────
+// generateReport calls through this indirection so tests can inject a stub
+// without touching the network. Defaults to the real ollama chat().
+let _chat = realChat;
+export function _setChatForTests(fn) {
+  _chat = typeof fn === "function" ? fn : realChat;
+}
 
 export const LEGACY_RUBRIC = [
   { key: "rapport", label: "Rapport & Opening", weight: 15 },
@@ -64,11 +77,23 @@ export function effectiveCriteria(session) {
   return { criteria, legacy: false };
 }
 
-function buildPrompt(session, criteria) {
+// ─── Shared prompt scaffolding ───────────────────────────────────────────────
+function courseHeader(session) {
   const c = session.courseSnapshot;
-  const courseLine = c
+  return c
     ? `A counsellor was selling "${c.name}" (${c.institute} x Masai School) to a simulated prospective student.`
     : `A counsellor was selling the "Executive Certification Programme in Business Analytics and AI" (IIM Ranchi x Masai) to a simulated prospective student.`;
+}
+
+function metaHeader(session) {
+  return `STUDENT PERSONA: ${session.personaSnapshot?.label || "student"}
+SCENARIO: ${session.scenarioSnapshot?.title || "n/a"} (difficulty: ${session.scenarioSnapshot?.difficulty || "n/a"})
+FINAL STUDENT SATISFACTION: ${session.satisfactionScore}/100`;
+}
+
+// ─── Call A prompt: rubric grading + 5-phase breakdown ───────────────────────
+function buildRubricPrompt(session, criteria) {
+  const c = session.courseSnapshot;
   const courseFacts = c ? `
 COURSE FACTS (ground truth — penalize the counsellor under "knowledge" for contradicting these):
 - Fee: ${c.feeTotal ? `₹${c.feeTotal}` : "not published"}; seat-block: ${c.feeBooking ? `₹${c.feeBooking}` : "₹4,000"}; ${c.feeNote}
@@ -86,11 +111,9 @@ COURSE FACTS (ground truth — penalize the counsellor under "knowledge" for con
   const m = session.milestones || {};
   const milestoneLines = `MILESTONE COVERAGE (tracked automatically): discovery done: ${!!m.discoveryDone}; presentation done: ${!!m.presentationDone}; payment asked: ${!!m.paymentAsked}; objections raised by student: ${m.objectionsRaised ?? "n/a"}. Real benchmark: the payment ask lands ~${STRUCTURE.paymentAskNorms?.typicalAtPct ?? 78}% into the call and appears in ${STRUCTURE.paymentAskNorms?.presentInPaidPct ?? 87}% of converting calls.`;
 
-  return `You are a senior sales-training coach evaluating a mock counselling call. ${courseLine}
+  return `You are a senior sales-training coach evaluating a mock counselling call. ${courseHeader(session)}
 
-STUDENT PERSONA: ${session.personaSnapshot?.label || "student"}
-SCENARIO: ${session.scenarioSnapshot?.title || "n/a"} (difficulty: ${session.scenarioSnapshot?.difficulty || "n/a"})
-FINAL STUDENT SATISFACTION: ${session.satisfactionScore}/100 (agreement threshold is 70)
+${metaHeader(session)}
 ${courseFacts}
 ${milestoneLines}
 
@@ -104,14 +127,65 @@ Return ONLY a JSON object with this exact shape:
 {
   "rubric": [ { "key": "<criterion key>", "score": 1-5, "justification": "one sentence grounded in the transcript, referencing the matched anchor behaviour" } ],
   "phaseBreakdown": [ { "phase": 1-5, "summary": "...", "didWell": "...", "toImprove": "..." } ],   // exactly 5, named phases: ${PHASE_NAMES_V2.join(", ")}
-  "strengths": [ { "point": "...", "quote": "short counsellor quote" } ],                            // 2-3
-  "improvements": [ { "point": "...", "quote": "short quote", "suggestion": "concrete advice" } ],   // 2-3
-  "keyMoments": [ { "turn": <number from transcript>, "type": "best"|"miss", "note": "what happened and why it mattered" } ],  // 2-4
-  "drills": [ { "title": "...", "focusCriterion": "<weakest criterion key>", "objectionCategory": "<EXACTLY one of: fee|emi_affordability|parents_family|time_commitment|competing_priorities|trust_legitimacy|job_guarantee_placement|course_fit_relevance|language_english|tech_access|other>", "instruction": "one concrete practice instruction" } ],  // 2-3
   "outcome": "Converted" | "Not Converted",
   "outcomeDetail": "one sentence on whether the student agreed to pay ${c?.feeBooking ? `₹${c.feeBooking}` : "the seat-block fee"} and why"
 }
 Score honestly and specifically. Do not output anything except the JSON object.`;
+}
+
+// ─── Call B prompt: strengths / improvements / keyMoments / headline ──────────
+// Focused: no rubric anchors, no course facts dump — just the transcript and the
+// narrative coaching asks.
+function buildNarrativePrompt(session) {
+  return `You are a senior sales-training coach writing the narrative section of a coaching report for a mock counselling call. ${courseHeader(session)}
+
+${metaHeader(session)}
+
+FULL TRANSCRIPT (turns are numbered):
+${transcriptText(session.transcript)}
+
+Write the coaching narrative for the COUNSELLOR (not the student).
+
+Return ONLY a JSON object with this exact shape:
+{
+  "headline": "ONE punchy sentence beginning 'Next session, focus on ' naming the single most important thing to improve",
+  "strengths": [ { "point": "...", "quote": "short counsellor quote" } ],                            // 2-3
+  "improvements": [ { "point": "...", "quote": "short quote", "suggestion": "concrete advice" } ],   // 2-3
+  "keyMoments": [ { "turn": <number from transcript>, "type": "best"|"miss", "note": "what happened and why it mattered" } ]  // 2-4
+}
+Be specific and ground every point in the transcript. Do not output anything except the JSON object.`;
+}
+
+// ─── Call C prompt: drills ───────────────────────────────────────────────────
+// Focused: receives only criteria keys+labels+scores (NOT full anchor text) so
+// it can target the weakest areas.
+function buildDrillsPrompt(session, gradedRubric) {
+  const sorted = [...gradedRubric].sort((a, b) => a.score - b.score);
+  const weakest = sorted.slice(0, 3);
+  const scoreLines = gradedRubric
+    .map((r) => `- ${r.key} (${r.label}): scored ${r.score}/5`)
+    .join("\n");
+  const weakestKeys = weakest.map((r) => r.key).join(", ") || "(none)";
+
+  return `You are a senior sales-training coach prescribing practice drills after a mock counselling call. ${courseHeader(session)}
+
+${metaHeader(session)}
+
+RUBRIC SCORES (1-5, already graded — target the weakest):
+${scoreLines}
+
+The weakest criteria are: ${weakestKeys}.
+
+FULL TRANSCRIPT (turns are numbered):
+${transcriptText(session.transcript)}
+
+Prescribe 2-3 targeted practice drills, each tied to one of the weakest criteria.
+
+Return ONLY a JSON object with this exact shape:
+{
+  "drills": [ { "title": "...", "focusCriterion": "<one of the weakest criterion keys>", "objectionCategory": "<EXACTLY one of: fee|emi_affordability|parents_family|time_commitment|competing_priorities|trust_legitimacy|job_guarantee_placement|course_fit_relevance|language_english|tech_access|other>", "instruction": "one concrete practice instruction" } ]  // 2-3
+}
+Do not output anything except the JSON object.`;
 }
 
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, Math.round(Number(n) || 0)));
@@ -132,24 +206,33 @@ function sanitizeObjectionCategory(raw) {
 }
 
 // ─── LLM call options ───────────────────────────────────────────────────────
-// Single model per contract (nemotron-3-nano:30b or OLLAMA_MODEL override).
-// 120 second timeout for the longer report generation call.
-// thinking:adaptive per the shared contract: report quality > latency, and
-// the adaptive reasoning budget helps ground rubric justifications in specific
-// transcript evidence. DETERMINISTIC_SAMPLING + timeoutMs are preserved.
-const REPORT_OPTIONS = { ...DETERMINISTIC_SAMPLING, timeoutMs: 120_000, thinking: { type: "adaptive" } };
+// Each fan-out call gets a focused prompt with a 60s timeout. Adaptive thinking
+// is enabled ONLY for longer transcripts (> 20 turns); otherwise disabled to
+// keep latency low. Attempt 2 always runs thinking-disabled (see runCall).
+const CALL_TIMEOUT_MS = 60_000;
 
-// ─── Retry helper ───────────────────────────────────────────────────────────
-// Tries fn() up to maxAttempts times. Returns {ok:true, value} or {ok:false, error}.
-async function retryLlmCall(fn, maxAttempts = 2) {
+function thinkingForSession(session) {
+  return (session.transcript || []).length > 20
+    ? { type: "adaptive" }
+    : { type: "disabled" };
+}
+
+// ─── Per-call runner with 2-attempt retry ────────────────────────────────────
+// Attempt 1: configured thinking, 60s. Attempt 2: thinking disabled, 60s.
+// Returns { ok:true, value } or { ok:false, error }.
+async function runCall(label, prompt, thinking) {
+  const attempts = [
+    { ...DETERMINISTIC_SAMPLING, timeoutMs: CALL_TIMEOUT_MS, thinking },
+    { ...DETERMINISTIC_SAMPLING, timeoutMs: CALL_TIMEOUT_MS, thinking: { type: "disabled" } },
+  ];
   let lastError;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+  for (let i = 0; i < attempts.length; i++) {
     try {
-      const value = await fn();
-      return { ok: true, value };
+      const text = await _chat([{ role: "user", content: prompt }], attempts[i]);
+      return { ok: true, value: extractJson(text) };
     } catch (err) {
       lastError = err;
-      console.warn(`[report] LLM attempt ${attempt}/${maxAttempts} failed: ${err.message}`);
+      console.warn(`[report] ${label} attempt ${i + 1}/${attempts.length} failed: ${err.message}`);
     }
   }
   return { ok: false, error: lastError };
@@ -158,7 +241,7 @@ async function retryLlmCall(fn, maxAttempts = 2) {
 // ─── Neutral fallback builder ────────────────────────────────────────────────
 // Builds a full rubric-v2-shaped report with neutral mid-band scores.
 // Uses effectiveCriteria(session) so voice_delivery is excluded/included correctly.
-function buildFallbackReport(session) {
+export function buildFallbackReport(session) {
   const { criteria } = effectiveCriteria(session);
   const totalWeight = criteria.reduce((n, c) => n + c.weight, 0) || 100;
 
@@ -192,6 +275,7 @@ function buildFallbackReport(session) {
       band: bandFor(percent),
       outcome: "Not Converted",
       outcomeDetail: "Report generation failed — neutral placeholder.",
+      headline: "",
     },
     rubric,
     phaseBreakdown,
@@ -199,21 +283,45 @@ function buildFallbackReport(session) {
     improvements: [],
     keyMoments: [],
     drills: [],
-    benchmarks: {
-      sessionMinutes,
-      medianPaidMinutes: BENCHMARKS.text?.paidVsUnpaid?.durationMedianPaid ?? null,
-      paymentAskSeen: !!session.milestones?.paymentAsked,
-      paymentAskNormPct: STRUCTURE.paymentAskNorms?.presentInPaidPct ?? null,
-    },
+    benchmarks: buildBenchmarks(session, sessionMinutes),
     scoreArc: (session.scoreHistory || []).map((h) => ({ turn: h.turn, score: h.score })),
     fallback: true,
     regenerable: true,
   };
 }
 
-// ─── Assemble report from LLM-parsed raw object ──────────────────────────────
-function assembleReport(session, raw, criteria) {
-  const byKey = new Map((raw.rubric || []).map((r) => [r.key, r]));
+function buildBenchmarks(session, sessionMinutes) {
+  return {
+    sessionMinutes,
+    medianPaidMinutes: BENCHMARKS.text?.paidVsUnpaid?.durationMedianPaid ?? null,
+    paymentAskSeen: !!session.milestones?.paymentAsked,
+    paymentAskNormPct: STRUCTURE.paymentAskNorms?.presentInPaidPct ?? null,
+  };
+}
+
+// ─── Public: instantly-available stub sections (C4) ──────────────────────────
+/**
+ * stubReportSections(session)
+ * Returns the report data that can be computed WITHOUT any LLM call: the live
+ * final score, the score arc, the benchmark comparisons, and the transcript.
+ * /end persists these immediately (status:"generating") so ReportDetail can
+ * render the hero/arc/benchmarks/transcript at once while the LLM sections fill.
+ */
+export function stubReportSections(session) {
+  const sessionMinutes = session.startedAt
+    ? Math.round((Date.now() - new Date(session.startedAt).getTime()) / 60000 * 10) / 10
+    : null;
+  return {
+    finalScore: typeof session.satisfactionScore === "number" ? session.satisfactionScore : null,
+    scoreArc: (session.scoreHistory || []).map((h) => ({ turn: h.turn, score: h.score })),
+    benchmarks: buildBenchmarks(session, sessionMinutes),
+    transcript: session.transcript,
+  };
+}
+
+// ─── Assemble the graded rubric + phase breakdown from Call A ─────────────────
+function assembleRubric(session, rawA, criteria) {
+  const byKey = new Map((rawA?.rubric || []).map((r) => [r.key, r]));
   const totalWeight = criteria.reduce((n, c) => n + c.weight, 0) || 100;
   const rubric = criteria.map((c) => {
     const r = byKey.get(c.key) || {};
@@ -228,61 +336,55 @@ function assembleReport(session, raw, criteria) {
   const percent = Math.round(rubric.reduce((sum, r) => sum + (r.score / 5) * r.weight, 0));
 
   const phaseBreakdown = PHASE_NAMES_V2.map((name, i) => {
-    const p = (raw.phaseBreakdown || []).find((x) => Number(x.phase) === i + 1) || {};
+    const p = (rawA?.phaseBreakdown || []).find((x) => Number(x.phase) === i + 1) || {};
     return { phase: i + 1, name, summary: p.summary || "", didWell: p.didWell || "", toImprove: p.toImprove || "" };
   });
 
-  const sessionMinutes = session.startedAt
-    ? Math.round((Date.now() - new Date(session.startedAt).getTime()) / 60000 * 10) / 10
-    : null;
+  return { rubric, percent, phaseBreakdown };
+}
 
+// ─── Assemble the narrative section from Call B ──────────────────────────────
+function assembleNarrative(session, rawB) {
+  const transcriptLen = (session.transcript || []).length;
   return {
-    overall: {
-      percent, band: bandFor(percent),
-      outcome: raw.outcome === "Converted" ? "Converted" : "Not Converted",
-      outcomeDetail: typeof raw.outcomeDetail === "string" ? raw.outcomeDetail : "",
-    },
-    rubric, phaseBreakdown,
-    strengths: (raw.strengths || []).slice(0, 3),
-    improvements: (raw.improvements || []).slice(0, 3),
-    keyMoments: (raw.keyMoments || []).slice(0, 4).map((k) => ({
-      turn: clamp(k.turn ?? 0, 0, (session.transcript || []).length - 1),
+    headline: typeof rawB?.headline === "string" ? rawB.headline : "",
+    strengths: (rawB?.strengths || []).slice(0, 3),
+    improvements: (rawB?.improvements || []).slice(0, 3),
+    keyMoments: (rawB?.keyMoments || []).slice(0, 4).map((k) => ({
+      turn: clamp(k.turn ?? 0, 0, Math.max(0, transcriptLen - 1)),
       type: k.type === "best" ? "best" : "miss",
       note: typeof k.note === "string" ? k.note : "",
     })),
-    drills: (raw.drills || []).slice(0, 3).map((d) => ({
-      title: typeof d.title === "string" ? d.title : "Practice drill",
-      focusCriterion: typeof d.focusCriterion === "string" ? d.focusCriterion : "",
-      objectionCategory: sanitizeObjectionCategory(d.objectionCategory),
-      instruction: typeof d.instruction === "string" ? d.instruction : "",
-    })),
-    benchmarks: {
-      sessionMinutes,
-      medianPaidMinutes: BENCHMARKS.text?.paidVsUnpaid?.durationMedianPaid ?? null,
-      paymentAskSeen: !!session.milestones?.paymentAsked,
-      paymentAskNormPct: STRUCTURE.paymentAskNorms?.presentInPaidPct ?? null,
-    },
-    scoreArc: (session.scoreHistory || []).map((h) => ({ turn: h.turn, score: h.score })),
   };
+}
+
+// ─── Assemble the drills section from Call C ─────────────────────────────────
+function assembleDrills(rawC) {
+  return (rawC?.drills || []).slice(0, 3).map((d) => ({
+    title: typeof d.title === "string" ? d.title : "Practice drill",
+    focusCriterion: typeof d.focusCriterion === "string" ? d.focusCriterion : "",
+    objectionCategory: sanitizeObjectionCategory(d.objectionCategory),
+    instruction: typeof d.instruction === "string" ? d.instruction : "",
+  }));
 }
 
 // ─── Public: report prompt for inspection endpoint ───────────────────────────
 /**
  * reportPromptForInspection(session)
- * Returns the exact prompt text that generateReport() would send to the LLM.
+ * Returns the Call A (rubric + phase) prompt text that generateReport() sends.
  * Used by GET /api/sessions/:id/prompt.
  */
 export function reportPromptForInspection(session) {
   const { criteria } = effectiveCriteria(session);
-  return buildPrompt(session, criteria);
+  return buildRubricPrompt(session, criteria);
 }
 
 // ─── Public: does this report need regeneration? ─────────────────────────────
 /**
  * needsRegeneration(report)
  * Returns true when report is a neutral fallback that should be regenerated.
- * Used by the /end endpoint (Integration agent) to skip the idempotent short-
- * circuit when a fallback:true report already exists for the session.
+ * Used by the /end endpoint to skip the idempotent short-circuit when a
+ * fallback:true report already exists for the session.
  */
 export function needsRegeneration(report) {
   return report?.fallback === true;
@@ -292,28 +394,72 @@ export function needsRegeneration(report) {
 /**
  * generateReport(session, {counsellorName?})
  *
- * Attempts the LLM call up to 2 times (DETERMINISTIC_SAMPLING, 120 s timeout).
- * On final failure returns a neutral placeholder in the full rubric-v2 shape with
- * {fallback:true, regenerable:true} so ReportDetail v2 renders immediately and
- * the report can be regenerated later (see needsRegeneration).
+ * Parallel fan-out:
+ *   - Call A (rubric + phaseBreakdown) and Call B (narrative + headline) run
+ *     concurrently via Promise.all.
+ *   - Call C (drills) runs after A because it needs A's weakest criteria scores.
+ *
+ * Adaptive thinking only when transcript.length > 20. Each call retries once
+ * (attempt 2 thinking-disabled), both with a 60s timeout.
+ *
+ * If Call A fails entirely → neutral fallback report (fallback:true,
+ * regenerable:true). If only B or C fails → assemble what succeeded and mark
+ * report.partial = true (missing sections default to empty arrays / "").
+ *
+ * Assembled shape is identical to the prior monolithic report PLUS
+ * overall.headline.
  */
-export async function generateReport(session, { counsellorName = "" } = {}) {
+export async function generateReport(session) {
   const { criteria } = effectiveCriteria(session);
-  const prompt = buildPrompt(session, criteria);
+  const thinking = thinkingForSession(session);
 
-  const result = await retryLlmCall(async () => {
-    const text = await chat(
-      [{ role: "user", content: prompt }],
-      REPORT_OPTIONS,
-    );
-    // extractJson strips markdown fences and throws on bad JSON
-    return extractJson(text);
-  }, 2);
+  const rubricPrompt = buildRubricPrompt(session, criteria);
+  const narrativePrompt = buildNarrativePrompt(session);
 
-  if (!result.ok) {
-    console.error("[report] All LLM attempts failed; returning neutral fallback.", result.error?.message);
+  // A and B are independent → run in parallel.
+  const [resultA, resultB] = await Promise.all([
+    runCall("Call A (rubric)", rubricPrompt, thinking),
+    runCall("Call B (narrative)", narrativePrompt, thinking),
+  ]);
+
+  // Call A is the spine of the report. If it failed entirely → fallback.
+  if (!resultA.ok) {
+    console.error("[report] Call A failed entirely; returning neutral fallback.", resultA.error?.message);
     return buildFallbackReport(session);
   }
 
-  return assembleReport(session, result.value, criteria);
+  const { rubric, percent, phaseBreakdown } = assembleRubric(session, resultA.value, criteria);
+
+  // Call C depends on A's graded rubric (weakest criteria), so it runs after A.
+  const resultC = await runCall("Call C (drills)", buildDrillsPrompt(session, rubric), thinking);
+
+  let partial = false;
+  const narrative = resultB.ok
+    ? assembleNarrative(session, resultB.value)
+    : (partial = true, assembleNarrative(session, null));
+  const drills = resultC.ok
+    ? assembleDrills(resultC.value)
+    : (partial = true, []);
+
+  const sessionMinutes = session.startedAt
+    ? Math.round((Date.now() - new Date(session.startedAt).getTime()) / 60000 * 10) / 10
+    : null;
+
+  const report = {
+    overall: {
+      percent, band: bandFor(percent),
+      outcome: resultA.value.outcome === "Converted" ? "Converted" : "Not Converted",
+      outcomeDetail: typeof resultA.value.outcomeDetail === "string" ? resultA.value.outcomeDetail : "",
+      headline: narrative.headline,
+    },
+    rubric, phaseBreakdown,
+    strengths: narrative.strengths,
+    improvements: narrative.improvements,
+    keyMoments: narrative.keyMoments,
+    drills,
+    benchmarks: buildBenchmarks(session, sessionMinutes),
+    scoreArc: (session.scoreHistory || []).map((h) => ({ turn: h.turn, score: h.score })),
+  };
+  if (partial) report.partial = true;
+  return report;
 }

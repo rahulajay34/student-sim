@@ -11,7 +11,7 @@
       "talkativeness": 3,
       "humour": 3,
       "skepticism": 2,
-      "formality": 2,
+      "formality": 3,
       "quirks": [
         "mentions cricket or IPL to make a comparison when nervous",
         "says 'basically' and 'actually' a lot as fillers",
@@ -81,9 +81,9 @@
       "talkativeness": 2,
       "humour": 2,
       "skepticism": 3,
-      "formality": 2,
+      "formality": 3,
       "quirks": [
-        "switches to Hindi phrases when worried or overwhelmed ('matlab sir, mujhe dar lagta hai')",
+        "trails off mid-sentence and repeats the word 'actually' when worried or overwhelmed",
         "asks 'but what if I fail?' style questions when reassured too quickly",
         "mentions a family member who suggested the idea of switching fields"
       ],
@@ -104,7 +104,7 @@
       "talkativeness": 2,
       "humour": 2,
       "skepticism": 3,
-      "formality": 2,
+      "formality": 3,
       "quirks": [
         "apologizes too much ('sorry, I know this is a basic question')",
         "pauses mid-thought and restarts ('actually, never mind, what I mean is...')",

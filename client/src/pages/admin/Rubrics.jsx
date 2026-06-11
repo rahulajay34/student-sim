@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api";
 import Button from "../../ui/Button";
 import Card from "../../ui/Card";
@@ -8,6 +8,9 @@ import Input from "../../ui/Input";
 import Textarea from "../../ui/Textarea";
 import Spinner from "../../ui/Spinner";
 import EmptyState from "../../ui/EmptyState";
+import SearchInput from "../../ui/SearchInput";
+import ConfirmDialog from "../../ui/ConfirmDialog";
+import { useCreateShortcut } from "../../ui/useCreateShortcut";
 
 const ANCHOR_LABELS = [
   { level: "1", label: "1 — Poor" },
@@ -39,8 +42,10 @@ export default function Rubrics() {
   const [form, setForm] = useState({ name: "", description: "", criteria: [emptyCriterion()] });
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
+  const [query, setQuery] = useState("");
+  const [confirmTarget, setConfirmTarget] = useState(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -51,18 +56,37 @@ export default function Rubrics() {
     } finally {
       setLoading(false);
     }
-  }
-
-  useEffect(() => {
-    load();
   }, []);
 
-  function openCreate() {
+  useEffect(() => {
+    // Defer so the effect body doesn't call setState synchronously.
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) load();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [load]);
+
+  const openCreate = useCallback(() => {
     setEditing(null);
     setForm({ name: "", description: "", criteria: [emptyCriterion()] });
     setFormError("");
     setModalOpen(true);
-  }
+  }, []);
+
+  useCreateShortcut(openCreate, { enabled: !loading && !modalOpen });
+
+  const filteredTemplates = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return templates;
+    return templates.filter((t) =>
+      [t.name, t.description, ...(t.criteria || []).map((c) => c.key)]
+        .filter(Boolean)
+        .some((v) => String(v).toLowerCase().includes(q)),
+    );
+  }, [templates, query]);
 
   function openEdit(tpl) {
     setEditing(tpl);
@@ -211,13 +235,16 @@ export default function Rubrics() {
     }
   }
 
-  async function handleDelete(tpl) {
-    if (!window.confirm(`Delete rubric template "${tpl.name}"? This cannot be undone.`)) return;
+  async function confirmDelete() {
+    const tpl = confirmTarget;
+    if (!tpl) return;
     try {
       await api.deleteRubricTemplate(tpl.id);
+      setConfirmTarget(null);
       await load();
     } catch (e) {
       setError(e.message || "Could not delete rubric template.");
+      throw e;
     }
   }
 
@@ -229,7 +256,7 @@ export default function Rubrics() {
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-ink">Rubric templates</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-ink">Rubric templates</h2>
           <p className="mt-1 text-sm text-muted">
             Evaluation rubrics used to grade mock counselling sessions.
           </p>
@@ -253,7 +280,7 @@ export default function Rubrics() {
 
       {/* Error banner */}
       {error && (
-        <div className="flex items-start justify-between gap-4 rounded-2xl border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">
+        <div role="alert" className="flex items-start justify-between gap-4 rounded-2xl border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">
           <span>{error}</span>
           <button
             type="button"
@@ -265,6 +292,16 @@ export default function Rubrics() {
         </div>
       )}
 
+      {/* Search — shown once there are many templates */}
+      {!loading && templates.length > 8 && (
+        <SearchInput
+          value={query}
+          onChange={setQuery}
+          placeholder="Search rubric templates…"
+          className="max-w-sm"
+        />
+      )}
+
       {/* Body */}
       {loading ? (
         <div className="flex items-center justify-center py-24">
@@ -274,7 +311,7 @@ export default function Rubrics() {
         <Card className="p-6">
           <EmptyState
             title="No rubric templates yet"
-            hint="Create a rubric template to define how mock counselling sessions are evaluated."
+            hint="Create a rubric template to define how mock counselling sessions are evaluated. Tip: press N to add one."
             icon={
               <svg
                 viewBox="0 0 24 24"
@@ -292,9 +329,13 @@ export default function Rubrics() {
             action={<Button onClick={openCreate}>New rubric</Button>}
           />
         </Card>
+      ) : filteredTemplates.length === 0 ? (
+        <Card className="p-6">
+          <EmptyState title="No matching templates" hint="Try a different search term." />
+        </Card>
       ) : (
         <div className="grid gap-5 md:grid-cols-2">
-          {templates.map((tpl) => {
+          {filteredTemplates.map((tpl) => {
             const wSum = (tpl.criteria || []).reduce((s, c) => s + (c.weight || 0), 0);
             const wSumOk = Math.abs(wSum - 100) < 1e-6;
             const previewKeys = (tpl.criteria || []).slice(0, 4).map((c) => c.key);
@@ -346,7 +387,7 @@ export default function Rubrics() {
                     </Button>
                   </div>
                   {!tpl.isDefault && (
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(tpl)}>
+                    <Button variant="ghost" size="sm" onClick={() => setConfirmTarget(tpl)}>
                       <span className="text-danger">Delete</span>
                     </Button>
                   )}
@@ -477,12 +518,21 @@ export default function Rubrics() {
           </div>
 
           {formError && (
-            <div className="rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-2.5 text-sm text-danger">
+            <div role="alert" className="rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-2.5 text-sm text-danger">
               {formError}
             </div>
           )}
         </div>
       </Modal>
+
+      <ConfirmDialog
+        open={!!confirmTarget}
+        onClose={() => setConfirmTarget(null)}
+        onConfirm={confirmDelete}
+        title="Delete rubric template?"
+        confirmLabel="Delete template"
+        body={`Delete rubric template "${confirmTarget?.name}"? This cannot be undone.`}
+      />
     </div>
   );
 }

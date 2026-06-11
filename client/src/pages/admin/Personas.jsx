@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../lib/api";
 import Button from "../../ui/Button";
 import Card from "../../ui/Card";
@@ -9,6 +9,9 @@ import Textarea from "../../ui/Textarea";
 import Select from "../../ui/Select";
 import Spinner from "../../ui/Spinner";
 import EmptyState from "../../ui/EmptyState";
+import SearchInput from "../../ui/SearchInput";
+import ConfirmDialog from "../../ui/ConfirmDialog";
+import { useCreateShortcut } from "../../ui/useCreateShortcut";
 
 const CATEGORY_OPTIONS = [
   { value: "studying", label: "Currently studying" },
@@ -202,8 +205,10 @@ export default function Personas() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
+  const [query, setQuery] = useState("");
+  const [confirmTarget, setConfirmTarget] = useState(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -214,18 +219,37 @@ export default function Personas() {
     } finally {
       setLoading(false);
     }
-  }
-
-  useEffect(() => {
-    load();
   }, []);
 
-  function openCreate() {
+  useEffect(() => {
+    // Defer so the effect body doesn't call setState synchronously.
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) load();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [load]);
+
+  const openCreate = useCallback(() => {
     setEditing(null);
     setForm({ ...EMPTY_FORM, personality: { ...DEFAULT_PERSONALITY, quirks: [] } });
     setFormError("");
     setModalOpen(true);
-  }
+  }, []);
+
+  useCreateShortcut(openCreate, { enabled: !loading && !modalOpen });
+
+  const filteredPersonas = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return personas;
+    return personas.filter((p) =>
+      [p.name, p.label, p.description, CATEGORY_LABEL[p.category] || p.category]
+        .filter(Boolean)
+        .some((v) => String(v).toLowerCase().includes(q)),
+    );
+  }, [personas, query]);
 
   function openEdit(persona) {
     setEditing(persona);
@@ -315,13 +339,16 @@ export default function Personas() {
     }
   }
 
-  async function handleDelete(persona) {
-    if (!window.confirm(`Delete persona "${persona.name}"? This cannot be undone.`)) return;
+  async function confirmDelete() {
+    const persona = confirmTarget;
+    if (!persona) return;
     try {
       await api.deletePersona(persona.id);
+      setConfirmTarget(null);
       await load();
     } catch (err) {
       setError(err.message || "Could not delete persona.");
+      throw err;
     }
   }
 
@@ -330,7 +357,7 @@ export default function Personas() {
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-ink">Persona library</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-ink">Persona library</h2>
           <p className="mt-1 text-sm text-muted">
             Reusable student profiles your counsellors practise against.
           </p>
@@ -354,7 +381,7 @@ export default function Personas() {
 
       {/* Error banner */}
       {error && (
-        <div className="flex items-start justify-between gap-4 rounded-2xl border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">
+        <div role="alert" className="flex items-start justify-between gap-4 rounded-2xl border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">
           <span>{error}</span>
           <button
             type="button"
@@ -366,6 +393,16 @@ export default function Personas() {
         </div>
       )}
 
+      {/* Search — shown once the library grows */}
+      {!loading && personas.length > 8 && (
+        <SearchInput
+          value={query}
+          onChange={setQuery}
+          placeholder="Search personas…"
+          className="max-w-sm"
+        />
+      )}
+
       {/* Body */}
       {loading ? (
         <div className="flex items-center justify-center py-24">
@@ -375,7 +412,7 @@ export default function Personas() {
         <Card className="p-6">
           <EmptyState
             title="No personas yet"
-            hint="Create your first student persona to start assigning mock counselling calls."
+            hint="Create your first student persona to start assigning mock counselling calls. Tip: press N to add one."
             icon={
               <svg
                 viewBox="0 0 24 24"
@@ -393,9 +430,16 @@ export default function Personas() {
             action={<Button onClick={openCreate}>New persona</Button>}
           />
         </Card>
+      ) : filteredPersonas.length === 0 ? (
+        <Card className="p-6">
+          <EmptyState
+            title="No matching personas"
+            hint="Try a different search term."
+          />
+        </Card>
       ) : (
         <div className="grid gap-5 md:grid-cols-2">
-          {personas.map((persona) => (
+          {filteredPersonas.map((persona) => (
             <Card key={persona.id} className="flex flex-col p-5">
               <div className="flex items-start justify-between gap-3">
                 <h3 className="min-w-0 truncate font-semibold text-ink">{persona.name}</h3>
@@ -421,7 +465,7 @@ export default function Personas() {
                 <Button variant="secondary" size="sm" onClick={() => openEdit(persona)}>
                   Edit
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => handleDelete(persona)}>
+                <Button variant="ghost" size="sm" onClick={() => setConfirmTarget(persona)}>
                   <span className="text-danger">Delete</span>
                 </Button>
               </div>
@@ -531,12 +575,21 @@ export default function Personas() {
           </div>
 
           {formError && (
-            <div className="rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-2.5 text-sm text-danger">
+            <div role="alert" className="rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-2.5 text-sm text-danger">
               {formError}
             </div>
           )}
         </div>
       </Modal>
+
+      <ConfirmDialog
+        open={!!confirmTarget}
+        onClose={() => setConfirmTarget(null)}
+        onConfirm={confirmDelete}
+        title="Delete persona?"
+        confirmLabel="Delete persona"
+        body={`Delete persona "${confirmTarget?.name}"? This cannot be undone.`}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { bandColor, relativeDate } from "../../lib/format";
@@ -8,6 +8,7 @@ import Select from "../../ui/Select";
 import Badge from "../../ui/Badge";
 import Avatar from "../../ui/Avatar";
 import EmptyState from "../../ui/EmptyState";
+import SearchInput from "../../ui/SearchInput";
 
 export default function AdminReports() {
   const navigate = useNavigate();
@@ -17,27 +18,32 @@ export default function AdminReports() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [counsellorId, setCounsellorId] = useState("");
+  const [query, setQuery] = useState("");
 
-  useEffect(() => {
-    let active = true;
+  const load = useCallback(async () => {
     setLoading(true);
     setError("");
-    Promise.all([api.getReports(), api.getCounsellors()])
-      .then(([rs, cs]) => {
-        if (!active) return;
-        setReports(Array.isArray(rs) ? rs : []);
-        setCounsellors(Array.isArray(cs) ? cs : []);
-      })
-      .catch((e) => {
-        if (active) setError(e.message || "Failed to load reports.");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
+    try {
+      const [rs, cs] = await Promise.all([api.getReports(), api.getCounsellors()]);
+      setReports(Array.isArray(rs) ? rs : []);
+      setCounsellors(Array.isArray(cs) ? cs : []);
+    } catch (e) {
+      setError(e.message || "Failed to load reports.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    // Defer so the effect body doesn't call setState synchronously.
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) load();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [load]);
 
   const colorByCounsellor = useMemo(() => {
     const map = {};
@@ -48,9 +54,15 @@ export default function AdminReports() {
   }, [counsellors]);
 
   const filtered = useMemo(() => {
-    if (!counsellorId) return reports;
-    return reports.filter((r) => r.counsellorId === counsellorId);
-  }, [reports, counsellorId]);
+    const q = query.trim().toLowerCase();
+    return reports.filter((r) => {
+      if (counsellorId && r.counsellorId !== counsellorId) return false;
+      if (!q) return true;
+      return [r.counsellorName, r.personaName, r.scenarioTitle, r.overall?.band, r.overall?.outcome]
+        .filter(Boolean)
+        .some((v) => String(v).toLowerCase().includes(q));
+    });
+  }, [reports, counsellorId, query]);
 
   const filterOptions = useMemo(
     () => [
@@ -64,6 +76,8 @@ export default function AdminReports() {
     {
       key: "counsellor",
       header: "Counsellor",
+      sortable: true,
+      sortValue: (r) => r.counsellorName || "",
       render: (r) => (
         <div className="flex items-center gap-3">
           <Avatar name={r.counsellorName} color={colorByCounsellor[r.counsellorId]} size="sm" />
@@ -74,16 +88,22 @@ export default function AdminReports() {
     {
       key: "persona",
       header: "Persona",
+      sortable: true,
+      sortValue: (r) => r.personaName || "",
       render: (r) => <span className="text-muted">{r.personaName}</span>,
     },
     {
       key: "scenario",
       header: "Scenario",
+      sortable: true,
+      sortValue: (r) => r.scenarioTitle || "",
       render: (r) => <span className="text-muted">{r.scenarioTitle}</span>,
     },
     {
       key: "score",
       header: "Score",
+      sortable: true,
+      sortValue: (r) => r.overall?.percent ?? -1,
       render: (r) => (
         <div className="flex items-center gap-2.5">
           <span className="tabular-nums font-semibold text-ink">{r.overall?.percent}%</span>
@@ -94,6 +114,8 @@ export default function AdminReports() {
     {
       key: "outcome",
       header: "Outcome",
+      sortable: true,
+      sortValue: (r) => r.overall?.outcome || "",
       render: (r) => (
         <Badge color={r.overall?.outcome === "Converted" ? "success" : "slate"}>
           {r.overall?.outcome}
@@ -104,6 +126,8 @@ export default function AdminReports() {
       key: "date",
       header: "Date",
       className: "whitespace-nowrap text-muted",
+      sortable: true,
+      sortValue: (r) => r.generatedAt || "",
       render: (r) => relativeDate(r.generatedAt),
     },
   ];
@@ -152,17 +176,22 @@ export default function AdminReports() {
                   <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                 </svg>
               }
+              action={
+                <button
+                  type="button"
+                  onClick={load}
+                  className="rounded-xl border border-line bg-white px-3 py-1.5 text-sm font-medium text-ink transition-colors hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-200"
+                >
+                  Try again
+                </button>
+              }
             />
           </div>
-        ) : filtered.length === 0 ? (
+        ) : reports.length === 0 ? (
           <div className="px-4 py-12">
             <EmptyState
-              title={counsellorId ? "No reports for this counsellor" : "No reports yet"}
-              hint={
-                counsellorId
-                  ? "Try clearing the filter or assigning a mock to this counsellor."
-                  : "Reports appear here once counsellors complete their mock sessions."
-              }
+              title="No reports yet"
+              hint="Reports appear here once counsellors complete their mock sessions."
               icon={
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
                   <path d="M9 17v-6m3 6V7m3 10v-3M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" />
@@ -170,11 +199,49 @@ export default function AdminReports() {
               }
             />
           </div>
+        ) : filtered.length === 0 ? (
+          <>
+            {reports.length > 8 && (
+              <div className="px-4 pt-3">
+                <SearchInput
+                  value={query}
+                  onChange={setQuery}
+                  placeholder="Search reports…"
+                  className="max-w-sm"
+                />
+              </div>
+            )}
+            <div className="px-4 py-12">
+              <EmptyState
+                title={counsellorId || query ? "No matching reports" : "No reports yet"}
+                hint={
+                  counsellorId || query
+                    ? "Try clearing the filter or search term."
+                    : "Reports appear here once counsellors complete their mock sessions."
+                }
+                icon={
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+                    <path d="M9 17v-6m3 6V7m3 10v-3M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" />
+                  </svg>
+                }
+              />
+            </div>
+          </>
         ) : (
           <Table
             columns={columns}
             rows={filtered}
             onRowClick={(r) => navigate(`/admin/reports/${r.id}`)}
+            toolbar={
+              reports.length > 8 ? (
+                <SearchInput
+                  value={query}
+                  onChange={setQuery}
+                  placeholder="Search reports…"
+                  className="max-w-sm"
+                />
+              ) : null
+            }
           />
         )}
       </Card>

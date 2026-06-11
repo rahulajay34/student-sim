@@ -105,6 +105,17 @@ export function initObjectionState() {
   return [];
 }
 
+// Truncate the student's actual sentence to ~140 chars for storage as the
+// objection's lastPhrasing (so the prompt can quote it and ban its reuse without
+// bloating the prompt).
+const PHRASING_MAX = 140;
+function truncPhrasing(text) {
+  if (typeof text !== "string") return null;
+  const t = text.replace(/\s+/g, " ").trim();
+  if (!t) return null;
+  return t.length > PHRASING_MAX ? t.slice(0, PHRASING_MAX - 1).trimEnd() + "…" : t;
+}
+
 /**
  * Record that a student has raised an objection of the given category.
  *
@@ -115,18 +126,25 @@ export function initObjectionState() {
  *    reset it to `open` (the counsellor's answer was insufficient — the objection
  *    is alive again) AND update `lastRaisedTurn`.
  *  - If the category has never been seen, push a new entry with `timesRaised: 1`.
+ *  - When `phrasing` (the student's actual sentence) is supplied, store it
+ *    truncated as `lastPhrasing` so the student prompt can quote it and forbid
+ *    reusing the same wording (the anti-loop fix). Omitting it leaves the prior
+ *    lastPhrasing in place (backward-compatible 3-arg call).
  *
  * @param {Array} state   The array returned by initObjectionState (mutated in place).
  * @param {string} category
  * @param {number} turn   Transcript turn index (0-based).
+ * @param {string} [phrasing] The student's actual sentence raising this concern.
  * @returns {void}
  */
-export function raiseObjection(state, category, turn) {
+export function raiseObjection(state, category, turn, phrasing) {
   if (!category) return;
+  const trimmed = truncPhrasing(phrasing);
   const existing = state.find((o) => o.category === category);
   if (existing) {
     existing.timesRaised += 1;
     existing.lastRaisedTurn = turn;
+    if (trimmed) existing.lastPhrasing = trimmed;
     // Re-open if the counsellor's answer did not permanently defuse it.
     if (existing.status === "addressed") {
       existing.status = "open";
@@ -140,6 +158,7 @@ export function raiseObjection(state, category, turn) {
       lastRaisedTurn: turn,
       addressedTurn: null,
       timesRaised: 1,
+      lastPhrasing: trimmed || null,
     });
   }
 }
@@ -286,16 +305,22 @@ function labelFor(category) {
 export function summarizeForPrompt(state) {
   if (!state || state.length === 0) return "";
 
+  // The explicit phrasing-ban clause, used for addressed concerns and for open
+  // concerns raised 2+ times. Quotes the student's own last sentence so the model
+  // cannot recycle it word-for-word.
+  const banClause = (o) =>
+    o.lastPhrasing
+      ? ` You already said it like this: "${o.lastPhrasing}" — do NOT reuse that phrasing.`
+      : "";
+
   const parts = state.map((o) => {
     const label = labelFor(o.category);
     if (o.status === "addressed") {
-      return `${label} (ANSWERED by the counsellor — do not repeat it verbatim; you may accept, ask ONE specific concrete follow-up question, or move on)`;
+      return `${label} (ANSWERED by the counsellor — do not raise it again verbatim; you may accept, ask ONE specific concrete follow-up question, or move on.${banClause(o)})`;
     }
-    // Open objection — add a loop-break nudge if raised multiple times.
-    const timesNote = o.timesRaised >= 3
-      ? ` — you have raised this ${o.timesRaised} times already; do NOT repeat the same phrase again; either escalate your doubt with new specifics or shift to a different concern`
-      : o.timesRaised === 2
-      ? ` — you raised this once before; rephrase rather than repeating verbatim`
+    // Open objection — loop-break nudge once it has been raised 2+ times.
+    const timesNote = o.timesRaised >= 2
+      ? ` — you have raised this ${o.timesRaised} times already; do NOT repeat the same wording; either escalate your doubt with new specifics or shift to a different concern.${banClause(o)}`
       : "";
     return `${label} (still open${timesNote})`;
   });
@@ -306,4 +331,34 @@ export function summarizeForPrompt(state) {
     : "";
 
   return `Concerns you have raised so far: ${parts.join(", ")}.${closingNote}`;
+}
+
+// steeringSummary(state) — a compact, plain-text summary (1-4 lines) for the
+// realtime mid-call steering block (contract C2). Lists the OPEN concerns and the
+// ANSWERED concerns, quoting each one's banned phrasing so the voice model does
+// not recycle the exact same sentence. Returns "" when nothing has been raised.
+export function steeringSummary(state) {
+  const arr = Array.isArray(state) ? state : [];
+  if (!arr.length) return "";
+
+  const open = arr.filter((o) => o.status === "open");
+  const addressed = arr.filter((o) => o.status === "addressed");
+  const lines = [];
+
+  if (open.length) {
+    const items = open.map((o) => {
+      const base = labelFor(o.category);
+      return o.lastPhrasing ? `${base} (do not reuse: "${o.lastPhrasing}")` : base;
+    });
+    lines.push(`Open concerns: ${items.join("; ")}.`);
+  }
+  if (addressed.length) {
+    const items = addressed.map((o) => {
+      const base = labelFor(o.category);
+      return o.lastPhrasing ? `${base} (answered; do not reuse: "${o.lastPhrasing}")` : `${base} (answered)`;
+    });
+    lines.push(`Answered concerns: ${items.join("; ")}.`);
+  }
+
+  return lines.join("\n");
 }

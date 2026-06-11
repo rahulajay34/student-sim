@@ -13,7 +13,7 @@ import { initObjectionState, raiseObjection, resolveObjection, detectObjectionCa
 import { instantCue, llmCue } from "./cues.js";
 import { getFirstMessage, getStudentReply, getStudentReplyStream } from "./engine.js";
 import { scoreMessage, isBackchannel, loadScoringConfig, saveScoringConfig, scoringPromptForInspection } from "./scoring.js";
-import { generateReport, needsRegeneration, reportPromptForInspection } from "./report.js";
+import { generateReport, needsRegeneration, reportPromptForInspection, stubReportSections, buildFallbackReport } from "./report.js";
 import { buildAdminAnalytics, buildCounsellorAnalytics } from "./analytics.js";
 import { classifyCounsellorTurn } from "./classify.js";
 import { getPromptConfig } from "./promptConfig.js";
@@ -881,39 +881,101 @@ app.post("/api/sessions/:id/observe", lockedHandler(async (req, res) => {
   }
 }));
 
+// --- Async report generation (C4) ------------------------------------------
+// In-memory map of in-flight background generations, keyed by sessionId, so a
+// re-call of /end while a report is generating does not kick off a second LLM
+// fan-out. Cleared when the promise settles.
+const reportJobs = new Map();
+
+// Run report generation in the background (OUTSIDE the per-session lock so it
+// never holds the lock for the full LLM duration) and update the persisted
+// report to status "ready" or "fallback" when done. Errors are caught and
+// produce a fallback report rather than an unhandled rejection.
+function startReportJob(sessionId, reportId) {
+  if (reportJobs.has(sessionId)) return reportJobs.get(sessionId);
+
+  const job = (async () => {
+    // Read the session fresh at job start; it was marked ended at stub time.
+    const session = store.getById("sessions", sessionId);
+    if (!session) return;
+
+    // generateReport handles its own retries and returns a {fallback:true} shape
+    // on Call A failure; only an unexpected throw lands in the catch below.
+    let generated;
+    try {
+      generated = await generateReport(session);
+    } catch (err) {
+      console.error("[report] background generation threw; using fallback:", err?.message);
+      generated = buildFallbackReport(session);
+    }
+
+    const stillThere = store.getById("reports", reportId);
+    if (!stillThere) return; // report was deleted while generating
+
+    if (generated.fallback) {
+      store.update("reports", reportId, {
+        ...generated,
+        status: "fallback",
+        regenerable: true,
+        generatedAt: new Date().toISOString(),
+      });
+    } else {
+      store.update("reports", reportId, {
+        // Clear any stale fallback flags from a prior generation in place.
+        fallback: false,
+        regenerable: false,
+        ...generated,
+        status: "ready",
+        generatedAt: new Date().toISOString(),
+      });
+    }
+  })().catch((err) => {
+    console.error("[report] background job failed unexpectedly:", err?.message);
+    // Last-resort: mark the report as fallback so the UI can offer regeneration.
+    const rec = store.getById("reports", reportId);
+    if (rec) store.update("reports", reportId, { status: "fallback", regenerable: true });
+  }).finally(() => {
+    reportJobs.delete(sessionId);
+  });
+
+  reportJobs.set(sessionId, job);
+  return job;
+}
+
 app.post("/api/sessions/:id/end", lockedHandler(async (req, res) => {
   // Serialized against /message for the same session so an end can't interleave
   // with a ~45s turn's full-object write (#7). Read inside the lock for freshness.
+  // The stub is persisted and the session marked ended INSIDE the lock (fast);
+  // the LLM fan-out runs in the background (startReportJob) OUTSIDE the lock.
   const session = store.getById("sessions", req.params.id);
   if (!session) return res.status(404).json({ error: "Session not found" });
 
   try {
-    // Idempotent: if a GOOD report already exists for this session, return it.
-    // But a previous neutral fallback (fallback:true / needsRegeneration) is NOT
-    // a terminal state — allow regeneration in place instead of short-circuiting.
     const existing = store.getAll("reports").find((r) => r.sessionId === session.id);
-    if (existing && !needsRegeneration(existing)) return res.json({ reportId: existing.id });
-
-    const counsellor = store.getById("users", session.counsellorId);
-    const generated = await generateReport(session, { counsellorName: counsellor?.name || "" });
 
     if (existing) {
-      // Replace the fallback report's generated payload in place (keep its id).
-      // Clear the stale fallback flags first so a now-successful regeneration does
-      // not inherit fallback:true via the shallow merge in store.update.
-      const updated = store.update("reports", existing.id, {
-        fallback: false,
-        regenerable: false,
-        ...generated,
-        transcript: session.transcript,
-        generatedAt: new Date().toISOString(),
-      });
-      store.update("sessions", session.id, { status: "ended", endedAt: new Date().toISOString() });
-      if (session.assignmentId) store.update("assignments", session.assignmentId, { status: "completed", reportId: existing.id });
-      return res.json({ reportId: updated.id });
+      // Still generating → return the same { reportId, status } (idempotent).
+      if (existing.status === "generating") {
+        return res.json({ reportId: existing.id, status: "generating" });
+      }
+      // A neutral fallback is not terminal: regenerate in place. Flip its status
+      // back to "generating" and kick a fresh background job.
+      if (needsRegeneration(existing) || existing.status === "fallback") {
+        store.update("reports", existing.id, { status: "generating" });
+        store.update("sessions", session.id, { status: "ended", endedAt: new Date().toISOString() });
+        if (session.assignmentId) store.update("assignments", session.assignmentId, { status: "completed", reportId: existing.id });
+        startReportJob(session.id, existing.id);
+        return res.json({ reportId: existing.id, status: "generating" });
+      }
+      // A good (ready) report already exists → return it unchanged.
+      return res.json({ reportId: existing.id, status: existing.status || "ready" });
     }
 
-    const report = {
+    // No report yet: persist a STUB with all instantly-available data and return
+    // immediately. The LLM sections fill in the background.
+    const counsellor = store.getById("users", session.counsellorId);
+
+    const stub = {
       id: store.newId("rep"),
       sessionId: session.id,
       assignmentId: session.assignmentId,
@@ -921,16 +983,22 @@ app.post("/api/sessions/:id/end", lockedHandler(async (req, res) => {
       counsellorName: counsellor?.name || "",
       personaName: session.personaSnapshot?.name || "",
       scenarioTitle: session.scenarioSnapshot?.title || "",
-      ...generated,
-      transcript: session.transcript,
+      status: "generating",
+      // Instantly-available sections (rendered immediately by ReportDetail):
+      // finalScore, scoreArc, benchmarks, transcript.
+      ...stubReportSections(session),
       generatedAt: new Date().toISOString(),
     };
-    store.insert("reports", report);
+    store.insert("reports", stub);
 
+    // Mark the session ended + assignment completed at stub time so locks release.
     store.update("sessions", session.id, { status: "ended", endedAt: new Date().toISOString() });
-    if (session.assignmentId) store.update("assignments", session.assignmentId, { status: "completed", reportId: report.id });
+    if (session.assignmentId) store.update("assignments", session.assignmentId, { status: "completed", reportId: stub.id });
 
-    res.json({ reportId: report.id });
+    // Kick the background generation (outside the lock — returns immediately).
+    startReportJob(session.id, stub.id);
+
+    res.json({ reportId: stub.id, status: "generating" });
   } catch (err) {
     console.error("Error in /sessions/end:", err.message);
     return res.status(502).json({ error: "Report generation failed — please try ending the session again." });

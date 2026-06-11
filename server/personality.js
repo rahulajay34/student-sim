@@ -18,7 +18,7 @@ export const DEFAULT_PERSONALITY = {
   talkativeness: 2,
   humour: 2,
   skepticism: 3,
-  formality: 2,
+  formality: 3,
   quirks: [],
   notes: "",
 };
@@ -122,20 +122,19 @@ export function renderPersonalitySection(flavour) {
     lines.push("You are noticeably skeptical — even reassuring answers only partly settle your doubts.");
   }
 
-  // Formality + LANGUAGE guidance. English is the default register for every
-  // student (see registerNote); this line decides how much, if any, Hindi/
-  // Hinglish a particular persona naturally mixes in, keyed to formality (1-5).
-  // Higher formality = purer English; lower formality = occasional Hindi words —
-  // but always majority English. Fail-soft: a non-numeric formality renders
-  // nothing extra (the default English register from registerNote stands).
+  // Formality + LANGUAGE guidance. The single language policy (contract C6) is the
+  // source of truth for every student; formality only tunes HOW polished the
+  // English is, never which Hindi tokens are named (there are none). Fail-soft: a
+  // non-numeric formality renders nothing extra (the default policy from
+  // registerNote stands).
   const form = flavour.formality;
   if (typeof form === "number") {
     if (form >= 4) {
-      lines.push("LANGUAGE: speak clear, correct, conversational English only. Do NOT mix in Hindi or Hinglish words.");
+      lines.push("LANGUAGE: Speak natural Indian English, on the more polished and correct side. At most one light Hindi word every few turns; never full Hindi sentences unless the counsellor themselves speaks full Hindi sentences repeatedly.");
     } else if (form === 3) {
-      lines.push("LANGUAGE: speak natural conversational English. Only a rare Hindi word may slip out if it genuinely fits — otherwise stay in English.");
+      lines.push("LANGUAGE: Speak natural Indian English. At most one light Hindi word every few turns; never full Hindi sentences unless the counsellor themselves speaks full Hindi sentences repeatedly.");
     } else {
-      lines.push("LANGUAGE: speak mostly English, but you are casual — you may naturally drop in the occasional Hindi/Hinglish word or phrase (like \"haan\", \"theek hai\", \"matlab\") when you are being informal. Still keep it majority English; do not switch fully to Hindi.");
+      lines.push("LANGUAGE: Speak natural Indian English, casual and a little imperfect. At most one light Hindi word every few turns; never full Hindi sentences unless the counsellor themselves speaks full Hindi sentences repeatedly.");
     }
   }
 

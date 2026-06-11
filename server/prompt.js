@@ -17,9 +17,16 @@ import { getPromptConfig } from "./promptConfig.js";
 import { fmtINR } from "./courseContext.js";
 import { renderPersonalitySection, DEFAULT_PERSONALITY, rollSessionFlavour } from "./personality.js";
 import { voiceBankFor, registerStatsFor } from "./register.js";
-import { summarizeForPrompt, openObjections, addressedObjections } from "./objections.js";
+import { summarizeForPrompt } from "./objections.js";
+import { computeDisposition, renderDispositionSection, stageToLegacyHint } from "./disposition.js";
 
 export { fmtINR };
+
+// Contract C6 — the SINGLE source of truth for the language policy, used verbatim
+// everywhere a language rule appears in the student prompt. Natural Indian English;
+// a light Hindi word only occasionally; never full Hindi sentences unless the
+// counsellor themselves speaks full Hindi sentences repeatedly.
+export const LANGUAGE_POLICY = "Speak natural Indian English. At most one light Hindi word every few turns; never full Hindi sentences unless the counsellor themselves speaks full Hindi sentences repeatedly.";
 
 const DEFAULT_BOOKING = "₹4,000";
 
@@ -107,48 +114,16 @@ RIGHT NOW — Phase ${currentPhase} instruction:
 ${instruction}`;
 }
 
-function buildScoreSection(score, booking) {
-  let state;
-  if (score >= 85) state = "You are genuinely interested and warm. You are likely to agree if the counsellor closes well.";
-  else if (score >= 70) state = "You are cautiously positive. You will agree but want one or two final assurances first.";
-  else if (score >= 50) state = "You are on the fence. You need more convincing. Raise another concern if the counsellor tries to close.";
-  else if (score >= 30) state = "You are skeptical and pulling back. Express doubt clearly. Do not entertain closing attempts.";
-  else state = "You have mentally checked out. Politely but firmly say this is not the right fit for you right now. Do not engage with further pressure.";
-
-  return `CURRENT SATISFACTION SCORE: ${score}/100
-AGREEMENT THRESHOLD: 70
-
-Your current emotional state: ${state}
-
-Behave according to your score:
-- 85-100: Warm and interested. Likely to agree if the counsellor closes well.
-- 70-84: Cautiously positive. Will agree but wants one or two final assurances.
-- 50-69: On the fence. Needs more convincing. Raise another concern if counsellor tries to close.
-- 30-49: Skeptical and pulling back. Express doubt clearly. Do not entertain closing attempts.
-- 0-29: Mentally checked out. Politely decline and do not engage with pressure.
-
-CRITICAL RULE: If the counsellor attempts to close (asks you to pay ${booking}, sends a payment link, or asks for a commitment) and your score is below 70, you must firmly decline. Reference a specific concern that was not properly addressed. Do not cave to pressure. Be polite but clear and final.
-
-If your score is above 70 and the counsellor closes well, you may agree. Ask for the payment link and next steps.`;
-}
-
-// CONVINCEMENT — the single strongest steer on whether the student is moving
-// toward "yes". Rendered AFTER the score section so it overrides the stock
-// score-band behaviour when the counsellor has actually earned progress. The
-// hint ('resistant' | 'warming' | 'ready') is computed in index.js from the
-// live score, the convincement thresholds, and the objection state; for
-// inspection it is recomputed from the stored session. null/'resistant' keeps
-// today's behaviour (renders nothing extra).
-function buildConvincementSection(cfg, convincementHint) {
-  if (!convincementHint || convincementHint === "resistant") return "";
-  const c = cfg.convincement || {};
-  const body =
-    convincementHint === "ready" ? c.readyText :
-    convincementHint === "warming" ? c.warmingText :
-    "";
-  if (!body) return "";
-  return `WHERE YOU ARE EMOTIONALLY RIGHT NOW (overrides the generic score bands above):
-${body}`;
+// DISPOSITION — the dynamic-convincement block. REPLACES the old hardcoded
+// buildScoreSection (the "AGREEMENT THRESHOLD: 70" / below-70 decline rule / five
+// fixed score-band strings / numeric score exposure) AND buildConvincementSection.
+// The student is now steered by an EMERGENT narrative of how they feel and what
+// would move them — computed in disposition.js from score TRAJECTORY, the
+// objection ledger, good-turn count, and a hidden per-session persuadability roll.
+// No numbers, no score, no threshold are ever exposed to the student.
+function buildDispositionSection(session) {
+  const disposition = computeDisposition(session);
+  return renderDispositionSection(disposition);
 }
 
 // OBJECTION STATE — injects objections.summarizeForPrompt(state) so the student
@@ -409,12 +384,32 @@ export const EMOTION_INSTRUCTION = `EMOTION TAG (machine-read protocol — ALWAY
 // lastAdjustment: number | null — the counsellor's LAST scoring adjustment. >= +2
 //           softens the student and lets a worry go this turn; <= -2 makes them a
 //           bit more doubtful; in-between / null renders nothing.
-export function buildSystemPrompt(persona, scenario, currentPhase, satisfactionScore = 50, course = null, turnHint = null, flavour = null, convincementHint = null, objectionState = null, turnVerbosity = null, lastAdjustment = null) {
+// session:  the full session object (optional) — threaded only for the dynamic
+//           disposition (needs scoreHistory + id + persona/scenario traits). When
+//           absent (legacy positional callers / tests) a synthetic session is
+//           reconstructed from the positional persona/scenario/objectionState so
+//           the disposition still renders deterministically.
+export function buildSystemPrompt(persona, scenario, currentPhase, satisfactionScore = 50, course = null, turnHint = null, flavour = null, convincementHint = null, objectionState = null, turnVerbosity = null, lastAdjustment = null, session = null) {
   const cfg = getPromptConfig();
   const booking = bookingOf(course);
   const archetypeBlock = buildArchetypeBlock(persona, scenario, currentPhase);
   const tuningSection = buildTuningSection(cfg, scenario);
-  const convincementSection = buildConvincementSection(cfg, convincementHint);
+
+  // DISPOSITION replaces the old score-band + convincement sections. Use the real
+  // session when threaded; otherwise reconstruct a minimal one so the narrative is
+  // still deterministic for positional callers.
+  const dispositionSession = (session && typeof session === "object")
+    ? session
+    : {
+        id: scenario?.id || persona?.id || "",
+        personaSnapshot: persona || {},
+        scenarioSnapshot: scenario || {},
+        objectionState: Array.isArray(objectionState) ? objectionState : [],
+        scoreHistory: typeof lastAdjustment === "number"
+          ? [{ adjustment: lastAdjustment, score: satisfactionScore }]
+          : [],
+      };
+  const dispositionSection = buildDispositionSection(dispositionSession);
   const objectionStateSection = buildObjectionStateSection(cfg, objectionState);
   const turnVerbositySection = buildTurnVerbositySection(cfg, turnVerbosity);
   const momentumSection = buildMomentumSection(cfg, lastAdjustment);
@@ -453,8 +448,8 @@ ${persona.coreAnxiety}
 
 ${buildPhaseSection(cfg, currentPhase, booking)}
 
-${buildScoreSection(satisfactionScore, booking)}
-${tuningSection ? `\n${tuningSection}\n` : ""}${convincementSection ? `\n${convincementSection}\n` : ""}${momentumSection ? `\n${momentumSection}\n` : ""}${objectionStateSection ? `\n${objectionStateSection}\n` : ""}
+${dispositionSection}
+${tuningSection ? `\n${tuningSection}\n` : ""}${momentumSection ? `\n${momentumSection}\n` : ""}${objectionStateSection ? `\n${objectionStateSection}\n` : ""}
 YOUR PERSONA-SPECIFIC BEHAVIOUR BY PHASE:
 ${persona.behaviourPrompt}
 
@@ -509,9 +504,11 @@ export function composeForInspection(session) {
     ? lastEntry.adjustment
     : null;
 
+  // Thread the full session as the LAST positional arg so the disposition narrative
+  // reads the real scoreHistory + id + traits (not a reconstructed stub).
   return buildSystemPrompt(
     personaSnapshot, scenarioSnapshot, currentPhase, satisfactionScore, courseSnapshot,
-    null, personalityFlavour, convincementHint, objectionState, turnVerbosity, lastAdjustment,
+    null, personalityFlavour, convincementHint, objectionState, turnVerbosity, lastAdjustment, session,
   );
 }
 
@@ -540,40 +537,15 @@ export function convincementParamsFor(difficulty, hesitancy = 3) {
   return { difficulty: d, threshold, effortTurns: effort };
 }
 
-// Compute readyToConvert + the convincement hint for a session. Shared by the
-// per-turn path in index.js and composeForInspection so the inspection prompt
-// matches what the LLM actually saw. Returns one of:
-//   'ready'      — readyToConvert: score >= threshold OR (no open objections AND
-//                  >= effortTurns counsellor turns scored >= +2 AND score >= threshold-10)
-//   'warming'    — score within 10 of threshold, OR at least half the raised
-//                  objections have been addressed
-//   'resistant'  — default (current behaviour)
+// THIN ALIAS over the dynamic disposition (W4). The old hardcoded threshold logic
+// is gone; willingness now emerges from disposition.js. This wrapper is kept so
+// existing imports (engine.js, cues.js, etc.) keep working — it maps the emergent
+// disposition.stage to the legacy three-value hint string:
+//   guarded | listening -> 'resistant'
+//   warming             -> 'warming'
+//   ready               -> 'ready'
 export function computeConvincementHint(session) {
   if (!session) return "resistant";
-  const { satisfactionScore = 50, scenarioSnapshot, objectionState = [] } = session;
-  const { threshold, effortTurns } = convincementParamsFor(scenarioSnapshot?.difficulty, scenarioSnapshot?.hesitancy);
-
-  const state = Array.isArray(objectionState) ? objectionState : [];
-  const open = openObjections(state);
-  const addressed = addressedObjections(state);
-
-  // Count counsellor turns that scored a real positive (>= +2).
-  const goodTurns = (session.scoreHistory || []).filter((h) => (h?.adjustment ?? 0) >= 2).length;
-
-  const readyToConvert =
-    satisfactionScore >= threshold ||
-    (open.length === 0 && goodTurns >= effortTurns && satisfactionScore >= threshold - 10);
-  if (readyToConvert) return "ready";
-
-  const totalRaised = state.length;
-  const halfAddressed = totalRaised > 0 && addressed.length >= Math.ceil(totalRaised / 2);
-  // (#10) Real-progress guard: warming at score=50 on turn 1 is too early.
-  // Require either (a) the score has genuinely moved above 50, or (b) at least
-  // one good counsellor turn, OR (c) half the raised objections are addressed.
-  const warmingByScore =
-    satisfactionScore >= threshold - 10 &&
-    (satisfactionScore > 50 || goodTurns >= 1);
-  if (warmingByScore || halfAddressed) return "warming";
-
-  return "resistant";
+  const { stage } = computeDisposition(session);
+  return stageToLegacyHint(stage);
 }

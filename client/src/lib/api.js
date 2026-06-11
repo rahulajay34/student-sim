@@ -43,6 +43,9 @@ export const api = {
   startSession: (payload) => req("/sessions/start", { method: "POST", body: payload }),
   sendMessage: (id, message, deliveryMetrics, thinking) => req(`/sessions/${id}/message`, { method: "POST", body: { message, ...(deliveryMetrics ? { deliveryMetrics } : {}), ...(thinking ? { thinking } : {}) } }),
   endSession: (id) => req(`/sessions/${id}/end`, { method: "POST" }),
+  // regenerateReport: re-call /end for a fallback report → kicks background regen,
+  // returns { reportId, status:"generating" } (idempotent while generating).
+  regenerateReport: (sessionId) => req(`/sessions/${sessionId}/end`, { method: "POST" }),
   getSession: (id) => req(`/sessions/${id}`),
   getSessionCue: (id) => req(`/sessions/${id}/cue`, { method: "POST" }),
 

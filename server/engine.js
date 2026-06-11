@@ -61,7 +61,7 @@ export async function getFirstMessage(persona, scenario, course, flavour = null)
     {
       role: "user",
       content:
-        "Start the conversation. Your very first message must be only a self-introduction of 2-3 sentences. Mention your background based on your persona and why you took the test. Nothing else.",
+        "Start the conversation. Your very first message must be only a self-introduction of 2-3 sentences. Improvise it fresh in your own words from your real facts (your name, what you do or study, your city, and why you took the test) — never a rehearsed-sounding script, and phrase it differently than a generic intro would. Nothing else.",
     },
   ], STUDENT_SAMPLING);
   return parseEmotion(raw);
@@ -197,9 +197,12 @@ function prepareReply(session) {
   const lastEntry = history.length ? history[history.length - 1] : null;
   const lastAdjustment = (lastEntry && typeof lastEntry.adjustment === "number") ? lastEntry.adjustment : null;
 
+  // Thread the full session as the LAST positional arg so the dynamic disposition
+  // narrative reads the real scoreHistory + session id + persona/scenario traits
+  // (stable persuadability across turns), not a stub reconstructed from positionals.
   const systemPrompt = buildSystemPrompt(
     personaSnapshot, scenarioSnapshot, currentPhase, satisfactionScore, courseSnapshot,
-    turnHint, personalityFlavour, convincementHint, objectionState, turnVerbosity, lastAdjustment,
+    turnHint, personalityFlavour, convincementHint, objectionState, turnVerbosity, lastAdjustment, session,
   );
   const messages = [{ role: "system", content: systemPrompt }, ...transcriptToMessages(transcript)];
   // `transcript` is needed by gateReply/guardLoop for the regeneration + anti-loop

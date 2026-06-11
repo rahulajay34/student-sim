@@ -1,7 +1,9 @@
 // node --test server/tests/a2-fixes.test.mjs
 //
 // Unit tests for A2 workstream fixes:
-//   (#10) computeConvincementHint warming real-progress guard
+//   (W4) computeConvincementHint is now a thin alias over the dynamic disposition
+//        — willingness EMERGES from momentum + objection ledger, not a fixed
+//        score threshold (the old #10 warming/ready threshold tests are gone).
 //   (#22) RELATED_GROUPS split — fee does NOT auto-close competing_priorities
 //   (#19) advancePhase case-1 counsellor-only counter
 //
@@ -27,8 +29,10 @@ import { computeConvincementHint } from "../prompt.js";
 // ─── Helper: build a minimal session object ──────────────────────────────────
 function makeSession(overrides = {}) {
   return {
+    id: "ses-a2-fixes",
     satisfactionScore: 50,
     scenarioSnapshot: { difficulty: "medium" },
+    personaSnapshot: { personality: { skepticism: 3 } },
     objectionState: [],
     scoreHistory: [],
     ...overrides,
@@ -36,51 +40,24 @@ function makeSession(overrides = {}) {
 }
 
 // ============================================================================
-// (#10) computeConvincementHint — warming real-progress guard
+// (W4) computeConvincementHint — now a thin alias over disposition.stage.
+//   Returns one of 'resistant' | 'warming' | 'ready'. A fresh call with no
+//   momentum and nothing addressed must NOT already read 'ready'; a string in
+//   the legacy set is always returned (so old imports keep working).
 // ============================================================================
 
-test("#10: warming does NOT fire at start score=50 with zero good turns and no objections addressed", () => {
-  const session = makeSession({ satisfactionScore: 50, scoreHistory: [] });
-  // medium threshold is 60; score=50 is within 10 (>=50), but no progress yet
-  const hint = computeConvincementHint(session);
-  assert.equal(hint, "resistant", `expected 'resistant' at score=50 with no good turns, got '${hint}'`);
+test("W4: computeConvincementHint returns a legacy hint string", () => {
+  const hint = computeConvincementHint(makeSession());
+  assert.ok(["resistant", "warming", "ready"].includes(hint), `unexpected hint '${hint}'`);
 });
 
-test("#10: warming fires when score has moved above 50 even without a good-turn", () => {
-  const session = makeSession({ satisfactionScore: 51, scoreHistory: [] });
-  // 51 > 50 satisfies (satisfactionScore > 50) branch, and 51 >= 60-10=50
-  const hint = computeConvincementHint(session);
-  assert.equal(hint, "warming", `expected 'warming' at score=51, got '${hint}'`);
+test("W4: a fresh session (no momentum, nothing addressed) is not already 'ready'", () => {
+  const hint = computeConvincementHint(makeSession({ scoreHistory: [], objectionState: [] }));
+  assert.notEqual(hint, "ready", `a brand-new call should not read 'ready', got '${hint}'`);
 });
 
-test("#10: warming fires at score=50 when at least 1 good turn exists", () => {
-  const session = makeSession({
-    satisfactionScore: 50,
-    scoreHistory: [{ turn: 1, score: 52, adjustment: 2 }],
-  });
-  const hint = computeConvincementHint(session);
-  assert.equal(hint, "warming", `expected 'warming' with 1 good turn at score=50, got '${hint}'`);
-});
-
-test("#10: warming fires when half objections addressed even at score=50 with no good turns", () => {
-  const state = initObjectionState();
-  raiseObjection(state, "fee", 1);
-  resolveObjection(state, "fee", 3); // 1 of 1 addressed = 100% >= 50%
-  const session = makeSession({ satisfactionScore: 50, objectionState: state, scoreHistory: [] });
-  const hint = computeConvincementHint(session);
-  assert.equal(hint, "warming", `expected 'warming' when half+ objections addressed, got '${hint}'`);
-});
-
-test("#10: ready fires when score >= threshold (60) regardless of progress guard", () => {
-  const session = makeSession({ satisfactionScore: 60, scoreHistory: [] });
-  const hint = computeConvincementHint(session);
-  assert.equal(hint, "ready", `expected 'ready' at score=60 (medium threshold), got '${hint}'`);
-});
-
-test("#10: resistant still fires when score is below 50 and no objections", () => {
-  const session = makeSession({ satisfactionScore: 40, scoreHistory: [] });
-  const hint = computeConvincementHint(session);
-  assert.equal(hint, "resistant", `expected 'resistant' at score=40, got '${hint}'`);
+test("W4: null session falls soft to 'resistant'", () => {
+  assert.equal(computeConvincementHint(null), "resistant");
 });
 
 // ============================================================================

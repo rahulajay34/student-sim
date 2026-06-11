@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Card from "../../ui/Card";
 import Avatar from "../../ui/Avatar";
 import Spinner from "../../ui/Spinner";
@@ -22,31 +22,35 @@ export default function Counsellors() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      setLoading(true);
-      setError("");
-      try {
-        const [c, a, r] = await Promise.all([
-          api.getCounsellors(),
-          api.getAssignments(),
-          api.getReports(),
-        ]);
-        if (!alive) return;
-        setCounsellors(c || []);
-        setAssignments(a || []);
-        setReports(r || []);
-      } catch (e) {
-        if (alive) setError(e.message || "Failed to load counsellors.");
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [c, a, r] = await Promise.all([
+        api.getCounsellors(),
+        api.getAssignments(),
+        api.getReports(),
+      ]);
+      setCounsellors(c || []);
+      setAssignments(a || []);
+      setReports(r || []);
+    } catch (e) {
+      setError(e.message || "Failed to load counsellors.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    // Defer the load so the effect body itself doesn't call setState synchronously.
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) load();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [load]);
 
   return (
     <div className="space-y-6">
@@ -60,8 +64,18 @@ export default function Counsellors() {
       </header>
 
       {error && (
-        <Card className="border-danger/30 bg-danger-soft p-4">
+        <Card
+          role="alert"
+          className="flex items-start justify-between gap-4 border-danger/30 bg-danger-soft p-4"
+        >
           <p className="text-sm font-medium text-danger">{error}</p>
+          <button
+            type="button"
+            onClick={load}
+            className="shrink-0 text-sm font-medium text-danger underline-offset-2 hover:underline"
+          >
+            Retry
+          </button>
         </Card>
       )}
 

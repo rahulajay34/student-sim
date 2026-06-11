@@ -86,3 +86,26 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 .animate-fadeup { animation: fadeup 0.25s ease-out; }
+
+/* ── Modal entrance ─────────────────────────────────────────────────── */
+@keyframes modal-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modal-pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-modal-fade { animation: modal-fade 0.15s ease-out; }
+.animate-modal-pop { animation: modal-pop 0.18s ease-out; }
+
+/* Respect users who prefer less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

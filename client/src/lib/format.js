@@ -1,5 +1,45 @@
 // Shared formatting + presentation helpers used across pages and the UI kit.
 
+import { useEffect, useRef, useState } from "react";
+
+// Whether the user prefers reduced motion (read once, lazily).
+function prefersReducedMotion() {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
+// Animate a number from 0 → target over `duration` ms on mount (and whenever
+// `target` changes). Returns the current animated value. Honors
+// prefers-reduced-motion by snapping straight to the target.
+// Non-finite targets are returned untouched so callers can render an em dash.
+export function useCountUp(target, duration = 500) {
+  const numeric = typeof target === "number" && Number.isFinite(target);
+  // Lazy initial state avoids a synchronous setState in the effect: when motion
+  // is off (or the target isn't numeric) we start already at the final value.
+  const animate = numeric && duration > 0 && !prefersReducedMotion();
+  const [value, setValue] = useState(() => (animate ? 0 : target));
+  const frameRef = useRef(0);
+
+  useEffect(() => {
+    if (!animate) return; // nothing to schedule; value already at target
+    let start = null;
+    const tick = (ts) => {
+      if (start == null) start = ts;
+      const t = Math.min(1, (ts - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic for a calm settle
+      setValue(t < 1 ? target * eased : target);
+      if (t < 1) frameRef.current = requestAnimationFrame(tick);
+    };
+    frameRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frameRef.current);
+  }, [target, duration, animate]);
+
+  return numeric ? value : target;
+}
+
 // 'success' | 'warn' | 'danger' for a 0-100 satisfaction score (thresholds 70 / 50).
 export function scoreColor(n) {
   if (n >= 70) return "success";

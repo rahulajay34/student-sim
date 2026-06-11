@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth.jsx";
@@ -17,32 +17,35 @@ export default function Reports() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const userId = user?.id;
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (!user?.id) return;
-    let active = true;
+  const load = useCallback(async () => {
+    if (!userId) return;
     setLoading(true);
     setError(null);
-    api
-      .getReports(user.id)
-      .then((data) => {
-        if (!active) return;
-        setReports(Array.isArray(data) ? data : []);
-      })
-      .catch((err) => {
-        if (!active) return;
-        setError(err.message || "Failed to load reports.");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+    try {
+      const data = await api.getReports(userId);
+      setReports(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError(err.message || "Failed to load reports.");
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    // Defer so the effect body doesn't call setState synchronously.
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) load();
+    });
     return () => {
-      active = false;
+      cancelled = true;
     };
-  }, [user?.id]);
+  }, [load]);
 
   const open = (id) => navigate("/app/reports/" + id);
 
@@ -141,7 +144,7 @@ export default function Reports() {
               </svg>
             }
             action={
-              <Button variant="secondary" size="sm" onClick={() => navigate(0)}>
+              <Button variant="secondary" size="sm" onClick={load}>
                 Try again
               </Button>
             }

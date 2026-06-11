@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Card, { CardHeader } from "../../ui/Card";
 import StatCard from "../../ui/StatCard";
+import CountUp from "../../ui/CountUp";
 import Button from "../../ui/Button";
 import Badge from "../../ui/Badge";
 import EmptyState from "../../ui/EmptyState";
@@ -306,16 +307,22 @@ export default function AdminDashboard() {
     {
       key: "name",
       header: "Counsellor",
+      sortable: true,
+      sortValue: (row) => row.name || "",
       render: (row) => <span className="font-medium text-ink">{row.name}</span>,
     },
     {
       key: "mocks",
       header: "Mocks",
+      sortable: true,
+      sortValue: (row) => row.mocks ?? -1,
       render: (row) => <span className="tabular-nums">{row.mocks}</span>,
     },
     {
       key: "avgPercent",
       header: "Avg %",
+      sortable: true,
+      sortValue: (row) => row.avgPercent ?? -1,
       render: (row) =>
         row.avgPercent != null ? (
           <span className="tabular-nums font-semibold">{Math.round(row.avgPercent)}%</span>
@@ -326,6 +333,8 @@ export default function AdminDashboard() {
     {
       key: "lastFiveDelta",
       header: "Last-5 trend",
+      sortable: true,
+      sortValue: (row) => row.lastFiveDelta ?? 0,
       render: (row) => {
         const d = row.lastFiveDelta;
         if (d == null || Math.abs(d) < 0.05) return <span className="text-muted">—</span>;
@@ -362,7 +371,7 @@ export default function AdminDashboard() {
       {/* Page header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-ink">Overview</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-ink">Overview</h2>
           <p className="mt-0.5 text-sm text-muted">
             Team performance, trends, and coaching insights at a glance.
           </p>
@@ -376,7 +385,7 @@ export default function AdminDashboard() {
       </div>
 
       {error && (
-        <Card className="border-danger/30 bg-danger-soft p-4">
+        <Card role="alert" className="border-danger/30 bg-danger-soft p-4">
           <p className="text-sm font-medium text-danger">{error}</p>
         </Card>
       )}
@@ -385,18 +394,30 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           label="Mocks completed"
-          value={kpis.mocksCompleted ?? 0}
+          value={<CountUp value={kpis.mocksCompleted ?? 0} />}
           icon={<Icon d={ICON.mocks} />}
         />
         <StatCard
           label="Avg score"
-          value={kpis.avgScore != null ? `${Math.round(kpis.avgScore)}%` : "—"}
+          value={
+            kpis.avgScore != null ? (
+              <CountUp value={Math.round(kpis.avgScore)} format={(n) => `${n}%`} />
+            ) : (
+              "—"
+            )
+          }
           hint={trendLabel}
           icon={<Icon d={ICON.score} />}
         />
         <StatCard
           label="Completion rate"
-          value={kpis.completionRatePct != null ? `${Math.round(kpis.completionRatePct)}%` : "—"}
+          value={
+            kpis.completionRatePct != null ? (
+              <CountUp value={Math.round(kpis.completionRatePct)} format={(n) => `${n}%`} />
+            ) : (
+              "—"
+            )
+          }
           hint="Assignments completed"
           icon={<Icon d={ICON.rate} />}
         />
