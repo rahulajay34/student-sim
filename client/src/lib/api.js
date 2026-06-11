@@ -44,6 +44,7 @@ export const api = {
   sendMessage: (id, message, deliveryMetrics) => req(`/sessions/${id}/message`, { method: "POST", body: deliveryMetrics ? { message, deliveryMetrics } : { message } }),
   endSession: (id) => req(`/sessions/${id}/end`, { method: "POST" }),
   getSession: (id) => req(`/sessions/${id}`),
+  getSessionCue: (id) => req(`/sessions/${id}/cue`, { method: "POST" }),
 
   // reports
   getReports: (counsellorId) => req(`/reports${qs(counsellorId)}`),
@@ -58,4 +59,13 @@ export const api = {
   // analytics
   getAdminAnalytics: () => req("/analytics/admin"),
   getCounsellorAnalytics: (id) => req(`/analytics/counsellor/${id}`),
+
+  // config (admin transparency)
+  getPromptConfig: () => req("/config/prompts"),
+  updatePromptConfig: (data) => req("/config/prompts", { method: "PUT", body: data }),
+  getScoringConfig: () => req("/config/scoring"),
+  updateScoringConfig: (data) => req("/config/scoring", { method: "PUT", body: data }),
+
+  // session prompt inspection (admin-only at UI layer)
+  getSessionPrompts: (id) => req(`/sessions/${id}/prompt`),
 };

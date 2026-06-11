@@ -44,7 +44,27 @@
     "batchInfo": "Next cohort dates announced by admissions.",
     "sourceUrl": "https://www.masaischool.com/program/iim-mumbai/ai-bi",
     "scrapedAt": "2026-06-10T00:00:00.000Z",
-    "active": true
+    "active": true,
+    "faqQuestions": [
+      "How will program-related communication and learning resources be shared?",
+      "How will programme-related communication and learning resources be shared?",
+      "What is the AI, Analytics, and Disruptive Technologies for Business Intelligence program?",
+      "What is the program duration?",
+      "How is the programme structured?",
+      "How many sessions are included in the programme?",
+      "What is the expected weekly time commitment?",
+      "Who is eligible to apply for this program?",
+      "Is prior experience in analytics or AI mandatory?",
+      "Will I receive a certificate upon successful completion of the programme?",
+      "When will I receive my certificate after completing the program?",
+      "What are the completion or assessment criteria?",
+      "What is the mode of delivery for the programme?",
+      "What happens if I miss a live session?",
+      "What topics and concepts are covered in the programme?",
+      "Does the program include hands-on learning?",
+      "Will real-world case studies be discussed during the programme?",
+      "Is the programme suitable for participants without a technical background?"
+    ]
   },
   {
     "id": "course-fe9dc87c",
@@ -86,7 +106,17 @@
     "batchInfo": "Batch 2 - Admissions Open",
     "sourceUrl": "https://www.masaischool.com/program/iim-ranchi/business-analytics-ai-sop",
     "scrapedAt": "2026-06-10T00:00:00.000Z",
-    "active": true
+    "active": true,
+    "faqQuestions": [
+      "What is the program duration?",
+      "Will I receive a digital or physical copy of the programme certificate?",
+      "When will I receive my certificate after completing the program?",
+      "What is the mode of delivery for the program?",
+      "Who will be teaching the classes in this program?",
+      "What is campus immersion?",
+      "What is the fee for the immersion?",
+      "Is campus immersion mandatory, and when does it take place?"
+    ]
   },
   {
     "id": "course-a09e2e3b",
@@ -124,7 +154,34 @@
     "batchInfo": "Next cohort dates announced by admissions.",
     "sourceUrl": "https://www.masaischool.com/program/rotman/data-driven-decision-making-with-gen-ai",
     "scrapedAt": "2026-06-10T00:00:00.000Z",
-    "active": true
+    "active": true,
+    "faqQuestions": [
+      "What are the key fee components?",
+      "What is the difference between the Secure Seat Fee and the remaining course fee?",
+      "Are EMI/loan options available?",
+      "Is GST applicable on the fees?",
+      "What is the duration of the program?",
+      "How much time do I need to commit every week?",
+      "Will I receive a certificate upon completion?",
+      "What is the mode of delivery for the program?",
+      "Who will be teaching the classes in this program?",
+      "Will I be able to interact with the faculty in the live class?",
+      "Who is this program ideal for?",
+      "What are the eligibility criteria for the program?",
+      "Do I need prior coding or AI experience?",
+      "What is the admission process?",
+      "What does the Qualifier Test assess?",
+      "How does this program help with industry readiness?",
+      "Does this program guarantee a job or placement?",
+      "What are the class timings?",
+      "How many hours of engagement are required per week?",
+      "How will the class schedule be communicated to students?",
+      "What if I miss a live session? Will I be able to access the recording?",
+      "What kind of support will I receive during the program?",
+      "How can I interact with my peers?",
+      "What learning resources will be available during the program?",
+      "How often will assessments be conducted?"
+    ]
   },
   {
     "id": "course-c5e6c251",
@@ -174,7 +231,43 @@
     "batchInfo": "Next cohort: July 2026",
     "sourceUrl": "https://www.masaischool.com/program/bitsom/pgp",
     "scrapedAt": "2026-06-10T00:00:00.000Z",
-    "active": true
+    "active": true,
+    "faqQuestions": [
+      "What is this programme about?",
+      "What is the duration and format of the programme?",
+      "Is this a technical programme? Do I need coding knowledge?",
+      "What is campus immersion? Is it mandatory, and when does it take place?",
+      "What is the fee for the immersion?",
+      "What does the immersion include?",
+      "Are accommodation, food, and travel included?",
+      "When will the detailed immersion schedule be shared?",
+      "Will I receive a certificate upon completion?",
+      "When will I receive my certificate after completing the program?",
+      "How will I be evaluated?",
+      "Who is this programme best suited for?",
+      "What are the eligibility criteria?",
+      "Can international professionals apply for the programme?",
+      "What is the admission process?",
+      "What is the programme fee?",
+      "What is the difference between the registration fee and programme fee?",
+      "Are EMI or loan options available?",
+      "What is the fee payment deadline?",
+      "What are the class timings?",
+      "How many hours of engagement are required per week?",
+      "How will the class schedule be communicated?",
+      "What if I miss a live session? Will recordings be available?",
+      "Is attendance mandatory for course completion?",
+      "What is the certification criteria?",
+      "What role does Masai play in this programme?",
+      "How can I raise queries or doubts once I enrol?",
+      "How will I interact with peers?",
+      "What kind of learning resources will I get?",
+      "How often will assessments be conducted?",
+      "Does this programme offer job placement support?",
+      "How will this programme help my career?",
+      "Will there be opportunities for networking?",
+      "Will I build any tangible output I can showcase?"
+    ]
   },
   {
     "id": "course-115a61c6",
@@ -215,7 +308,17 @@
     "batchInfo": "Next cohort dates announced by admissions.",
     "sourceUrl": "https://www.masaischool.com/program/pwc/cyber-security-ethical-hacking-ai",
     "scrapedAt": "2026-06-10T00:00:00.000Z",
-    "active": true
+    "active": true,
+    "faqQuestions": [
+      "What is the program duration?",
+      "What topics and concepts are covered in the program?",
+      "What are the projects I will work on?",
+      "Will I receive a certificate upon completion?",
+      "What is the mode of delivery for the program?",
+      "Who will be teaching the classes in this program?",
+      "What tools and software will I learn during the course?",
+      "Will I work on real-world case studies?"
+    ]
   },
   {
     "id": "course-1acee5f4",
@@ -256,7 +359,48 @@
     "batchInfo": "Next cohort dates announced by admissions.",
     "sourceUrl": "https://www.masaischool.com/program/iit-roorkee/cyber-security",
     "scrapedAt": "2026-06-10T00:00:00.000Z",
-    "active": true
+    "active": true,
+    "faqQuestions": [
+      "What is the difference between Registration fee and Course fees?",
+      "How soon will I receive the receipt after paying the registration or course fee?",
+      "Are there any specific financial institutions/partners involved in the EMI process?",
+      "What is the fee payment deadline?",
+      "Is there any financial aid or scholarship available?",
+      "What is the rate of interest on the loan?",
+      "What are the class timings?",
+      "How many hours of engagement is required per week?",
+      "How will the class schedule be communicated to students?",
+      "What if I miss a live session, will I be able to access recording?",
+      "I am a working professional / college student and would like to plan my week ahead. Can I get access to the schedule well in advance?",
+      "What happens if I miss a live session?",
+      "What are the requirements for completing this program successfully?",
+      "Is there any attendance criteria in this program for course completion?",
+      "How is attendance calculated?",
+      "What happens if the student doesn't meet the required attendance criteria?",
+      "What if I am unable to attend live sessions or watch recordings within 30 days due to some exigencies?",
+      "How can I raise any queries once I enroll in the program?",
+      "How can I interact with my peers?",
+      "Is there a helpline session for student queries?",
+      "What learning resources will be made available during the program?",
+      "How often will assessments be conducted?",
+      "What happens if I don't clear a module?",
+      "What is the program duration?",
+      "Will I receive a digital or physical copy of the programme certificate?",
+      "When will I receive my certificate after completing the program?",
+      "What is the mode of delivery for the program?",
+      "Who will be teaching the classes in this program?",
+      "What is campus immersion?",
+      "Is campus immersion mandatory, and when does it take place?",
+      "What is the fee for the campus immersion?",
+      "Does the program offer placement opportunities?",
+      "What is the average salary package for graduates of this program?",
+      "What kind of support will I receive to prepare for job interviews?",
+      "What are the eligibility criteria for the program?",
+      "Can international students apply for the program?",
+      "What is the admission process?",
+      "What skills does the Qualifier test assess?",
+      "Can I take the Qualifier test after my college exams are over?"
+    ]
   },
   {
     "id": "course-06d95663",
@@ -293,7 +437,14 @@
     "batchInfo": "Batch 4 starts 15 Jul 2026; admissions open.",
     "sourceUrl": "https://www.masaischool.com/program/iit-patna/ai-ml-sop",
     "scrapedAt": "2026-06-10T00:00:00.000Z",
-    "active": true
+    "active": true,
+    "faqQuestions": [
+      "What is the program duration?",
+      "Will I receive a digital or physical copy of the programme certificate?",
+      "When will I receive my certificate after completing the program?",
+      "What is the mode of delivery for the program?",
+      "Who will be teaching the classes in this program?"
+    ]
   },
   {
     "id": "course-241323f7",
@@ -343,7 +494,42 @@
     "batchInfo": "Inaugural Batch",
     "sourceUrl": "https://www.masaischool.com/program/iit-mandi/nlp-ai-ml",
     "scrapedAt": "2026-06-10T00:00:00.000Z",
-    "active": true
+    "active": true,
+    "faqQuestions": [
+      "What is the difference between the Registration fee and the Course fees?",
+      "How soon will I receive the receipt after paying the registration or course fee?",
+      "Are there any specific financial institutions/partners involved in the EMI process?",
+      "What is the fee payment deadline?",
+      "Is there any financial aid or scholarship available?",
+      "What is the rate of interest on the loan?",
+      "What are the class timings?",
+      "How many hours of engagement is required per week?",
+      "How will the class schedule be communicated to students?",
+      "What if I miss a live session, will I be able to access the recording?",
+      "I am a working professional / college student and would like to plan my week ahead. Can I get access to the schedule well in advance?",
+      "Is there any attendance criteria in this program for course completion?",
+      "How is attendance calculated?",
+      "What happens if the student doesn't meet the required attendance criteria?",
+      "What if I am unable to attend live sessions or watch recordings within 30 days due to some exigencies?",
+      "How can I raise any queries once I enroll in the program?",
+      "How can I interact with my peers?",
+      "Is there a helpline session for student queries?",
+      "What learning resources will I learn during the program?",
+      "How often will assessments be conducted?",
+      "What is the program duration?",
+      "Will I receive a digital or physical copy of the programme certificate?",
+      "When will I receive my certificate after completing the program?",
+      "What is the mode of delivery for the program?",
+      "Who will be teaching the classes in this program?",
+      "Does the program offer placement assistance?",
+      "What is the average salary package for graduates of this program?",
+      "What kind of support will I receive to prepare for job interviews?",
+      "What are the eligibility criteria for the program?",
+      "Can international students apply for the program?",
+      "What is the admission process?",
+      "What skills does the Qualifier test assess?",
+      "Can I take the Qualifier test after my college exams are over?"
+    ]
   },
   {
     "id": "course-3b1fc4f6",
@@ -380,7 +566,14 @@
     "batchInfo": "Next cohort dates announced by admissions.",
     "sourceUrl": "https://www.masaischool.com/program/iit-patna/gen-ai",
     "scrapedAt": "2026-06-10T00:00:00.000Z",
-    "active": true
+    "active": true,
+    "faqQuestions": [
+      "What is the program duration?",
+      "Will I receive a digital or physical copy of the certificate?",
+      "When will I receive my certificate after completing the program?",
+      "What is the mode of delivery for the program?",
+      "Who will be teaching the classes in this program?"
+    ]
   },
   {
     "id": "course-8f950cc3",
@@ -422,7 +615,19 @@
     "batchInfo": "Next cohort dates announced by admissions.",
     "sourceUrl": "https://www.masaischool.com/program/xlri/entrepreneurship",
     "scrapedAt": "2026-06-10T00:00:00.000Z",
-    "active": true
+    "active": true,
+    "faqQuestions": [
+      "What is the program duration?",
+      "Will I receive a digital or physical copy of the programme certificate?",
+      "When will I receive my certificate after completing the program?",
+      "What is the mode of delivery?",
+      "Who will be teaching the classes in this program?",
+      "What are the benefits of attending this program?",
+      "What is the Master Pitching & Showcase event? Is it mandatory?",
+      "What is campus immersion?",
+      "Is campus immersion mandatory and when does it take place?",
+      "What is the fee for the campus immersion?"
+    ]
   },
   {
     "id": "course-24604389",
@@ -462,7 +667,18 @@
     "batchInfo": "Next cohort dates announced by admissions.",
     "sourceUrl": "https://www.masaischool.com/program/iim-trichy/fintech-ai",
     "scrapedAt": "2026-06-10T00:00:00.000Z",
-    "active": true
+    "active": true,
+    "faqQuestions": [
+      "What is the program duration?",
+      "Will I receive a digital or physical copy of the programme certificate?",
+      "When will I receive my certificate after completing the program?",
+      "What is the mode of delivery for the program?",
+      "Who will be teaching the classes in this program?",
+      "Is there an in-person component?",
+      "What is campus immersion?",
+      "Is campus immersion mandatory, and when does it take place?",
+      "What is the fee for the campus immersion?"
+    ]
   },
   {
     "id": "course-a3d62159",
@@ -503,7 +719,16 @@
     "batchInfo": "",
     "sourceUrl": "https://www.masaischool.com/program/iim-rohtak/digital-marketing",
     "scrapedAt": "2026-06-10T00:00:00.000Z",
-    "active": true
+    "active": true,
+    "faqQuestions": [
+      "What is the difference between the Registration fee and the Course fees?",
+      "When do I receive the receipt after paying the fee?",
+      "Are there any specific financial institutions/partners involved in the EMI process?",
+      "What is the fee payment deadline?",
+      "What is the rate of interest on the loan?",
+      "Is there any additional cost for admission kits?",
+      "Are there any additional charges for assessments during the course?"
+    ]
   },
   {
     "id": "course-d765b624",
@@ -548,7 +773,27 @@
     "batchInfo": "18 July 2026",
     "sourceUrl": "https://www.masaischool.com/program/iim-ranchi/executive-product-management",
     "scrapedAt": "2026-06-10T00:00:00.000Z",
-    "active": true
+    "active": true,
+    "faqQuestions": [
+      "What is the total fee?",
+      "What is the fee breakup?",
+      "Is the fee refundable?",
+      "What is this program?",
+      "Who runs this program?",
+      "Who will teach in this program?",
+      "What certificate will I receive?",
+      "Who can apply?",
+      "Is counselling mandatory?",
+      "Where will the program be conducted?",
+      "What is the duration?",
+      "What is the mode of learning?",
+      "Will accommodation be provided?",
+      "On which days will classes be held?",
+      "Will there be placement support?",
+      "Will industry mentors teach?",
+      "How can I apply?",
+      "Who will receive placement support?"
+    ]
   },
   {
     "id": "course-44c0c2e1",
@@ -590,7 +835,50 @@
     "batchInfo": "Next cohort dates announced by admissions.",
     "sourceUrl": "https://www.masaischool.com/program/iit-roorkee/software-engineering",
     "scrapedAt": "2026-06-10T00:00:00.000Z",
-    "active": true
+    "active": true,
+    "faqQuestions": [
+      "What is the difference between Registration fee and Course fees?",
+      "How soon will I receive the receipt after paying the registration or course fee?",
+      "Are there any specific financial institutions/partners involved in the EMI process?",
+      "What is the fee payment deadline?",
+      "Is there any financial aid or scholarship available?",
+      "What is the rate of interest on the loan?",
+      "Is there any additional cost for admission kits?",
+      "Are there any additional charges for assessments during the course?",
+      "What are the class timings?",
+      "How many hours of engagement is required per week?",
+      "How will the class schedule be communicated to students?",
+      "What if I miss a live session, will I be able to access recording?",
+      "I am a working professional / college student and would like to plan my week ahead. Can I get access to the schedule well in advance?",
+      "What happens if I miss a live session?",
+      "What are the requirements for completing this program successfully?",
+      "Is there any attendance criteria in this program for course completion?",
+      "How is attendance calculated?",
+      "What happens if the student doesn't meet the required attendance criteria?",
+      "What if I am unable to attend live sessions or watch recordings within 30 days due to some exigencies?",
+      "How can I raise any queries once I enroll in the program?",
+      "How can I interact with my peers?",
+      "Is there a helpline session for student queries?",
+      "What learning resources will be made available during the program?",
+      "How often will assessments be conducted?",
+      "What happens if I don't clear a module?",
+      "What is the program duration?",
+      "Will I receive a digital or physical copy of the programme certificate?",
+      "When will I receive my certificate after completing the program?",
+      "What is the structure of the program (online, offline)?",
+      "Who will be teaching the classes in this program?",
+      "What is campus immersion?",
+      "Is campus immersion mandatory, and when does it take place?",
+      "What is the fee for the campus immersion?",
+      "Does the program offer placement Opportunities?",
+      "What is the average salary package for graduates of this program?",
+      "What kind of support will I receive to prepare for job interviews?",
+      "What are the eligibility criteria for the program?",
+      "Can international students apply for the program?",
+      "What is the admission process?",
+      "What skills does the Qualifier test assess?",
+      "Can I take the Qualifier test after my college exams are over?"
+    ]
   },
   {
     "id": "course-edc6e07e",
@@ -630,6 +918,40 @@
     "batchInfo": "Batch 2 — Admissions Open",
     "sourceUrl": "https://www.masaischool.com/program/iit-patna/software-engineering-ai",
     "scrapedAt": "2026-06-10T00:00:00.000Z",
-    "active": true
+    "active": true,
+    "faqQuestions": [
+      "What is the difference between Registration fee and Course fees?",
+      "How soon will I receive the receipt after paying the registration or course fee?",
+      "Are there any specific financial institutions/partners involved in the EMI process?",
+      "What is the fee payment deadline?",
+      "Is there any financial aid or scholarship available?",
+      "What is the rate of interest on the loan?",
+      "Is there any additional cost for admission kits?",
+      "Are there any additional charges for assessments during the course?",
+      "What are the class timings?",
+      "How many hours of engagement is required per week?",
+      "How will the class schedule be communicated to students?",
+      "What if I miss a live session, will I be able to access recording?",
+      "I am a working professional / college student and would like to plan my week ahead. Can I get access to the schedule well in advance?",
+      "Is Attendance mandatory for course completion?",
+      "How can I raise any queries once I enroll in the program?",
+      "How can I interact with my peers?",
+      "Is there a helpline session for student queries?",
+      "What learning resources will be made available during the program?",
+      "How often will assessments be conducted?",
+      "What is the program duration?",
+      "Will I receive a digital or physical copy of the programme certificate?",
+      "When will I receive my certificate after completing the program?",
+      "What is the structure of the program (online, offline)?",
+      "Who will be teaching the classes in this program?",
+      "Does the program offer placement opportunities?",
+      "What is the average salary package for graduates of this program?",
+      "What kind of support will I receive to prepare for job interviews?",
+      "What are the eligibility criteria for the program?",
+      "Can international students apply for the program?",
+      "What is the admission process?",
+      "What skills does the Qualifier test assess?",
+      "Can I take the Qualifier test after my college exams are over?"
+    ]
   }
 ]

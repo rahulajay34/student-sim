@@ -13,6 +13,7 @@ const NAV = [
   { to: "/admin/rubrics", label: "Rubrics", icon: "rubrics" },
   { to: "/admin/assignments", label: "Assignments", icon: "assignments" },
   { to: "/admin/reports", label: "Reports", icon: "reports" },
+  { to: "/admin/prompts", label: "Prompts & Scoring", icon: "prompts" },
 ];
 
 function titleFor(path) {
@@ -23,6 +24,7 @@ function titleFor(path) {
   if (path.startsWith("/admin/assignments/new")) return "New Assignment";
   if (path.startsWith("/admin/assignments")) return "Assignments";
   if (path.startsWith("/admin/reports")) return "Reports";
+  if (path.startsWith("/admin/prompts")) return "Prompts & Scoring";
   return "Dashboard";
 }
 

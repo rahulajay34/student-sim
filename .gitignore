@@ -22,3 +22,4 @@ counselling_ba_courses - Sheet1.csv
 __pycache__/
 *.pyc
 *.egg-info/
+voice-samples/

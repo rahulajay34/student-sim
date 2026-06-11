@@ -34,6 +34,194 @@ import capabilities
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("voice.main")
 
+# ---------- ElevenLabs helpers ----------
+
+# Primary model: eleven_v3 (expressive, supports inline audio tags).
+# Override via VOICE_ELEVENLABS_MODEL env var (e.g. set to eleven_flash_v2_5 for lower latency).
+# The v3 alpha retry fallback model is always eleven_flash_v2_5 (no audio tags).
+_EL_MODEL_DEFAULT = "eleven_v3"
+_EL_MODEL_FALLBACK = "eleven_flash_v2_5"
+_EL_API_BASE = "https://api.elevenlabs.io/v1"
+
+
+def _el_model() -> str:
+    """Return the configured ElevenLabs TTS model (env override or default)."""
+    return os.environ.get("VOICE_ELEVENLABS_MODEL", _EL_MODEL_DEFAULT).strip() or _EL_MODEL_DEFAULT
+
+
+# eleven_v3 inline audio-tag mapping (prepended to text before synthesis).
+# eleven_v3 supports audio tags like [cheerful], [excited], [hesitant], [sighs],
+# [nervous], [frustrated].  neutral gets no tag (let the model breathe naturally).
+_EL_V3_AUDIO_TAGS: dict[str, str] = {
+    "neutral":    "",
+    "happy":      "[cheerful]",
+    "excited":    "[excited]",
+    "hesitant":   "[hesitant]",
+    "worried":    "[nervous]",
+    "frustrated": "[frustrated]",
+}
+
+# Emotion → ElevenLabs voice_settings
+# stability:  lower = more expressive/variable; higher = more consistent
+# similarity_boost: kept neutral (0.75) across emotions
+# style: 0–1 expressive style exaggeration (ElevenLabs v2+ models)
+# use_speaker_boost: True for all (better clarity)
+# speed: 0.7–1.3 range (maps conceptually to kokoro speed nudges)
+_EL_EMOTION_MAP: dict[str, dict] = {
+    "neutral":    {"stability": 0.55, "similarity_boost": 0.75, "style": 0.20, "use_speaker_boost": True, "speed": 1.00},
+    "happy":      {"stability": 0.45, "similarity_boost": 0.75, "style": 0.40, "use_speaker_boost": True, "speed": 1.05},
+    "excited":    {"stability": 0.35, "similarity_boost": 0.75, "style": 0.60, "use_speaker_boost": True, "speed": 1.12},
+    "hesitant":   {"stability": 0.70, "similarity_boost": 0.75, "style": 0.10, "use_speaker_boost": True, "speed": 0.88},
+    "worried":    {"stability": 0.65, "similarity_boost": 0.75, "style": 0.15, "use_speaker_boost": True, "speed": 0.94},
+    "frustrated": {"stability": 0.40, "similarity_boost": 0.75, "style": 0.50, "use_speaker_boost": True, "speed": 1.06},
+}
+
+
+def _mp3_to_wav(mp3_bytes: bytes) -> bytes:
+    """Convert raw MP3 bytes to WAV bytes (via soundfile or ffmpeg fallback)."""
+    import io as _io
+    import soundfile as _sf
+
+    audio_buf = _io.BytesIO(mp3_bytes)
+    try:
+        arr, sr = _sf.read(audio_buf, dtype="float32", always_2d=False)
+        arr = _resample_if_needed(arr, sr, TARGET_SR)
+        return _to_wav_bytes(arr, TARGET_SR)
+    except Exception:
+        # soundfile can't read mp3 — fall back to ffmpeg subprocess.
+        import tempfile, subprocess
+        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp_mp3:
+            tmp_mp3.write(mp3_bytes)
+            tmp_mp3_path = tmp_mp3.name
+        tmp_wav_path = tmp_mp3_path.replace(".mp3", ".wav")
+        try:
+            subprocess.run(
+                ["ffmpeg", "-y", "-i", tmp_mp3_path, "-ar", "22050", "-ac", "1",
+                 "-f", "wav", tmp_wav_path],
+                check=True, capture_output=True,
+            )
+            return Path(tmp_wav_path).read_bytes()
+        finally:
+            import os as _os
+            _os.unlink(tmp_mp3_path)
+            try:
+                _os.unlink(tmp_wav_path)
+            except FileNotFoundError:
+                pass
+
+
+def _elevenlabs_tts_with_model(
+    text: str,
+    emotion: str,
+    model_id: str,
+    voice_id: str,
+    api_key: str,
+    add_audio_tag: bool,
+) -> bytes:
+    """Send a single ElevenLabs TTS request for the given model and return WAV bytes.
+
+    Raises RuntimeError on HTTP error or empty/conversion failure.
+    """
+    import requests as _requests
+
+    vs = _EL_EMOTION_MAP.get(emotion, _EL_EMOTION_MAP["neutral"])
+    speed = vs.get("speed", 1.0)
+    voice_settings = {k: v for k, v in vs.items() if k != "speed"}
+    if speed != 1.0:
+        voice_settings["speed"] = speed
+
+    # eleven_v3: prepend inline audio tag to the text for expressive delivery.
+    # Other models (eleven_flash_v2_5, etc.) don't support audio tags — omit them.
+    request_text = text
+    if add_audio_tag:
+        tag = _EL_V3_AUDIO_TAGS.get(emotion, "")
+        if tag:
+            request_text = f"{tag} {text}"
+
+    payload = {
+        "text": request_text,
+        "model_id": model_id,
+        "voice_settings": voice_settings,
+        "output_format": "mp3_22050_32",
+    }
+
+    url = f"{_EL_API_BASE}/text-to-speech/{voice_id}"
+    headers = {
+        "xi-api-key": api_key,
+        "Content-Type": "application/json",
+        "Accept": "audio/mpeg",
+    }
+
+    resp = _requests.post(url, json=payload, headers=headers, timeout=30)
+    if resp.status_code != 200:
+        raise RuntimeError(f"ElevenLabs HTTP {resp.status_code}: {resp.text[:200]}")
+
+    mp3_bytes = resp.content
+    if not mp3_bytes:
+        raise RuntimeError("ElevenLabs returned empty audio body")
+
+    try:
+        return _mp3_to_wav(mp3_bytes)
+    except Exception as conv_err:
+        raise RuntimeError(f"ElevenLabs mp3->wav conversion failed: {conv_err}") from conv_err
+
+
+def _elevenlabs_tts(text: str, emotion: str, voice_override: str | None = None) -> bytes:
+    """Call ElevenLabs HTTP API and return WAV bytes.
+
+    Uses eleven_v3 (or VOICE_ELEVENLABS_MODEL override) with inline audio tags.
+    On any 4xx/5xx from v3, retries once with eleven_flash_v2_5 (no audio tags)
+    before raising RuntimeError so the caller can fall back to a local engine.
+    Logs which model actually served each request.
+
+    Raises RuntimeError on all-engine failure so the caller can fall back.
+    """
+    api_key, voice_id = capabilities.get_elevenlabs_credentials()
+    if not api_key:
+        raise RuntimeError("ElevenLabs API key not available")
+    if voice_override:
+        voice_id = voice_override
+
+    primary_model = _el_model()
+    is_v3 = primary_model == "eleven_v3"
+
+    # --- Primary attempt ---
+    try:
+        wav = _elevenlabs_tts_with_model(
+            text, emotion, primary_model, voice_id, api_key,
+            add_audio_tag=is_v3,
+        )
+        log.info("TTS/elevenlabs model=%s emotion=%s", primary_model, emotion)
+        return wav
+    except RuntimeError as primary_err:
+        err_str = str(primary_err)
+        # Only retry for HTTP errors (4xx/5xx); propagate immediately for other failures.
+        is_http_error = "ElevenLabs HTTP" in err_str
+        if not is_v3 or not is_http_error:
+            # Non-v3 model or non-HTTP error: don't retry, let caller fall back.
+            raise
+
+        log.warning(
+            "TTS/elevenlabs v3 request failed (%s) — retrying with %s",
+            err_str, _EL_MODEL_FALLBACK,
+        )
+
+    # --- v3 retry with fallback model (no audio tags) ---
+    try:
+        wav = _elevenlabs_tts_with_model(
+            text, emotion, _EL_MODEL_FALLBACK, voice_id, api_key,
+            add_audio_tag=False,
+        )
+        log.info(
+            "TTS/elevenlabs model=%s (v3 retry fallback) emotion=%s",
+            _EL_MODEL_FALLBACK, emotion,
+        )
+        return wav
+    except RuntimeError as fallback_err:
+        raise RuntimeError(
+            f"ElevenLabs v3 failed and {_EL_MODEL_FALLBACK} retry also failed: {fallback_err}"
+        ) from fallback_err
+
 # ---------- app + CORS ----------
 
 @asynccontextmanager
@@ -64,7 +252,8 @@ app.add_middleware(
 @app.get("/health")
 def health() -> dict:
     status = capabilities.get_status()
-    engine = capabilities.get_tts_engine()
+    tts_engine = capabilities.get_tts_engine()
+    stt_engine = capabilities.get_stt_engine()
     return {
         "ok": True,
         "capabilities": {
@@ -72,7 +261,8 @@ def health() -> dict:
             "stt": status["stt"],
             "analyze": status["analyze"],
         },
-        "ttsEngine": engine,
+        "ttsEngine": tts_engine,
+        "sttEngine": stt_engine,
     }
 
 
@@ -107,6 +297,7 @@ class TtsRequest(BaseModel):
     text: str
     emotion: str = "neutral"
     intensity: float = Field(default=0.5, ge=0.0, le=1.0)
+    voice: str | None = None  # ElevenLabs voice ID override (per-session student voice)
 
 
 def _sentence_chunks(text: str, max_chars: int = MAX_CHUNK_CHARS) -> list[str]:
@@ -165,7 +356,8 @@ def tts(req: TtsRequest) -> Response:
         raise HTTPException(503, "TTS disabled (VOICE_TTS=off)")
     if status == "loading":
         raise HTTPException(503, "TTS model loading, retry shortly")
-    if status.startswith("error") or model is None:
+    # ElevenLabs engine uses model=None (stateless HTTP); only reject None for local engines.
+    if status.startswith("error") or (model is None and engine != "elevenlabs"):
         raise HTTPException(503, f"TTS unavailable: {status}")
 
     emotion = req.emotion if req.emotion in VALID_EMOTIONS else "neutral"
@@ -174,7 +366,72 @@ def tts(req: TtsRequest) -> Response:
     t0 = time.perf_counter()
     segments: list[np.ndarray] = []
 
-    if engine == "chatterbox":
+    if engine == "elevenlabs":
+        # ElevenLabs: synthesise the full text in one call (API handles chunking internally).
+        # Per-request failure falls through to the next available local engine rather than
+        # crashing the request, so a transient API error doesn't take the session down.
+        try:
+            wav_bytes = _elevenlabs_tts(req.text, emotion, req.voice)
+            elapsed = time.perf_counter() - t0
+            log.info("TTS/elevenlabs: %.1fs, %d KB", elapsed, len(wav_bytes) // 1024)
+            return Response(content=wav_bytes, media_type="audio/wav")
+        except Exception as el_err:
+            log.warning(
+                "TTS/elevenlabs: all-engine failure (%s) — falling back to local engine", el_err
+            )
+            # Fall through: try to synthesise with the next available local engine.
+            # We attempt chatterbox then kokoro on this request without altering the
+            # global engine selection (ElevenLabs remains the primary for future requests).
+            try:
+                import chatterbox.tts as cbtts  # type: ignore
+                fallback_model = cbtts.ChatterboxTTS.from_pretrained(device="cpu")
+                fallback_engine = "chatterbox"
+            except Exception:
+                fallback_model = None
+                fallback_engine = None
+
+            if fallback_engine is None:
+                # Last resort: kokoro
+                try:
+                    from kokoro_onnx import Kokoro  # type: ignore
+                    onnx_path = capabilities.MODELS_DIR / "kokoro-v1.0.onnx"
+                    voices_path = capabilities.MODELS_DIR / "voices-v1.0.bin"
+                    capabilities._ensure_kokoro_models(onnx_path, voices_path)
+                    fallback_model = Kokoro(str(onnx_path), str(voices_path))
+                    fallback_engine = "kokoro"
+                except Exception as kokoro_err:
+                    raise HTTPException(503, f"TTS all engines failed: {el_err}; kokoro: {kokoro_err}")
+
+            # Synthesise with the fallback engine
+            fb_segments: list[np.ndarray] = []
+            if fallback_engine == "chatterbox":
+                params = EMOTION_MAP[emotion].copy()
+                base_exag = params["exaggeration"]
+                delta = (req.intensity - 0.5) * 2 * 0.15
+                params["exaggeration"] = float(np.clip(base_exag + delta, 0.0, 1.0))
+                for chunk in chunks:
+                    wav_tensor = fallback_model.generate(chunk, **params)
+                    arr = wav_tensor.squeeze().cpu().numpy().astype(np.float32)
+                    arr = _resample_if_needed(arr, fallback_model.sr, TARGET_SR)
+                    fb_segments.append(arr)
+            else:  # kokoro
+                speed = KOKORO_SPEED_MAP.get(emotion, 1.0)
+                for chunk in chunks:
+                    samples, sr = fallback_model.create(chunk, voice="af_heart", speed=speed, lang="en-us")
+                    arr = np.array(samples, dtype=np.float32)
+                    arr = _resample_if_needed(arr, sr, TARGET_SR)
+                    fb_segments.append(arr)
+
+            combined = np.concatenate(fb_segments) if len(fb_segments) > 1 else fb_segments[0]
+            wav_bytes = _to_wav_bytes(combined, TARGET_SR)
+            elapsed = time.perf_counter() - t0
+            log.info(
+                "TTS/elevenlabs-fallback-%s: %d chunks, %.1fs, %d KB",
+                fallback_engine, len(chunks), elapsed, len(wav_bytes) // 1024,
+            )
+            return Response(content=wav_bytes, media_type="audio/wav")
+
+    elif engine == "chatterbox":
         params = EMOTION_MAP[emotion].copy()
         # Intensity scales exaggeration ±0.15 around the base value
         base_exag = params["exaggeration"]
@@ -207,47 +464,120 @@ def tts(req: TtsRequest) -> Response:
     return Response(content=wav_bytes, media_type="audio/wav")
 
 
-# ---------- /stt ----------
+# ---------- ElevenLabs Scribe STT helper ----------
 
-@app.post("/stt")
-def stt(audio: UploadFile = File(...)) -> dict:
+_EL_SCRIBE_URL = "https://api.elevenlabs.io/v1/speech-to-text"
+_EL_SCRIBE_MODEL = "scribe_v1"
+
+
+def _scribe_stt(raw_wav: bytes) -> dict:
+    """Transcribe WAV bytes via ElevenLabs Scribe.
+
+    Returns the normalised contract dict {text, words:[{word,start,end}], durationSec}.
+    language_code is intentionally omitted (auto) so Hinglish transcribes as mixed
+    Hindi-English.  Scribe may return Devanagari script for Hindi words — this is
+    expected and acceptable.
+
+    Raises RuntimeError on any failure so the caller can fall back to faster-whisper.
+    """
+    import requests as _req
+
+    api_key = os.environ.get("ELEVENLABS_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError("ELEVENLABS_API_KEY not available")
+
+    # Compute duration from the WAV before we send it.
+    duration_sec: float | None = None
+    try:
+        _buf = io.BytesIO(raw_wav)
+        _arr, _sr = sf.read(_buf, dtype="float32", always_2d=False)
+        duration_sec = round(len(_arr) / _sr, 2)
+    except Exception:
+        pass  # fall through; we will try to get it from the response
+
+    files = {
+        "file": ("audio.wav", io.BytesIO(raw_wav), "audio/wav"),
+    }
+    data = {
+        "model_id": _EL_SCRIBE_MODEL,
+        "timestamps_granularity": "word",
+        # language_code intentionally omitted → Scribe auto-detects; supports Hinglish
+    }
+
+    resp = _req.post(
+        _EL_SCRIBE_URL,
+        headers={"xi-api-key": api_key},
+        files=files,
+        data=data,
+        timeout=60,
+    )
+    if resp.status_code != 200:
+        raise RuntimeError(f"Scribe HTTP {resp.status_code}: {resp.text[:300]}")
+
+    payload = resp.json()
+
+    # Map Scribe response → contract shape.
+    # Scribe response shape:
+    #   { text: str, words: [{text, start, end, type, speaker_id}], ... }
+    text = (payload.get("text") or "").strip()
+
+    words: list[dict] = []
+    for w in payload.get("words") or []:
+        # Scribe word tokens have type "word"; spacing/punctuation tokens have other types.
+        # We include only tokens with timestamps (word tokens always have them).
+        word_text = (w.get("text") or "").strip()
+        if not word_text:
+            continue
+        start_val = w.get("start")
+        end_val = w.get("end")
+        if start_val is None or end_val is None:
+            continue
+        words.append({
+            "word": word_text,
+            "start": round(float(start_val), 3),
+            "end": round(float(end_val), 3),
+        })
+
+    # Derive durationSec from last word end if we couldn't read the WAV header.
+    if duration_sec is None:
+        if words:
+            duration_sec = round(words[-1]["end"], 2)
+        else:
+            # Last resort: use Scribe's own duration if provided
+            duration_sec = round(float(payload.get("audio_duration") or 0.0), 2)
+
+    return {
+        "text": text,
+        "words": words,
+        "durationSec": duration_sec,
+    }
+
+
+def _whisper_stt(raw_wav: bytes) -> dict:
+    """Transcribe WAV bytes via the locally-loaded faster-whisper model.
+
+    Returns the normalised contract dict {text, words:[{word,start,end}], durationSec}.
+    Raises RuntimeError on any failure.
+    """
     model = capabilities.get_stt()
-    status = capabilities.get_status()["stt"]
+    if model is None:
+        raise RuntimeError("faster-whisper model not available")
 
-    if status == "off":
-        raise HTTPException(503, "STT disabled (VOICE_STT=off)")
-    if status == "loading":
-        raise HTTPException(503, "STT model loading, retry shortly")
-    if status.startswith("error") or model is None:
-        raise HTTPException(503, f"STT unavailable: {status}")
-
-    raw = audio.file.read()
-    if len(raw) > 30_000_000:
-        raise HTTPException(413, "Audio upload too large (max 30 MB)")
-    buf = io.BytesIO(raw)
-
-    # Load audio via soundfile (expects WAV)
+    buf = io.BytesIO(raw_wav)
     try:
         y, sr = sf.read(buf, dtype="float32", always_2d=False)
     except Exception as e:
-        raise HTTPException(400, f"Could not read audio: {e}") from e
+        raise RuntimeError(f"Could not read WAV: {e}") from e
 
     if y.ndim > 1:
         y = y.mean(axis=1)
-
-    # faster-whisper expects 16 kHz mono float32
     if sr != 16000:
         y = librosa.resample(y, orig_sr=sr, target_sr=16000)
         sr = 16000
 
-    duration_sec = len(y) / sr
+    duration_sec = round(len(y) / sr, 2)
 
-    # Write to temp buffer for faster-whisper (it reads from file path or numpy)
-    segments, _info = model.transcribe(
-        y,
-        word_timestamps=True,
-        language="en",
-    )
+    segments, _info = model.transcribe(y, word_timestamps=True, language="en")
 
     words: list[dict] = []
     text_parts: list[str] = []
@@ -263,8 +593,67 @@ def stt(audio: UploadFile = File(...)) -> dict:
     return {
         "text": " ".join(text_parts),
         "words": words,
-        "durationSec": round(duration_sec, 2),
+        "durationSec": duration_sec,
     }
+
+
+# ---------- /stt ----------
+
+@app.post("/stt")
+def stt(audio: UploadFile = File(...)) -> dict:
+    _model, engine = capabilities._get_stt_with_engine()
+    status = capabilities.get_status()["stt"]
+
+    if status == "off":
+        raise HTTPException(503, "STT disabled (VOICE_STT=off)")
+    if status == "loading":
+        raise HTTPException(503, "STT model loading, retry shortly")
+    # For scribe engine, model is None (stateless HTTP) — only reject None for whisper.
+    if status.startswith("error") or (_model is None and engine != "scribe"):
+        raise HTTPException(503, f"STT unavailable: {status}")
+
+    raw = audio.file.read()
+    if len(raw) > 30_000_000:
+        raise HTTPException(413, "Audio upload too large (max 30 MB)")
+
+    if engine == "scribe":
+        try:
+            result = _scribe_stt(raw)
+            log.info(
+                "STT/scribe: %d words, %.1fs, %r...",
+                len(result["words"]),
+                result["durationSec"],
+                result["text"][:60],
+            )
+            return result
+        except Exception as scribe_err:
+            log.warning(
+                "STT/scribe: per-request failure (%s) — falling back to faster-whisper", scribe_err
+            )
+            # Per-request fallback: try faster-whisper without changing the global engine.
+            try:
+                result = _whisper_stt(raw)
+                log.info(
+                    "STT/scribe-fallback-whisper: %d words, %.1fs",
+                    len(result["words"]),
+                    result["durationSec"],
+                )
+                return result
+            except Exception as whisper_err:
+                raise HTTPException(503, f"STT all engines failed — scribe: {scribe_err}; whisper: {whisper_err}")
+
+    # engine == "whisper" (or None already handled above)
+    try:
+        result = _whisper_stt(raw)
+        log.info(
+            "STT/whisper: %d words, %.1fs, %r...",
+            len(result["words"]),
+            result["durationSec"],
+            result["text"][:60],
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(503, f"STT/whisper failed: {e}") from e
 
 
 # ---------- /analyze ----------

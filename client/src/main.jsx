@@ -16,6 +16,7 @@ import Assignments from "./pages/admin/Assignments.jsx";
 import AssignmentCreate from "./pages/admin/AssignmentCreate.jsx";
 import AdminReports from "./pages/admin/AdminReports.jsx";
 import Rubrics from "./pages/admin/Rubrics.jsx";
+import Prompts from "./pages/admin/Prompts.jsx";
 
 import Dashboard from "./pages/counsellor/Dashboard.jsx";
 import MyMocks from "./pages/counsellor/MyMocks.jsx";
@@ -54,6 +55,7 @@ function App() {
           <Route path="/admin/rubrics" element={<Rubrics />} />
           <Route path="/admin/reports" element={<AdminReports />} />
           <Route path="/admin/reports/:id" element={<ReportDetail backTo="/admin/reports" />} />
+          <Route path="/admin/prompts" element={<Prompts />} />
         </Route>
 
         {/* Counsellor */}

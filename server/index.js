@@ -9,10 +9,20 @@ import cors from "cors";
 
 import * as store from "./store.js";
 import { advancePhase, initPhaseCounters, initMilestones, PHASE_NAMES } from "./phases.js";
-import { getFirstMessage, getStudentReply } from "./engine.js";
-import { scoreMessage } from "./scoring.js";
-import { generateReport } from "./report.js";
+import { initObjectionState, raiseObjection, resolveObjection, detectObjectionCategory, openObjections } from "./objections.js";
+import { instantCue, llmCue } from "./cues.js";
+import { getFirstMessage, getStudentReply, getStudentReplyStream } from "./engine.js";
+import { scoreMessage, isBackchannel, loadScoringConfig, saveScoringConfig, scoringPromptForInspection } from "./scoring.js";
+import { generateReport, needsRegeneration, reportPromptForInspection } from "./report.js";
 import { buildAdminAnalytics, buildCounsellorAnalytics } from "./analytics.js";
+import { classifyCounsellorTurn } from "./classify.js";
+import { getPromptConfig } from "./promptConfig.js";
+import { composeForInspection } from "./prompt.js";
+import { pickStudentVoice } from "./voices.js";
+import { rollSessionFlavour, DEFAULT_PERSONALITY } from "./personality.js";
+import { writeFileSync } from "fs";
+
+const PROMPT_CONFIG_PATH = join(__dirname, "data", "prompt-config.json");
 
 console.log("Ollama API key loaded:", process.env.OLLAMA_API_KEY ? "YES" : "NO - KEY MISSING");
 
@@ -21,6 +31,28 @@ app.use(cors());
 app.use(express.json());
 
 const publicUser = (u) => u && { id: u.id, name: u.name, email: u.email, role: u.role, avatarColor: u.avatarColor };
+
+// --- Per-turn verbosity roll -----------------------------------------------
+// Rolls turnVerbosity ('open' | 'short') so consecutive student turns vary in
+// length instead of being uniformly terse. Probability of 'open' scales with the
+// session's personality talkativeness (1 -> 0.30 ... 5 -> 0.65; ~0.50 default).
+// Hard rules: phase 3 (Presentation) is listen-and-acknowledge, so force 'short'
+// unless the counsellor explicitly invited a question (turnType 'invite'); and
+// never roll 'open' twice in a row (tracked via the prior session.lastTurnVerbosity).
+// Returns 'open' | 'short'. Uses the standard JS RNG — this is application code.
+function rollTurnVerbosity({ talkativeness, currentPhase, turnType, lastTurnVerbosity }) {
+  // Phase 3 stays terse unless the counsellor invited a question.
+  if (currentPhase === 3 && turnType !== "invite") return "short";
+
+  const talk = typeof talkativeness === "number" ? Math.min(5, Math.max(1, talkativeness)) : 3;
+  // Linear map 1 -> 0.30, 5 -> 0.65.
+  const pOpen = 0.30 + (talk - 1) * ((0.65 - 0.30) / 4);
+
+  // Never two 'open' in a row.
+  if (lastTurnVerbosity === "open") return "short";
+
+  return Math.random() < pOpen ? "open" : "short";
+}
 
 // --- Auth ------------------------------------------------------------------
 app.post("/api/login", (req, res) => {
@@ -37,24 +69,30 @@ app.get("/api/counsellors", (_req, res) => res.json(store.getCounsellors().map(p
 app.get("/api/personas", (_req, res) => res.json(store.getAll("personas")));
 
 app.post("/api/personas", (req, res) => {
-  const { name, category, label, coreAnxiety, behaviourPrompt, description } = req.body || {};
+  const { name, category, label, coreAnxiety, behaviourPrompt, description, personality } = req.body || {};
   if (!name || !label) return res.status(400).json({ error: "name and label are required" });
   const now = new Date().toISOString();
   const persona = {
     id: store.newId("persona"),
     name, category: category || "custom", label,
     coreAnxiety: coreAnxiety || "", behaviourPrompt: behaviourPrompt || "", description: description || "",
+    // personality is optional; callers that omit it get DEFAULT_PERSONALITY at session-start time
+    personality: (personality && typeof personality === "object") ? personality : undefined,
     createdAt: now, updatedAt: now,
   };
+  // strip undefined keys so JSON.stringify stays clean
+  if (persona.personality === undefined) delete persona.personality;
   res.json(store.insert("personas", persona));
 });
 
 app.put("/api/personas/:id", (req, res) => {
-  const { name, category, label, coreAnxiety, behaviourPrompt, description } = req.body || {};
+  const { name, category, label, coreAnxiety, behaviourPrompt, description, personality } = req.body || {};
   const patch = { updatedAt: new Date().toISOString() };
   for (const [k, v] of Object.entries({ name, category, label, coreAnxiety, behaviourPrompt, description })) {
     if (v !== undefined) patch[k] = v;
   }
+  // personality is optional; persist as-is if provided (callers may send a partial object)
+  if (personality !== undefined) patch.personality = personality;
   const updated = store.update("personas", req.params.id, patch);
   if (!updated) return res.status(404).json({ error: "Persona not found" });
   res.json(updated);
@@ -264,9 +302,25 @@ app.post("/api/sessions/start", async (req, res) => {
     const persona = store.getById("personas", personaId2);
     if (!persona) return res.status(404).json({ error: "Persona not found" });
 
+    // Assign the student's voice up front so the prompt (name/gender) and the
+    // TTS voice agree for the whole session.
+    const sessionId = store.newId("ses");
+    const voice = pickStudentVoice(sessionId);
+
+    // Roll per-session personality flavour. Fails soft to DEFAULT_PERSONALITY when
+    // the persona predates the personality field or has a malformed value.
+    // Note: personaPromptOverride replaces behaviourPrompt only — it does NOT
+    // override personality; each session still gets its own flavour roll.
+    const resolvedPersonality = (persona.personality && typeof persona.personality === "object")
+      ? persona.personality
+      : DEFAULT_PERSONALITY;
+    const personalityFlavour = rollSessionFlavour(resolvedPersonality);
+
     const personaSnapshot = {
       name: persona.name, category: persona.category, label: persona.label,
       coreAnxiety: persona.coreAnxiety, behaviourPrompt: override || persona.behaviourPrompt,
+      voiceName: voice.name, voiceGender: voice.gender,
+      personality: resolvedPersonality,
     };
 
     let courseId2 = courseId;
@@ -290,10 +344,15 @@ app.post("/api/sessions/start", async (req, res) => {
     if (!tpl) tpl = allTemplates.find((t) => t.isDefault) || null;
     const rubricSnapshot = tpl ? { templateId: tpl.id, name: tpl.name, criteria: tpl.criteria } : null;
 
-    const { text: firstMessage, emotion: firstEmotion } = await getFirstMessage(personaSnapshot, scenario2, courseSnapshot);
+    const { text: firstMessage, emotion: firstEmotion } = await getFirstMessage(personaSnapshot, scenario2, courseSnapshot, personalityFlavour);
     const now = new Date().toISOString();
+    // Composed student system prompt at session start, for transparency/auditing.
+    const promptSnapshot = composeForInspection({
+      personaSnapshot, scenarioSnapshot: scenario2, courseSnapshot, currentPhase: 1, satisfactionScore: 50,
+      personalityFlavour,
+    });
     const session = {
-      id: store.newId("ses"),
+      id: sessionId,
       assignmentId: assignment ? assignment.id : null,
       counsellorId,
       mode: mode === "assigned" ? "assigned" : "practice",
@@ -301,10 +360,14 @@ app.post("/api/sessions/start", async (req, res) => {
       scenarioSnapshot: scenario2,
       courseSnapshot,
       rubricSnapshot,
+      promptSnapshot,
+      personalityFlavour,
+      voice,
       currentPhase: 1,
       satisfactionScore: 50,
       phaseCounters: initPhaseCounters(),
       milestones: initMilestones(),
+      objectionState: initObjectionState(),
       scoreHistory: [{ turn: 0, score: 50, adjustment: 0, reason: "start" }],
       transcript: [{ role: "student", text: firstMessage, emotion: firstEmotion, phase: 1, scoreAfter: 50, ts: now }],
       status: "active",
@@ -314,7 +377,7 @@ app.post("/api/sessions/start", async (req, res) => {
 
     if (assignment) store.update("assignments", assignment.id, { status: "in_progress", sessionId: session.id });
 
-    res.json({ sessionId: session.id, firstMessage, emotion: firstEmotion, currentPhase: 1, satisfactionScore: 50, milestones: session.milestones });
+    res.json({ sessionId: session.id, firstMessage, emotion: firstEmotion, currentPhase: 1, satisfactionScore: 50, milestones: session.milestones, voice });
   } catch (err) {
     console.error("Error in /sessions/start:", err.message);
     res.status(500).json({ error: err.message });
@@ -348,37 +411,173 @@ function sanitizeDeliveryMetrics(raw) {
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
+// Per turn: 409 ended-session guard FIRST (before any SSE headers) → classify the
+// counsellor message into a turnType → push the counsellor transcript entry (with
+// sanitized deliveryMetrics + turnType) → run scoring and the student reply
+// CONCURRENTLY (the reply prompt sees the PRE-message score; one turn of lag in the
+// satisfaction bands, in exchange for the reply starting sooner). Backchannel
+// acknowledgements skip the scoring LLM (isBackchannel). scoreAfter + scoreReason
+// are backfilled onto the counsellor entry once scoring resolves. Milestone/phase
+// advancement is preserved exactly.
+//
+// Dual-mode: with `Accept: text/event-stream` the reply streams as SSE `token`
+// events and ends with a `done` event whose data is BYTE-FOR-BYTE the same JSON
+// object as the non-SSE response (reply, emotion, currentPhase, satisfactionScore,
+// scoreReason, turnType, milestones). `error` events carry { error } (incl.
+// LLM_TIMEOUT). Plain requests keep today's JSON response shape exactly.
 app.post("/api/sessions/:id/message", async (req, res) => {
   const session = store.getById("sessions", req.params.id);
   if (!session) return res.status(404).json({ error: "Session not found. Please start a new session." });
+  // 409 ended-session guard FIRST — before any SSE headers are written.
   if (session.status === "ended") return res.status(409).json({ error: "This session has ended." });
   const { message, deliveryMetrics: rawDeliveryMetrics } = req.body || {};
   if (!message) return res.status(400).json({ error: "message is required" });
 
-  try {
-    // Advance phase on the counsellor's message, then score it.
-    advancePhase(session, "counsellor", message);
-    const lastStudentMsg = [...session.transcript].reverse().find((m) => m.role === "student")?.text || "";
-    const { adjustment, reason } = await scoreMessage(message, lastStudentMsg, session.courseSnapshot?.name);
-    session.satisfactionScore = Math.max(0, Math.min(100, session.satisfactionScore + adjustment));
+  // Fail-soft: sessions started before objection tracking existed have no
+  // objectionState. Seed an empty one so the lifecycle calls below are safe.
+  if (!Array.isArray(session.objectionState)) session.objectionState = initObjectionState();
 
+  const wantsSSE = (req.headers.accept || "").includes("text/event-stream");
+  let send = null; // non-null once SSE headers are out
+  try {
+    // Classify the counsellor turn (statement | question | invite).
+    const turnType = classifyCounsellorTurn(message);
+
+    // Advance phase on the counsellor's message, then push the entry. scoreAfter is
+    // the PRE-message score for now; it is backfilled once scoring resolves.
+    advancePhase(session, "counsellor", message);
+    const preScore = session.satisfactionScore;
     const now = new Date().toISOString();
-    const counsellorEntry = { role: "counsellor", text: message, phase: session.currentPhase, scoreAfter: session.satisfactionScore, ts: now };
+    const counsellorEntry = {
+      role: "counsellor", text: message, phase: session.currentPhase,
+      turnType, scoreAfter: preScore, ts: now,
+    };
     const sanitized = sanitizeDeliveryMetrics(rawDeliveryMetrics);
     if (sanitized) counsellorEntry.deliveryMetrics = sanitized;
     session.transcript.push(counsellorEntry);
+
+    // Roll this turn's verbosity override (scaled by talkativeness, phase-3 short,
+    // never two 'open' in a row) and persist it on the session BEFORE the reply
+    // path runs — prepareReply reads session.lastTurnVerbosity to set the override.
+    session.lastTurnVerbosity = rollTurnVerbosity({
+      talkativeness: session.personalityFlavour?.talkativeness,
+      currentPhase: session.currentPhase,
+      turnType,
+      lastTurnVerbosity: session.lastTurnVerbosity ?? null,
+    });
+
+    // Momentum: the counsellor's LAST scoring adjustment (one-turn lag — scoring
+    // for THIS turn runs concurrently with the reply, so scoreHistory's last entry
+    // is the previous turn's value). Threaded into the cue context below; the reply
+    // path reads the same value from scoreHistory inside prepareReply.
+    const lastHistEntry = session.scoreHistory[session.scoreHistory.length - 1] || null;
+    const lastCounsellorAdjustment = (lastHistEntry && typeof lastHistEntry.adjustment === "number")
+      ? lastHistEntry.adjustment
+      : null;
+    const lastCounsellorScoreReason = lastHistEntry?.reason ?? null;
+
+    // Recent context window for scoring: last N turns BEFORE this counsellor turn (admin-tunable).
+    const windowSize = loadScoringConfig().recentTurnsWindow;
+    const recentTurns = session.transcript.slice(-(windowSize + 1), -1).map(({ role, text }) => ({ role, text }));
+    // Open objections THIS session is tracking, so the scorer resolves the same key.
+    const openObjForScore = openObjections(session.objectionState).map(({ category }) => ({ key: category }));
+
+    if (wantsSSE) {
+      res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" });
+      send = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    }
+
+    // Backchannel acks skip the scoring LLM entirely (no penalty, no call).
+    const scorePromise = isBackchannel(message)
+      ? Promise.resolve({ adjustment: 0, reason: "Backchannel acknowledgement", addressedObjection: null })
+      : scoreMessage(message, {
+          recentTurns, phase: session.currentPhase, turnType, courseName: session.courseSnapshot?.name,
+          openObjections: openObjForScore,
+        });
+
+    // Reply: streaming generator for SSE, plain await otherwise. Both go through
+    // the coherence gate and return the canonical { text, emotion }.
+    let replyResult;
+    const replyPromise = (async () => {
+      if (send) {
+        const gen = getStudentReplyStream(session);
+        let step = await gen.next();
+        while (!step.done) {
+          send("token", { text: step.value });
+          step = await gen.next();
+        }
+        return step.value; // { text, emotion, raw }
+      }
+      return getStudentReply(session); // { text, emotion }
+    })();
+
+    // Scoring and reply run CONCURRENTLY (reply sees the pre-message score).
+    const [{ adjustment, reason, addressedObjection }, reply] = await Promise.all([scorePromise, replyPromise]);
+    replyResult = reply;
+
+    // Apply the score and backfill scoreAfter + scoreReason onto the counsellor entry.
+    session.satisfactionScore = Math.max(0, Math.min(100, preScore + adjustment));
+    counsellorEntry.scoreAfter = session.satisfactionScore;
+    counsellorEntry.scoreReason = reason;
     session.scoreHistory.push({ turn: session.scoreHistory.length, score: session.satisfactionScore, adjustment, reason });
 
-    const { text: reply, emotion } = await getStudentReply(session);
+    // OBJECTION LIFECYCLE — resolve first (the counsellor's just-scored turn), then
+    // raise on the student's reply. The turn index is the transcript position the
+    // entry will occupy. Resolving uses the counsellor entry's index.
+    if (addressedObjection) {
+      const counsellorTurnIdx = session.transcript.indexOf(counsellorEntry);
+      resolveObjection(session.objectionState, addressedObjection, counsellorTurnIdx);
+    }
 
-    advancePhase(session, "student", reply);
-    session.transcript.push({ role: "student", text: reply, emotion, phase: session.currentPhase, scoreAfter: session.satisfactionScore, ts: new Date().toISOString() });
+    const { text: replyText, emotion } = replyResult;
+    // advancePhase returns the detected objection category (or null) and bumps
+    // milestones.objectionsRaised via the broad OBJECTION_RE gate (phase >= 3).
+    const gateCategory = advancePhase(session, "student", replyText);
+
+    // Record the objection in the lifecycle tracker. Prefer the phase gate's
+    // category; fall back to a direct detect so concerns raised before phase 3
+    // (which the gate ignores) are still tracked. The objectionsRaised counter is
+    // owned by advancePhase; we do not double-count here.
+    const studentTurnIdx = session.transcript.length; // position the student entry will take
+    const raisedCategory = gateCategory || detectObjectionCategory(replyText);
+    if (raisedCategory) raiseObjection(session.objectionState, raisedCategory, studentTurnIdx);
+
+    session.transcript.push({
+      role: "student", text: replyText, emotion, phase: session.currentPhase,
+      scoreAfter: session.satisfactionScore, ts: new Date().toISOString(),
+    });
 
     store.update("sessions", session.id, session);
-    res.json({ reply, emotion, currentPhase: session.currentPhase, satisfactionScore: session.satisfactionScore, scoreReason: reason, milestones: session.milestones });
+
+    // Instant counsellor cue (synchronous, zero-LLM) from the just-raised
+    // objection + live session state. Additive field on the same payload object.
+    // Cue v2 context: the counsellor's last scoring adjustment + reason and the
+    // live objection state, so the cue can react to a good/bad move and open concerns.
+    const cue = instantCue({
+      session, lastStudentText: replyText, objectionCategory: raisedCategory,
+      lastCounsellorAdjustment, lastCounsellorScoreReason, objectionState: session.objectionState,
+    });
+
+    const payload = {
+      reply: replyText, emotion,
+      currentPhase: session.currentPhase, satisfactionScore: session.satisfactionScore,
+      scoreReason: reason, turnType, milestones: session.milestones,
+      cue,
+    };
+    if (send) {
+      send("done", payload);
+      res.end();
+    } else {
+      res.json(payload);
+    }
   } catch (err) {
     console.error("Error in /sessions/message:", err.message);
-    res.status(500).json({ error: err.message });
+    if (send) {
+      send("error", { error: err.message });
+      res.end();
+    } else {
+      res.status(500).json({ error: err.message });
+    }
   }
 });
 
@@ -387,12 +586,30 @@ app.post("/api/sessions/:id/end", async (req, res) => {
   if (!session) return res.status(404).json({ error: "Session not found" });
 
   try {
-    // Idempotent: if a report already exists for this session, return it.
+    // Idempotent: if a GOOD report already exists for this session, return it.
+    // But a previous neutral fallback (fallback:true / needsRegeneration) is NOT
+    // a terminal state — allow regeneration in place instead of short-circuiting.
     const existing = store.getAll("reports").find((r) => r.sessionId === session.id);
-    if (existing) return res.json({ reportId: existing.id });
+    if (existing && !needsRegeneration(existing)) return res.json({ reportId: existing.id });
 
     const counsellor = store.getById("users", session.counsellorId);
     const generated = await generateReport(session, { counsellorName: counsellor?.name || "" });
+
+    if (existing) {
+      // Replace the fallback report's generated payload in place (keep its id).
+      // Clear the stale fallback flags first so a now-successful regeneration does
+      // not inherit fallback:true via the shallow merge in store.update.
+      const updated = store.update("reports", existing.id, {
+        fallback: false,
+        regenerable: false,
+        ...generated,
+        transcript: session.transcript,
+        generatedAt: new Date().toISOString(),
+      });
+      store.update("sessions", session.id, { status: "ended", endedAt: new Date().toISOString() });
+      if (session.assignmentId) store.update("assignments", session.assignmentId, { status: "completed", reportId: existing.id });
+      return res.json({ reportId: updated.id });
+    }
 
     const report = {
       id: store.newId("rep"),
@@ -448,6 +665,104 @@ app.get("/api/reports/:id", (req, res) => {
 app.delete("/api/reports/:id", (req, res) => {
   store.remove("reports", req.params.id);
   res.json({ ok: true });
+});
+
+// --- Config (admin-editable prompt + scoring scaffolding) ------------------
+// GET returns the effective merged config (file over built-in defaults). PUT
+// persists the body to the JSON file; loaders fail soft to defaults if the file
+// is later missing/corrupt. Admin-only at the UI layer, like the other admin CRUD.
+app.get("/api/config/prompts", (_req, res) => {
+  res.json(getPromptConfig());
+});
+
+app.put("/api/config/prompts", (req, res) => {
+  const body = req.body;
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return res.status(400).json({ error: "prompt config must be a JSON object" });
+  }
+  try {
+    writeFileSync(PROMPT_CONFIG_PATH, JSON.stringify(body, null, 2) + "\n");
+  } catch (err) {
+    console.error("Error writing prompt-config.json:", err.message);
+    return res.status(500).json({ error: "failed to persist prompt config" });
+  }
+  // Return the effective (merged) config so the client sees defaults filled in.
+  res.json(getPromptConfig());
+});
+
+app.get("/api/config/scoring", (_req, res) => {
+  res.json(loadScoringConfig({ fresh: true }));
+});
+
+app.put("/api/config/scoring", (req, res) => {
+  const body = req.body;
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return res.status(400).json({ error: "scoring config must be a JSON object" });
+  }
+  try {
+    const saved = saveScoringConfig(body);
+    res.json(saved);
+  } catch (err) {
+    console.error("Error saving scoring config:", err.message);
+    res.status(500).json({ error: "failed to persist scoring config" });
+  }
+});
+
+// Transparency: the three composed prompts the LLM currently sees for a session.
+// Admin-only at the UI layer (consistent with the other admin routes).
+app.get("/api/sessions/:id/prompt", (req, res) => {
+  const session = store.getById("sessions", req.params.id);
+  if (!session) return res.status(404).json({ error: "Session not found" });
+  const transcript = session.transcript || [];
+  const lastCounsellor = [...transcript].reverse().find((m) => m.role === "counsellor");
+  const windowSize = loadScoringConfig().recentTurnsWindow;
+  res.json({
+    studentSystemPrompt: composeForInspection(session),
+    scoringPrompt: scoringPromptForInspection({
+      message: lastCounsellor?.text || "<counsellor message>",
+      recentTurns: transcript.slice(-windowSize).map(({ role, text }) => ({ role, text })),
+      phase: session.currentPhase,
+      turnType: lastCounsellor?.turnType,
+      courseName: session.courseSnapshot?.name,
+      openObjections: openObjections(session.objectionState).map(({ category }) => ({ key: category })),
+    }),
+    reportPrompt: reportPromptForInspection(session),
+  });
+});
+
+// On-demand richer cue: one deterministic LLM call over recent context, falling
+// back to the synchronous corpus cue on any failure/timeout. Admin/counsellor-
+// agnostic (no auth layer exists). Returns { cue, source }.
+app.post("/api/sessions/:id/cue", async (req, res) => {
+  const session = store.getById("sessions", req.params.id);
+  if (!session) return res.status(404).json({ error: "Session not found" });
+  // Same cue v2 context the per-turn path passes: last scoring adjustment + reason
+  // and the live objection state. Computed once for both the success-fallback and
+  // error-fallback instantCue calls below.
+  const cueHist = Array.isArray(session.scoreHistory) ? session.scoreHistory : [];
+  const cueLastEntry = cueHist.length ? cueHist[cueHist.length - 1] : null;
+  const cueLastAdjustment = (cueLastEntry && typeof cueLastEntry.adjustment === "number") ? cueLastEntry.adjustment : null;
+  const cueLastReason = cueLastEntry?.reason ?? null;
+  const fallbackInstantCue = () => {
+    const lastStudent = [...(session.transcript || [])].reverse().find((m) => m.role === "student");
+    const objectionCategory = lastStudent ? detectObjectionCategory(lastStudent.text) : null;
+    return instantCue({
+      session, lastStudentText: lastStudent?.text || "", objectionCategory,
+      lastCounsellorAdjustment: cueLastAdjustment, lastCounsellorScoreReason: cueLastReason,
+      objectionState: session.objectionState,
+    });
+  };
+  try {
+    const llm = await llmCue(session);
+    if (llm) return res.json({ cue: llm, source: llm.source });
+    // Fall back to the instant cue, derived from the latest student turn.
+    const cue = fallbackInstantCue();
+    res.json({ cue, source: cue.source });
+  } catch (err) {
+    console.error("Error in /sessions/:id/cue:", err.message);
+    const cue = fallbackInstantCue();
+    res.json({ cue, source: cue.source });
+  }
 });
 
 // --- Analytics -------------------------------------------------------------

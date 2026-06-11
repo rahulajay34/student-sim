@@ -92,5 +92,45 @@
     "createdAt": "2026-06-10T08:12:39.327Z",
     "sessionId": "ses-e8eaeb21",
     "reportId": "rep-1b67053b"
+  },
+  {
+    "id": "asn-1d9cbc78",
+    "counsellorId": "counsellor-2",
+    "personaId": "persona-studying",
+    "courseId": "course-06d95663",
+    "personaPromptOverride": null,
+    "scenario": {
+      "title": "",
+      "difficulty": "medium",
+      "situation": "",
+      "contextNotes": ""
+    },
+    "rubricTemplateId": "rt-grounded-v2",
+    "revealPersona": true,
+    "status": "completed",
+    "createdBy": "admin-1",
+    "createdAt": "2026-06-10T18:32:35.000Z",
+    "sessionId": "ses-853812bc",
+    "reportId": "rep-c6b991f3"
+  },
+  {
+    "id": "asn-c9b9933f",
+    "counsellorId": "counsellor-2",
+    "personaId": "persona-diff-field",
+    "courseId": "course-3b1fc4f6",
+    "personaPromptOverride": null,
+    "scenario": {
+      "title": "",
+      "difficulty": "medium",
+      "situation": "",
+      "contextNotes": ""
+    },
+    "rubricTemplateId": "rt-grounded-v2",
+    "revealPersona": true,
+    "status": "completed",
+    "createdBy": "admin-1",
+    "createdAt": "2026-06-10T21:21:57.660Z",
+    "sessionId": "ses-39e80263",
+    "reportId": "rep-1fceda95"
   }
 ]

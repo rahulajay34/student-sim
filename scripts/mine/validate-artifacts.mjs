@@ -168,6 +168,87 @@ const CHECKS = {
       }
     }
   },
+
+  // ── New register artifacts ────────────────────────────────────────────────
+
+  'register-lines.json': (a, errs) => {
+    req(a, 'source', 'string', errs, 'root');
+    req(a, 'totalTurns', 'number', errs, 'root');
+    req(a, 'uniqueLines', 'number', errs, 'root');
+    if (!req(a, 'lines', 'array', errs, 'root')) return;
+    if (a.lines.length < 50) errs.push(`lines array has only ${a.lines.length} entries, want >=50`);
+    const VALID_CATEGORIES = new Set(['question', 'concern', 'answer', 'backchannel']);
+    const VALID_PHASES = new Set([null, 1, 2, 3, 4, 5]);
+    a.lines.forEach((l, i) => {
+      req(l, 'text', 'string', errs, `lines[${i}]`);
+      req(l, 'count', 'number', errs, `lines[${i}]`);
+      if (!VALID_CATEGORIES.has(l.category)) {
+        errs.push(`lines[${i}].category "${l.category}" not in {question,concern,answer,backchannel}`);
+      }
+      if (!VALID_PHASES.has(l.phase)) {
+        errs.push(`lines[${i}].phase ${l.phase} not in {null,1,2,3,4,5}`);
+      }
+      // PII heuristic: no capitalized tokens that look like names in text
+      if (typeof l.text === 'string' && /\bN\s+[A-Z][a-z]+\s+\d{3}/.test(l.text)) {
+        errs.push(`lines[${i}]: possible email-ID pattern detected`);
+      }
+    });
+  },
+
+  'voice-bank.json': (a, errs) => {
+    req(a, 'source', 'string', errs, 'root');
+    if (!req(a, 'stages', 'array', errs, 'root')) return;
+    if (a.stages.length < 5) errs.push(`stages array has only ${a.stages.length} entries, want >=5`);
+    const VALID_PHASES = new Set([1, 2, 3, 4, 5]);
+    const VALID_CATEGORIES = new Set(['studying', 'graduate', 'same-field', 'diff-field', 'non-working']);
+    a.stages.forEach((s, i) => {
+      req(s, 'id', 'string', errs, `stages[${i}]`);
+      req(s, 'name', 'string', errs, `stages[${i}]`);
+      if (!req(s, 'phases', 'array', errs, `stages[${i}]`)) return;
+      s.phases.forEach((p, j) => {
+        if (!VALID_PHASES.has(p)) {
+          errs.push(`stages[${i}].phases[${j}] = ${p} not in {1,2,3,4,5}`);
+        }
+      });
+      if (!req(s, 'common', 'array', errs, `stages[${i}]`)) return;
+      s.common.forEach((e, j) => req(e, 'text', 'string', errs, `stages[${i}].common[${j}]`));
+      const bp = s.byPersona ?? {};
+      Object.keys(bp).forEach((cat) => {
+        if (!VALID_CATEGORIES.has(cat)) {
+          errs.push(`stages[${i}].byPersona has unknown category "${cat}"`);
+        }
+        bp[cat].forEach((e, j) => req(e, 'text', 'string', errs, `stages[${i}].byPersona.${cat}[${j}]`));
+      });
+    });
+  },
+
+  'register-stats.json': (a, errs) => {
+    req(a, 'source', 'string', errs, 'root');
+    if (!req(a, 'byPhase', 'object', errs, 'root')) return;
+    // Must have entries for phases 1–5 (phase 4 may be approximated)
+    const EXPECTED_PHASES = ['1', '2', '3', '4', '5'];
+    for (const p of EXPECTED_PHASES) {
+      if (!a.byPhase[p]) {
+        errs.push(`byPhase missing phase "${p}"`);
+      } else {
+        req(a.byPhase[p], 'medianWords', 'number', errs, `byPhase.${p}`);
+        req(a.byPhase[p], 'turnCount', 'number', errs, `byPhase.${p}`);
+      }
+    }
+    if (!req(a, 'phaseWordBands', 'object', errs, 'root')) return;
+    for (const p of EXPECTED_PHASES) {
+      if (!Array.isArray(a.phaseWordBands?.[p]) || a.phaseWordBands[p].length !== 2) {
+        errs.push(`phaseWordBands.${p} must be [min, max] tuple`);
+      }
+    }
+    if (!req(a, 'fillers', 'array', errs, 'root')) return;
+    a.fillers.forEach((f, i) => req(f, 'value', 'string', errs, `fillers[${i}]`));
+    // Source path must not contain Windows user paths
+    const srcStr = JSON.stringify(a.source ?? '');
+    if (/Users\\\\[a-zA-Z]+\\\\|Users\/[a-zA-Z]+\//.test(srcStr)) {
+      errs.push('source field contains a user home path — scrub it');
+    }
+  },
 };
 
 export function validateArtifact(name, artifact) {

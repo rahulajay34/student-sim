@@ -1,0 +1,2450 @@
+{
+  "source": "32 diarized real calls (PII scrubbed)",
+  "generatedAt": "2026-06-10T00:00:00.000Z",
+  "totalTurns": 448,
+  "uniqueLines": 404,
+  "distribution": {
+    "question": {
+      "turns": 76,
+      "share": 0.17
+    },
+    "concern": {
+      "turns": 33,
+      "share": 0.074
+    },
+    "answer": {
+      "turns": 260,
+      "share": 0.58
+    },
+    "backchannel": {
+      "turns": 79,
+      "share": 0.176
+    }
+  },
+  "lines": [
+    {
+      "text": "Oh, wait. Wait, there's one, one minute. Is it good now? I was turning on by you.",
+      "phase": 1,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Okay, in which year? Yeah, 2020, 2020. So any campus placement have you received? Actually my father was in adept so i attended joining his business.",
+      "phase": 1,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "BPO. It's like a technical job, right? Non-technical only claims associated.",
+      "phase": 1,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Yes, sir? sir am I audible to you? Yes, sir. So did I am I audible to you? sir, good afternoon. Am I audible to you? Yes, sir, you are ordered to.",
+      "phase": 1,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "The camera? Yeah, I'm visible.",
+      "phase": 1,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Well, thank you for asking. Where are you from? Well, I am from Rajasthan Kota, but currently I'm in Mumbai.",
+      "phase": 1,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Yes, sir. Okay, so like which year now? First year? Yes, this here I gave my boots, my colleagues, had come next to you. Okay, it's not started yet. No, sorry.",
+      "phase": 1,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Hi, ma'am. I'm visible, right? Am I fully or half of my face?",
+      "phase": 1,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Net. I'm visible?",
+      "phase": 1,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Is this? I'm visible, hello? Yeah, visible, yeah.",
+      "phase": 1,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Yeah, hi, how are you? Yeah, I'm fine.",
+      "phase": 1,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Okay, so it was paid or unpaid internship?",
+      "phase": 1,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "So just like, how is it going your job? going your jobs and everything. Not very good.",
+      "phase": 1,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Okay. Switching to which field? Same. Same. Business antics, right? Okay, got it, got it.",
+      "phase": 1,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Hi sir. I'm visible, right?",
+      "phase": 1,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Can you hear me now? Yes, I can hear you.",
+      "phase": 2,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Okay, okay, okay. So, so you know, that time? Yeah. Okay. So, now, now, you're, when, the exams, now? It's, two‑tarics. Two, two days, it's, your exam started. Yeah. No, no, it's, no.",
+      "phase": 2,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Now, it's, how many exams are it? Now, I'm entering from there. Executive, there are two groups. Then, internship, and then, two years, professional, there, approximately, four exams. Four exams.",
+      "phase": 2,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Hello? Hello? Yeah, you're facing any difficulty, because I'm getting noise from your side. Hello? Hello. Yeah, I'm getting your noises from your side.",
+      "phase": 2,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Does it include placement assistance?",
+      "phase": 2,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Which industries can I apply my skills to?",
+      "phase": 2,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "What are the placement statistics?",
+      "phase": 2,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Can you send me the website link so I can review it?",
+      "phase": 2,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Project engineer, okay. So having three years experience right now?",
+      "phase": 2,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Yeah, exactly, business analyst. I have not applied for, is it for business analysts and generative AI, I guess? Yeah, business analytics with gen and agentic AI. I've been very passionate about business analytics and I wanted to pursue my career in this field after I complete my course. So that it's a booming field right now. And in the new future, also, it will be a good career path for me as it is involving AI and authentic AI in business analysts. So it is, I think it is good opportunity for me.",
+      "phase": 2,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "sir, like I have seen that thing. You have seen the website? Yeah.",
+      "phase": 2,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Would you be letting me know the, you know, the fee structure as well because it was not mentioned thoroughly so.",
+      "phase": 2,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Which this application the pandas is because I've never heard about this with the python best pandas right?",
+      "phase": 2,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "So why you want to do this program very fast? I know that EI is like... EI is getting into everyone's hand. Like, we need air. and business analytics as I'm in the field of BBA and in the finance field. Like I have chosen finance, like commerce and international accounting. So we need that, like I need that, like business analytics and artificial intelligence for to grow my career and also the world is growing fast in the face of AI. So that's all right.",
+      "phase": 2,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "This program about I know we this we can we can't we can use through and how we use and then for business growth for how we use you can use you? You know ma'am? No ma'am. You have? You have? Do you? This is they have full support. What is what do you? What's business? What is? Our construction's business.",
+      "phase": 2,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "It's higher second grade, 12. 12 standard? Yeah. Actually, I have completed my first year and second year. But the thing was that I got some bad marks in the second year. So I couldn't complete my third, go in passing for a third year. for the 30 years. Okay. So that's why and at that time I was currently working also. So that time I couldn't manage my studies and the work. So I would continue with this work on the work.",
+      "phase": 2,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Have you gone through the website and research about it? and research about it? Yes, I got a little bit about the website. Like curriculum and the structure. I just wanted to want it. Correct.",
+      "phase": 2,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Yes, it's my internet connection fluctuating. Okay, so can you go to the place where you have a good network issue? I'm on road only. That's where I borrow a Wi‑Fi connection from the store.",
+      "phase": 2,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "I have one doubt that will I be given the tools to practice on or will I have to purchase the subscriptions?",
+      "phase": 2,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Okay. So I'm presenting my screen, ma'am. Just let me know is it visible or not? So is it visible to you? No. Now my screen is visible to you? Yes. Yes. Okay. Yes.",
+      "phase": 2,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Okay. So like, you have business, like, some plans have you have business plan? Which you, in future, you implement are you? Online business. Online business, right? Okay, got it. So, like, a category, like, it's a fashion category, or it's a food, or any category. Sorry? essential things. Yes. Groceries. Yes. Okay, Got it. That's a good idea. And this program will be helping you, like, on the data part itself.",
+      "phase": 2,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "BC ma'am? BC last time.",
+      "phase": 2,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Are the classes live or recorded?",
+      "phase": 2,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "How much can I spend? What's the budget? I'm thinking about ROI.",
+      "phase": 3,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "What will be the exact outcome after six months? What can I build or automate on my own?",
+      "phase": 3,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "What is the exact name of the course?",
+      "phase": 3,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Will there be a lot of coding? I'm more of an analytics person.",
+      "phase": 3,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Which companies do you have as hiring partners?",
+      "phase": 3,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "When does the course start?",
+      "phase": 3,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "What is the class schedule?",
+      "phase": 3,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Today, how do you, a part, you know, and you're, you're, you know, today, you know, a, a, that's, you're, you know, how can use it? How can use it? How do you use it? How do you use? Like, my business analytics use for my present data and what I want to what I want to, it's going to get my future plan, okay.",
+      "phase": 3,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "So is this a theoretical course or will there be projects? I see projects like quick commerce delivery, major projects, assignments each week, hands‑on experience.",
+      "phase": 3,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Will the classes be live or recorded? How many live sessions per week?",
+      "phase": 3,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "So you're aware about the program for you, right? No, sir. Actually, I didn't get any information about it. Do you know it's a paid program? I just know it's a paid program. But in that amount I don't know about it. So what is your college with generally? Well, generally, actually, I even got a scholarship because I was told 80% in the boat. So like, what is the history is 5,000 and public for the college has been down to 36,000 from the student.",
+      "phase": 3,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "I have some clarification about the placements. Which companies will be handling the placements?",
+      "phase": 3,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Sorry? It looks like somebody is holding the camera from my end.",
+      "phase": 3,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "No, actually I'm outside from my home, but what are you saying to me? Sorry? No, I can't access my camera right now.",
+      "phase": 3,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Once you reach him at what time you're going to reach your home? Tomorrow 9am.",
+      "phase": 3,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "your home?",
+      "phase": 3,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "My first question is about the joint course – who are the teachers? Is it BITS or Masai?",
+      "phase": 3,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Are the video lectures unlimited views?",
+      "phase": 3,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "What about attendance if I miss a live class?",
+      "phase": 3,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "I am from a commerce background – will the basics be covered?",
+      "phase": 3,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Where is the campus immersion?",
+      "phase": 3,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Any queries so far? No.",
+      "phase": 5,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "I'm interested but I can't pay 59 today. So I will pay only 4,000 to block my seat, right?",
+      "phase": 5,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "No, no. We'll do one thing, okay?",
+      "phase": 5,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Can you? Yeah, that's, I've got it from I want to say I'll tell that I want to all all that is it's okay so that's all the same program, okay, and the difference is it's five months, it's okay?",
+      "phase": 5,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "So market or if they're whether whether they're present, last two, three years, okay, that, they're focused on projects, mainly, and additional projects are like a minor projects are okay, it's 15 weeks, that's like 34 weeks, okay?",
+      "phase": 5,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "And what What are what you first, SQL database based on then Excel, and different and decision-making statistics are normally business development, like analytics kind of holds okay, What we're what we're based on business analytics, AI engineer, LLM engineer, Prompin engineer, and data analytics, okay?",
+      "phase": 5,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Can I do it by card?",
+      "phase": 5,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Can you tell me about payment options?",
+      "phase": 5,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Uh, 1.5. As a developer? I have done six months of internship before that as well.",
+      "phase": 5,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Okay. So when will that session be?",
+      "phase": 5,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Will you teach the whole LLM models or just prompting?",
+      "phase": 5,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "What hardware do I need?",
+      "phase": 5,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Yes, yes, definitely. So comfortable with the seat securing process by paying 2,000? Yes. In this session only? Yes, I'm going to pay. 2,000. Do I need to pay 2,000? Yes, you need to pay 2,000 within a session, okay? Okay, okay.",
+      "phase": 5,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "I'm connected with my Wi-Fi? Sorry? I'm connected with my Wi-Fi, sir.",
+      "phase": null,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Okay. Can I switch places? Can you give me two minutes?",
+      "phase": null,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Hello? Yes, sir, you're audible.",
+      "phase": null,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Rug up am I audible now?",
+      "phase": null,
+      "count": 1,
+      "category": "question"
+    },
+    {
+      "text": "Yeah, and I'm okay with this. Still I had to ask my parents as well because there is...",
+      "phase": 3,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "Sir, like they are a little hesitant or so they'll just postpone this course for some time because because I have been preparing for this you face right just they are asking me to let the result come and you just decide later they are asked me to later they ask me to do this okay it's up to you call",
+      "phase": 3,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "No, no. I don't have any idea. Because when I'm submitting that application at that time, they just ask me, like, how much you can invest for a month? I said select like $3,000 to $3,000, just for rough. I don't know exactly the fee structure about.",
+      "phase": 3,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "My salary didn't really... I'm okay... I'm not sure about the fee... I'm sorry, I can't go ahead with my profile.",
+      "phase": 3,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "I’m not too concerned about placement, I can figure it out myself.",
+      "phase": 3,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "How do I make the payment? Is there an EMI option?",
+      "phase": 3,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "what about this placement support you are giving I eligible I've done 65% 3.5 GPA and what was the other 65% of attendance 70% of marks for the placement this two for the certification 35% of marks with 65% of attendance for placement right for placement what are the conditions 70% of marks with 65% of attenance.",
+      "phase": 3,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "All right. Okay, so. So, you know, your parents, or your family, you know, you know, you're applying? Well, I've got, he said, he said, that you know, that's why I was, I was saying, I was he was asking that, that is, to attend to, then, we're, we're doing, we're doing, okay,, that's the little that's no, he's, they're in they're in okay, they're they're so you can, you, then, I can, I can, I can talk, like, you know, like, you know, they're, they're,, you know, you know, and you have, So, it's registration, we'll So, you you're, what you do you job opportunities? Job opportunity? No, no, just I want, I want, I want, so that I'm, so that I'm I'm doing, so you know, so, what's, what you're,, you know, accountant and marketing sales, just, these are content, marketing sales, these are you can you can't you can't that you don't have any used not used used used, the that, and then then I was start to start to I was I'm Okay, you have you applied with AI, so So, you know, so business analytics, what is business analytics, that that's, that's, just what business what needs, that what is, that's, to look, business analysis, I'm, I'm, you know, I think plan that it's Okay, so you know, you know, business plan, or what is, you? No, dream, to business did, so that that way, that's a way, kind of, you know,, you know,, you know, you?",
+      "phase": 3,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "I need to discuss with my parents, and I’m not sure about the ROI.",
+      "phase": 3,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "Yeah, so target job roles is what you guys saying. ... I'm not sure if you will guarantee a job, but you'll help with interview preparation and apply to hiring partners.",
+      "phase": 3,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "The Rs 52,000 is a lot for me. I earn around 90 k to 1 lakh per month, after rent and living costs I have only 20‑30 k left. If I take EMI I might not manage. Is there a cheaper option?",
+      "phase": 3,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "I need to discuss with my parents.",
+      "phase": 3,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "I've spoken to my parents.",
+      "phase": 3,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "what is business analytics and what did actually um basically the data gathering and it has to do something with analysis strategic analysis for better results in my work okay cool so So let me tell you one thing, right, for a consultant or an operation or analyst, business analytics with AI becomes very powerful if you have, because already you have done the operations consultant side, right? So it becomes very powerful skill because the consultant mainly solve business problems. You know that? Yeah. Yeah, improve performance and help companies to make better decisions. So like for example, the first key point whenever you are going ahead with business analytics, that is better decision making, right? So do you like constructed job or you want to go ahead with with data things? Um, or you want to switch your career? I'm a little unsure about that. You're not sure. I haven't planned. Okay. Yeah, I can think about some other.",
+      "phase": 3,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "Please give me one day because this fee is very high. The class is going to start from 30th of May itself. Admission we are closing as of now. If you're going for EMI, it will be manageable. But if you're doing 5,000, 10,000, 15,000 programs, you will not get the output, you will be losing your time.",
+      "phase": 3,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "I'm not married, I need to discuss with my parents. Can you call them? No, I will connect them myself.",
+      "phase": 3,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "Can I talk to my parents first?",
+      "phase": 3,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "See, before May, when I had decided two years back when I decided I want to be a chartered accountant, that time I was already determined to do something extraordinary which will already which will make me stand out in front of other CS parents, right? Now before May I had a simple clear plan about getting to know and getting getting to expertise AI in finance. Okay. So that would make me stand out amongst the others. But then just this may ICAI announce that they are already including AI for in their course itself. So I was like, no, I have to do something extraordinary. I want to stand out between my peers and everyone. So also business analytics is something where I where I think I like to go, okay? Even though I'm doing CA, my one, the main idea of me doing CA is starting something of my own after some time. I like the knowledge. I want to get the knowledge of CA, which is why I'm doing.",
+      "phase": 3,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "I'm trying the placement route and working towards it. YouTube posts are good, certified courses are okay.",
+      "phase": 3,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "Is there a doubt‑clearing support team?",
+      "phase": 3,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "Can I join later after my exams?",
+      "phase": 3,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "Can I pay the remaining amount later?",
+      "phase": 3,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "My parents are, let's one way, wait for a at least knowledge and talk about, let's say, I need, uh, I need, office.",
+      "phase": 5,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "Both two are same, here, there are places we're a business because because there's start-up companies and AI engineers need they're paying job and start a company's like 25,000 like 25,000 So 25,000 plus G 20,000 securing seat to and the remaining 23,000 EMI",
+      "phase": 5,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "My parents.",
+      "phase": 5,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "I talked with my father and he said yes, sir.",
+      "phase": 5,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "Sir, can you give me five minutes? I need to talk with my father then I will answer.",
+      "phase": 5,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "What about the duration and placement support?",
+      "phase": 5,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "Thank you for your time, I will think about it and get back to you.",
+      "phase": 5,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "Yeah, I'm able to see now one-time payment and EMI.",
+      "phase": 5,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "So my mother is here. Yeah, can you ask your mother to come to that case? Yeah, can you ask your mother to come to that case? Good evening, ma'am. I'm the counsellor, academic counselor here from Masai school. So I'll be handling the all the admission process of IAM. I am watching and Bidstone. Okay. So I'll just give you the complete details of the program, like curriculum and timings and how the program is going to be there, and how the placement is also going to happen. I'll just give the complete details and after that you need to pay some amount of money to secure your stock. Okay? So, can you give a call to the [student]? [student], you can remove the headphones for that you can go to watch it. So do one thing, connect the reverse. Okay? Cool. So, [student] will just explain you about the program. [student] will just explain you about the program details. Okay? So if your mother can understand your ingestion now, right? Yes, sir. Yes, sir. Okay. So if she can't agree on the lesson, you just take it into her. Okay? So have you informed the fee structure and all? No, so I just . So, ma'am, this program is not a free program. It's a paid program. Okay? So your total program, this is around 52,000, the GST will be. Okay? So this 52 will be dividing into two parts. 48,000 is a court fee and 4,000 is your admission set. So this 48, you can take. you can pay in one time or it can convert into EMA also. So we have EMA for nine months and if you want I can extend to 12 months also. Okay? In this session you need to complete your admission process, which means you need to pay some amount of money to secure your snow. And the remaining money you can pay less also. So are you comfortable in the fee structure and all? The only, like we are asking you to just complete the admission process in this session because total 16,000 students have registered for the exam. Okay? But we are hiring only limited chees of 250. So we are going to council the students whose course more than 115 notes. 7,000 students qualified in this and you are there in that 7,000. So congratulations for that. And we started the council session today morning. good morning and right now we already got me to the 186 and we left to the 70s. That's the only reason we are asking you to just complete your admission process and the remaining money you can stay later also. So you need to research about the program before, right, regarding the two and all? So you got a P.PT, right, in the mails and all? You haven't checked that one? I have got one PPD about the counselling session in the Wattenham. Yeah. You haven't seen the program details over there? I couldn't. I couldn't. But they wasn't make mentioned about what the stuff. I think. I think two team got the decision. Okay, so we'll do one thing. I'm sending you a message to your registration mobile number. So please look into it and let me know me to the end of the day. Okay? Take your watch up and send your message. Okay. Got the message? Yeah, please go through it and let me know by end of the day. Okay, I'll just update from mine. Thank you.",
+      "phase": 5,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "Can I pay it in EMI?",
+      "phase": 5,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "Yes, ma'am, I have asked my parents for the payment and registration.",
+      "phase": 5,
+      "count": 1,
+      "category": "concern"
+    },
+    {
+      "text": "I'm a recent graduate. I graduated in 2024 and I worked for here. And then I decided to like off a competitive exam. for competitive exam, which I was preparing for UPS and I just gave my films this year. So, like, it went well, I'm just waiting for the results. The thing is, I want to upskill and currently I want to like get into job as well. So since like speaking.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, I want to just upskill and again, obviously there is job.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "One minute, I cannot hear you properly. I think there's a lag in sound.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Ah, it's good, sir. It's good, sir.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, I'm fine. Sure, turning it on now. I hope you can see me.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'm from Agra.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Hi, my name is [student]. I'm currently working as an assistant manager in ... handling ... I completed my DVA from ... University. I have about two years experience ... My current designation is system manager.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Hello, yeah. Just give me a minute, let me, let me switch my camera as well. Hope you are able to see me. hope you are able to see me yeah so where are you from Sarwansekar you're from chenny need you from cheney no i'm sorry okay but you're from Tamil state right yes okay got it",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Okay, my name is [student]. I am from Yanam Puticherry. Now I'm currently staying in Hyderbath. I have a four years of experience in claims processing. I have an global solutions. Mm-hmm.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I have completed MCA at Kaya, Jay into University, Kakinada. Okay, Teluguay. Tellu.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Through social media, Instagram.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I am currently pursuing CS and BBA from Oxford College. And C.S. I'm doing like side pay. Okay. I'm from shadow but first studying I came to indoor.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, sir. Sir, my name is [student]. And sir, I'm from Dhasuda, Odisa. And I'm recently graduated from Centurion University. That's it, sir.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, sir. One second. Yes, sir.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Good. I'm okay, thank you. My name is [student], and I am from Delhi. I have nearly 8 years of work experience in fund accounting and client service domain. I work in a global bank, currently based in Delhi, working in Gurgaon.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I am very interested to learn something like gen AI, agentic AI, those fascinating words that I heard a lot of people talking about. My objective is not to become an AI developer or a robot programmer, I'm not from a tech background. I just want to learn and understand AI so that I can apply it in my current work.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'm good, thank you. Yes, I can see you now.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'm from Hyderabad, staying in Habibu. I was brought up in Nandur, Maharashtra and my parents are from Kolkata.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I have overall nine plus years experience. I did my graduation in science, then worked in clinical research at Apollo hospitals, then medical billing, then moved to banking and completed 4.5 years in HSBC, which is a full banking profile.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, you are audible to me.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "My email ID is on file.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Sir, I'm [student], yeah.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Sir, actually my BBA is finished. My last semester just ended. Yes, I can listen.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, passed out. My results are pending, but my degree is complete.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, I can hear you.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No, I cannot hear your voice and I'm turning off the cameras so that I can hear you properly.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Okay, I'll unmute the thing and I'll listen to you.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, as I've mentioned, my name is [student], and I live in Hyderabad. I've completed my bachelor's in electronics and communication engineering in a local university and passed out in 2023. Since then, I have been working as a project engineer in a company.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'm from Hyderabad, Telangana. The moment I am going to like Masters in UK. I'm living in UK. UK? Yeah. Okay, so in UK you're working? At the moment I'm working in part time, like in Indian grocery shop. Right now? Yeah. And what about right now? Right now you're not walking? Right now I'm working but for a week days we go through like 20 hours of job. of jobs, that's it. Not full time.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "My graduation done by 2021. I don't have any experience in IT sector and that. My stream was electronic and communication.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Okay, so you're in UK. Okay. Living up to your own or with your family like family with my with my own with my with my own okay and why do you want to join this program uh like when where i was working like in supermarket that is a supermarket okay uh for the developing like applications and website I need those like knowledge about the AI technology and like data analyst. It will work in our field like for grabbing the customers and like what to do like offers and everything. And like managing the till and everything.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No idea. I didn't go through it because after doing the application, like this is the first session of you.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No, my own.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "My name is [student]. I am from Japan Kashmir. And currently I have done diploma and nautical science. So I am doing selling right now. And I wanted to explore career opportunities.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'm from West Bengal, Burdaman.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'm a, well, I joined as a data analyst and right now I work as a senior data analyst.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I will be finishing five years of experience this July. Five years experience.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Hi, hi, I'm good. I'm from Manglore.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, I'm from Manglore. I graduated recently from a university, deemed to be a university, Manglore, in BCOM. I specialize in finance and information system that includes business analytics and HR analytics.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Actually, I recently finished my degree last week and received my results two days back.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'm planning for higher studies. Since I have almost 10 months, I'm planning to do a course similar to this to improve my studies and my resume.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, I'm planning.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I've already done the specialization. Data has always been my interest. Since AI is trending and is the future, I'm interested in this course.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, the admission process is still ongoing. We have to apply for transcripts and then begin the application.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, I had applied for a few internships initially. Then I came across this course and felt it was more relevant, so I applied.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "This day I completed my board's examination, classroom boards and currently I'm pursuing BBA degree in accountancy, sorry, in commerce and international accounting, BBA commerce and international accounting.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes. So, I'm 12th pass out. I'm talking about. I'm going to go. I've seen on Instagram on its BitSans this A.I. course is provided I mean That is the Maneauph is the 12 complete has How percentage how percentage 69 and and you why you think you you this program join because technical.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'm from Jumu and Kashmir. You are from Jammu and Kashmir. You are from Jammu and Kashmir.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, it's on already.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, I am [student]. I am currently working in a company from last past eight years. Currently, I have completed my I for 12th, almost 2014. That was already one. Okay, so I'm traveling right now. Actually, I'm going home by my... Just left my office. Okay. So I won't take it. much time that we complete this. Okay.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, I can listen. Yeah, hi.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, you're audible.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, sir, you're visible.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Complete face is visible.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, I guess it is better now.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah. I still have a network issue.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "From my end, it could be because I'm in my hometown, the network is not stable here. Where is your home town, by the way? It's in Uttar Khan, Almura. Okay. So there is no Wi-Fi connection there? It's my own Wi-Fi, actually. No, it's my own internet connection. It was working fine for other things.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "So let me introduce myself. I'm the counsellor. I am a senior counselor here who will be guiding you for business analytics with Gen. and Agent TKai from Pitson. And I believe that you are a working professional. you are a working professional, I know that I hope that you have gone through all the regions regarding the program. Yeah, I put that on my application. I'm working as a consultant in administrative headquarter. It's in a statutory body in Delhi. Sorry? And I've been working there for three years. This is a statutory body, NMC National Medical Commission in Delhi. Okay. And I am a consultant there. Okay, okay. Okay. consultant there.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'm from Manipal, which I'm from Manipal, which is in Karnataka. Sorry, my name is [student]. I'm from Karnaata, it's in a city. And currently I'm working as a cloud association. Part of entity as an application developer.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "It's kind of developing a website as well as the app.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, the DART language.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Three years.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Like it was kind of interesting, like a business analytic with using the AI. Anyways, the market is going on with AI for now. Yeah, I like that.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No, I'm not... No.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'm from Jarsi.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "It was good. Actually, I have my classes and office and all. So yeah, it was good.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, sure. Hi. Hi. So I'm a student and currently I'm doing my graduation from my university. And I'm also studying marketing and I've done 10 months of internship in marketing, even marketing specifically.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Right now I'm just attending my college and yes, that's it about me.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'm doing BSE honors in biochemistry and I'm in second year. My second year exams are almost done. So I've been third year in a few days.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "It's a three year degree. It's a three year degree.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, I have completed my internship.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Actually, I'm not too much, like not that much into chemistry. Biochemistry is a subject where you learn the processes that happens in your body like metabolism.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Actually, I was not very sure about science. I wanted to explore more fields that I can pursue my career in. So I picked marketing, even marketing specifically, because I wanted to explore more fields that I can pursue my career in. because I like events, hosting events and managing teams and all. So I started with marketing.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "For three months, it was unpaid and after that it was paid.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I like playing badminton. I like playing badminton the most and other than that I have hobbies like writing and painting sometimes.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "My exams are going on, like my practicals are going on, my exams are done.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "In a day or two.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Right now I'm in fourth semester.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I work and currently working in reliance retail in garden industry. And total nine year experience in this field.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Currently, my designation is an assistant manager. Okay. As a I manager. As an? I. Industrial engineer and production planning.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "So I just passed out 12th and I am an athlete. Also, I was getting bored so I just signed up the other course. I'm also learning Spanish and I do a lot of things to not get bored for now.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No, that's not the thing. I like to do different stuff, and I'd sign up for this because I saw something, I liked it, I liked it.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, they do.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No, not exactly. I've been to the website, but I haven't seen the fee structure.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'm planning to do a BBA or a UIUX design course.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Shooting, 10 meter and 50 meter rifle shooting.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Ah, yes ma'am.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, I can.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Just a second.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, I'm here visible.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Okay, you already know my name. So I am 12th pass, C.A as parent. So I just finished with my May. attempt foundation, CA foundation, and right now I'm finding colleges for BICOM. So I've just cleared my 12th examinations. I have attempted my CA Foundation first attempt in May. Okay. And right now I was searching for courses when I found out with some Gen. A.I. Business analytics.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'm currently pursuing my biotech from Manipal, I'm pursuing CS in AI and currently I'm in third year, my fourth is about to begin in August and I'm in good shape.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'm great, ma'am.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Ma'am, currently I'm living in Delhi. There is a network issue. Can you check your Wi‑Fi? See? That is Ashoka Delis.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, it's fine. Yes, ma'am. Yes, ma'am.",
+      "phase": 1,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, I'll get it. Just connected.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, it's good enough.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, I did research, sir. still like it says I and ML and it is affiliated to the IAT. Yeah, this is what I know so far.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No, sir, I'm not aware of that.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Okay. Yes, I do.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'm actually looking for a career in this program, a career in this program and having an experience ... and having a chance for understanding AI, ML and machine learning properly.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No, I haven't checked all that. I only looked at some details like AML function and the beginning.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No doubts, it's clear.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I like, I like to go coding so I thought, I've been off from coding for a long time so I thought I'll start somewhere.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No, I've done my bachelor computer application. No, even though many of my friends have completed the graduation in the CSC only but they don't like coding. I know app development in Android studio.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No, I want to just learn about AI.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Instagram, not from the official website.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I don't know, I can afford a rough idea. Based on that you can suggest the best program.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I can only do Sundays, I'm busy six days a week, have incoming calls. I can do one day on Saturday or Sunday. Need at least weekend.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah. Reserted and then, then, application submitted.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, I have some knowledge. in data science. Mission learning, I didn't know. Python data science, which tells? NMB, and Pandas and Jupiter only have I used.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "First year. First year BBA, okay wow.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No, no. I mean C.S. C.S. But, uh, but, uh, my attempts waste are wasted. So, so, I mean, when you have 12th, when completed? Last year. Last, uh, 20-25.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Okay, okay, sorry, sorry. Got it, got it. So you, then, repeat, did? So, you were? C.S. exams were in December attempt, so that I didn't and in June, in the attempt, in college exams collapsed.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No, sir. Actually, I am, I have done, sir, Becom, not a pre‑tech.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, sir, social media, from Instagram.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, sir. I have researched about it. I have a rough idea about the curriculum and the fee structure.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Sir, parents say, okay, I mean, the interview about, what's what they're going to do.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, sir, I know.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I am working as an assistant manager leading a team of about 8 to 10 people. Currently I work in fund operations, client onboarding, trade processing, cash and payment reconciliation, international transfers. I have experience across fund lifecycle in markets like London, US, Hong Kong, Singapore.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Because I think AI is something everybody is looking for, and for business analysis AI is a skill everyone wants to upskill in.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "From Instagram and Facebook ads.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No, I could not.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'm not aware of it.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I am not working right now. I was upskilling for investment banking, completed a course and have three months of internship left, so I'm looking for something in AI.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "That is fine.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I am [student]. I am completed my bachelor's degree in a city, a College. And recently I completed my bachelor's degree. Now I am fresher, it's only skills I have that in college school and college competition. Then no, no, any intersive and no, just like a fresher.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Odisha, Ben. Odisha, Bobnishar.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "BICOM.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "6.25 CGP.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "So that, so I have your business analytics or data analytics or what I want to learn. So that's based on, just distance MBA is just my degree.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I come from a family property business. My main goal is property dealing and business, maybe e‑commerce.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No, no, electronics and communication engineer.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I have scored a 6.7 CGPA in my bachelor's.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No, no, two years.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No, I mean, so I have graduated around August, 23 and I got into company in March. So it's a buffer time, offer time, three to four months.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Every business requires analysis so that we can strategize our future goals, how to generate revenue, how to gain customers. It's all about the data which we acquire and then we strategize it for our better future of the company.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No, I did not. I saw this on Instagram and I just have applied. I registered for this. It was around 100 rupees, I guess, for the registration fees. I've applied it and I got a call yesterday. And I was very busy. I did not even check the details of this course.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "It is a well-known organization and I've heard a lot of good things about this so that I also wanted to get into it and pursue my goals through this course.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, yeah, please, go ahead. BITSOM. BITSOM, yeah. So is that in Google. School of Management? Yeah, business, BIST school of management. Go to that, BITSOM.edu.in.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah. Yes, yes, yes. So I read the website right now. In the website right now yes I'm on the page on the top right side you can see that menu option right the three lines click on yeah there you can see an option called xec ed e xec ed ... so just click on that so now scroll down you get an option called the certificate program in business analytics with gen and h n tk i batch three click on that ...",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'm expecting a good career in it.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Because my elder brother, he is in AWS and he suggested me on what's the ongoing language we need to learn and we can get the knowledge.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Sir, I'm currently UKF as current. I'm the present I want to learn AI. And you have this program about some research? Adash? Sir, research, this is a thing. I did this. Business management and data and data. data. Indicators of people. I've got to follow.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I this time in Delhi in Delhi. In Delhi.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "29. 29.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No, this is my first time.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Not fully, but I have just checked.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Well, actually, I have been researching for a while and since my company is Morningstar and it's a combination of finance and fintech. So when I joined, I have a post-graduation diploma in finance. I know I'm from commerce background, I know the financial side of it. But with the market right now and with all the demands which I've been facing, I realize that there are some technical skills which I'm lagging, which will help me progress my career. So that's what I was looking for and a lot of things were aligning with the course.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I am not sure about it. Actually, it was asked about the timings. I was thinking that it will be a weekend or it will be a recorded session or it will be a live session.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "30th May, okay. I'm ready for it.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Since I'm deeply interested, I expect to learn more, specialize, and gain better skills than what I learned in college.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I did a one‑month marketing internship, but other than that I haven't attended any.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I've applied for both Business Analytics and International Business. Whatever I get, I'll go for it. I also want to start my own business in the future.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, it was a PCB. PCB, okay.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "It's almost 1030 to 7.30. But I stay extras due to some workload-related issues. So I have to stay after work problem. Okay. So almost 8. Five days in a week, right? Yes. No, it's six days a week.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Okay. Okay. During the Saturday, you can watch the recording lecture park. Just dropping me because I think they'll give you that tendency.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I've done BBA from a Nepal University. Oh, okay. Got it, got it.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "It's all right, but it's a very old traditional kind of work if you understand that. that there is not much usage of AI. I want to build and... Okay.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Okay, so work in... in my office is actually very administrative. It's more dependent on coordination, communication, workflow management, and basically I have to manage the human resources as well there. And I can't find any scope of growth there, so I want to switch up a little.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I hope my skin is visible to you, sir.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'm into storytelling a lot. In marketing, I've learned that I am not that good at analytics and I'm good at AI. I've practiced many tools in AI. And to be very honest, I am doing marketing and I'm searching options in marketing, like should I do brand marketing or even marketing. The kind of marketing I enjoy the most is even marketing till now. I've also done marketing for some brands on Instagram and LinkedIn.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "In marketing you need to understand a business so that you can tell people you can shape the vision of people who are buying from it. So I think business analytics is very important to understand your audience, your business that you're working for and that's why I want to learn about business analytics.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I started with Chat GPT, but right now I use Claude for most of my work for writing sometimes and for making content calendars and for analytics. And this is the main tool that I use and along with that I used to use Perplexity for research. And I also use Gemini for research. I've tried many tools, but mostly I use Claude and chat.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "To be very honest, not that much.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah. I'm okay with this.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "It's exciting. I like research, I like analytics, that's why I chose biochemistry, then marketing and now business analytics.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "So this is the program which will be helping you to get that. Business analytics, they earn very high. They earn very high to be realistic. Okay. And you're going to be realistic. Euro make it. But only you have to give your six months for this program. Are you ready to give your six months? Yes.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, I did.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I can spend around two hours a day, maybe eight to ten hours a week.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "A certification, learning the software, and all the things the program offers.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "My dad is in industry and my mom is outside.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, yeah, I know. Yeah.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I've joined because it teaches about business and generative AI and agentic AI. I'm interested in Gen AI and I feel in near future the role of AI in business analytics will be very beneficial. Also it's conducted by Bitsom, that's a factor.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'm from Kanpur but currently I'm at home, my college is in Manipal.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I have done previous courses and like, ma'am, Excel from Udeme and business analytics. So from that perspective, I have developed interest in this field. So now as there's like AI thing coming into the place, so ma'am, I'm thinking to like collaborate these two fields and like learn this course.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "They have an idea.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Like I got an ad on Facebook while scrolling and from that I read it to your site and then came to know about the course.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, ma'am, it's visible.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, ma'am, it's clear.",
+      "phase": 2,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No, because I have been like, no, I used to work then I had to like take a gap. So.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'll tell how much it was after knowing about all this, then I will pay.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah. Like, you know, this session to complete this one, no problem.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "You can't complete it.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, PDF compiches.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I mean, work easy time, making work easy, automation... I'm confused... I'm interested... I'm still confused... I don't know... okay.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Analytics is essential in finance. Without it we cannot predict or make decisions for client services. We deal with clients from multiple regions, need to analyze market trends, stocks, etc.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I am non‑technical, so I am curious how prompt engineering and agentic AI will work for me. Will I be able to build something without coding?",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I am not looking for a certification, I just want real experience. I don’t want to be an executor, I want to be an automator.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Please send me the course content.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Now I can hear you clearly.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "My concern is the course you're offering it will be more of a theoretical one or like there will be a practical application or some project.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "so 65% of attendance ... if I'm not able to attend on the live lectures but I'm completing them with the recorded ones so if you're having 10 classes if you're attending only live sessions for six minimum four you need to watch the recordings that works four for four as in four weeks you're soon yes yes for attendance purpose if you're watching the recordings so make sure that you're watching within 30 days to calculate your attendance.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "there's an offline exam as well I just saw that yeah so it will be conducted on nearest centers the list will be given to you where you need to select any three centers which are nearby your location based on that one center will be allocated to you so is banglor location okay got it.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "anything else no admission kit you'll receive in which you'll receive your t-shirt and your ID card.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'm admission actually I'm I'm don't know I'm going to that I'm that I'm that that's this program now is it's we're then we're after we're pay pay for security for for you have time you you're you're going to you can't you can't do you you're okay so so what I'm not I don't think that I've didn't you know, you you say that you know, you know, you did you did website it was there didn't I didn't you know, that I'm think that then thank you. if you if you're I'm really sorry, I'm really sorry, that options not I'm you and",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Okay, I understand.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, I am.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I don't have any doubts right now.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No, that's it. Thank you so much.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I have a question on huh please go on so on so So like I'm, whenever live classes will, so maybe I'm, I'm, I mean, I, I mean, I'll, I mean, that day, in the day time, yeah, day time, So, then, if I'm here, I, then, if I'm here, then, so I can go through the recorded lectures, live lectures, you're getting, you're going to record lectures, you're getting, you're going to live lectures miss or if you're going to, if you're going to recorded lectures, If you're recorded lectures, look at all, you're 100% classes complete, both scenarios in scenario can do you.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Actually, I wanted to know more about the courses. What is the thing? The benefit, what is the thing? What exactly I'm going to learn in this.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I want to make the $4,000 payment now but my online payment is not working today because I just purchased a washing machine and refrigerator. Can we do it tomorrow?",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Actually, I have some technical issue. I was trying to, you know, join the meeting also like two to three times. So if it's okay, we can continue without the camera.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No, there's some technical issue. Even I waited here for last. here for last 40 minutes to join this session.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Um, I don't know, like, I'm not able to, yeah, open it. Like, there's a start camera option, right? Click on that.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I do want to upgrade myself. I want to stay future relevant if you're looking for that. relevant if you say it like that because the current trends, the current usage of AI is actually increasing. I'm also incorporating AI in my present work environment as well, but I want to upgrade that. I want to go deeper.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I actually need one day because the amount is very high. I selected 1,000 to 3,000. But the thing is, per month your salary would be around 65,000 plus GST, total around 70,000. Give me one day.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Okay, I'll talk to them.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "But many colleges charge 15-20 lakh for B.Tech and the packages they offer are low. Companies like EY, Deloitte, TCS look at your projects, not just your degree.",
+      "phase": 3,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, I'm ready.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Okay, I will do that.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I haven't received the mail yet. Please send it again on WhatsApp.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, I can see the screen.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No doubts, everything clear.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, I can try.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, much and I see I'm Thank you.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Hello, See, mainly, what is the classes are next week to start.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "And today, we're finally going to come here, campus.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "So, you're going to go to college off.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "If you're going to get LMS access, first.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Okay. This is every week, you have assignments on, monthly-wise, they'll complete, there are, placements, this class timing is almost similar.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "So this is a budget issue.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, budget issue but this I'm maybe maybe I won't I'm But if we we're right here...",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "We're total 16,000 students are five different programs to five different colleges in that seven students qualify So I take college is three I It's Potton It's 20,000 50,000 and two programs and another school of management so in these...",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I can't pay someone else holding a seat is not under my authority, if you if you're another student if you want to ask I'm need to ask they're in there's based there slots available to yeah yeah sure okay okay I'm okay perfect it's up to you so you message from WhatsApp yeah sure let let me let tell sure um for 20 thank thank so you message is okay okay so five 30 a complete and I accept I'll accept I'm here accept you you partner from page it's coach. Sure, sure. Okay. Thank you, sir. What's the message? Yeah, I get. Okay. A quick complete and I'll tell you. Okay.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No, sir. Currently, they are not.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, sir, I can share my screen.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, we're good to go.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I am from Himachal Pradesh, Shimla.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes. I have the link to it.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "One second. I'll have to do it through a different device, I guess.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Just wait for a minute. I'm just on the call. I'm just switching tabs and I'll complete the thing.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Thank you. Hello. Yes, Yes, Yeah, have the payment.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Just a minute. Attend your session. I have shared you.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Okay, thank you. Please send the link.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Okay, please share the link.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No, I don't have any more doubts.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'm exploring other opportunities, and if I don't hear back from you I won't approach again.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, I am interested, I will do it. Let's proceed with enrollment.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I got the email, payment link, I have completed it.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'm 21. I'm targeting universities in Poland and Lithuania for my masters.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Done. I've scanned the QR code and paid.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I need to do some research about the management as well. I need some more time, like tomorrow or on Friday.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "It was good and very interactive. Thank you so much.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "One‑time.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Okay, I see the pop‑up.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Done, payment is confirmed.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, sure. I want.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Now, that's... From my side, like, kind of master's in nanobiotechnology, that would be. Thank you. Thank you.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Okay, I will do it now.",
+      "phase": 5,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "My voice is coming through.",
+      "phase": null,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yes, sir, I can hear you.",
+      "phase": null,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Hello. I can't hear you, sir, I can't hear you, sir, your voice is too low.",
+      "phase": null,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No, sir, it's too low. Give me one second.",
+      "phase": null,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "I'm a visible now, sir.",
+      "phase": null,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Yeah, voice is clear, sir. But your video is getting stuck.",
+      "phase": null,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "No problem, I'll just continue.",
+      "phase": null,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Hello. Yes, sir, I can hear you.",
+      "phase": null,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Hello, sir, I can hear you.",
+      "phase": null,
+      "count": 1,
+      "category": "answer"
+    },
+    {
+      "text": "Okay.",
+      "phase": 5,
+      "count": 12,
+      "category": "backchannel"
+    },
+    {
+      "text": "Yeah.",
+      "phase": 2,
+      "count": 9,
+      "category": "backchannel"
+    },
+    {
+      "text": "Yes.",
+      "phase": 5,
+      "count": 7,
+      "category": "backchannel"
+    },
+    {
+      "text": "Yes, sir.",
+      "phase": 1,
+      "count": 5,
+      "category": "backchannel"
+    },
+    {
+      "text": "Yes, ma'am.",
+      "phase": 1,
+      "count": 4,
+      "category": "backchannel"
+    },
+    {
+      "text": "Thank you.",
+      "phase": 3,
+      "count": 4,
+      "category": "backchannel"
+    },
+    {
+      "text": "Okay, thank you.",
+      "phase": 5,
+      "count": 3,
+      "category": "backchannel"
+    },
+    {
+      "text": "Hello, sir.",
+      "phase": 1,
+      "count": 2,
+      "category": "backchannel"
+    },
+    {
+      "text": "Sure, ma'am.",
+      "phase": 1,
+      "count": 2,
+      "category": "backchannel"
+    },
+    {
+      "text": "Yes, yes.",
+      "phase": 2,
+      "count": 2,
+      "category": "backchannel"
+    },
+    {
+      "text": "No.",
+      "phase": 2,
+      "count": 2,
+      "category": "backchannel"
+    },
+    {
+      "text": "Okay, okay.",
+      "phase": 5,
+      "count": 2,
+      "category": "backchannel"
+    },
+    {
+      "text": "Okay, sir.",
+      "phase": 5,
+      "count": 2,
+      "category": "backchannel"
+    },
+    {
+      "text": "No, that's all. Thank you.",
+      "phase": 5,
+      "count": 2,
+      "category": "backchannel"
+    },
+    {
+      "text": "Yes, sure.",
+      "phase": 1,
+      "count": 1,
+      "category": "backchannel"
+    },
+    {
+      "text": "Good, sir.",
+      "phase": 1,
+      "count": 1,
+      "category": "backchannel"
+    },
+    {
+      "text": "Yes, sir. Yeah, good, sir.",
+      "phase": 1,
+      "count": 1,
+      "category": "backchannel"
+    },
+    {
+      "text": "Fine, sir, thank you.",
+      "phase": 1,
+      "count": 1,
+      "category": "backchannel"
+    },
+    {
+      "text": "Yes, sure. Hello.",
+      "phase": 1,
+      "count": 1,
+      "category": "backchannel"
+    },
+    {
+      "text": "Okay, sir. Okay.",
+      "phase": 2,
+      "count": 1,
+      "category": "backchannel"
+    },
+    {
+      "text": "Yes, sir. Yes, sir.",
+      "phase": 2,
+      "count": 1,
+      "category": "backchannel"
+    },
+    {
+      "text": "Okay. Yes, sir.",
+      "phase": 2,
+      "count": 1,
+      "category": "backchannel"
+    },
+    {
+      "text": "Yes, sir, yeah.",
+      "phase": 2,
+      "count": 1,
+      "category": "backchannel"
+    },
+    {
+      "text": "Yes, yes, yes.",
+      "phase": 2,
+      "count": 1,
+      "category": "backchannel"
+    },
+    {
+      "text": "Okay. Got it, got it.",
+      "phase": 2,
+      "count": 1,
+      "category": "backchannel"
+    },
+    {
+      "text": "No. No.",
+      "phase": 2,
+      "count": 1,
+      "category": "backchannel"
+    },
+    {
+      "text": "No, ma'am.",
+      "phase": 2,
+      "count": 1,
+      "category": "backchannel"
+    },
+    {
+      "text": "Okay, yeah.",
+      "phase": 3,
+      "count": 1,
+      "category": "backchannel"
+    },
+    {
+      "text": "Okay, okay, sure.",
+      "phase": 3,
+      "count": 1,
+      "category": "backchannel"
+    },
+    {
+      "text": "Okay, yeah, sure. Thank you.",
+      "phase": 5,
+      "count": 1,
+      "category": "backchannel"
+    },
+    {
+      "text": "Thank you, sir.",
+      "phase": 5,
+      "count": 1,
+      "category": "backchannel"
+    },
+    {
+      "text": "Okay, that's fine.",
+      "phase": 5,
+      "count": 1,
+      "category": "backchannel"
+    },
+    {
+      "text": "Okay, done.",
+      "phase": 5,
+      "count": 1,
+      "category": "backchannel"
+    },
+    {
+      "text": "Sure, thank you.",
+      "phase": 5,
+      "count": 1,
+      "category": "backchannel"
+    },
+    {
+      "text": "Hello? Yes.",
+      "phase": null,
+      "count": 1,
+      "category": "backchannel"
+    }
+  ]
+}

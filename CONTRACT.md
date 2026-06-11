@@ -40,7 +40,9 @@ existing patterns and keep it minimal.
 
 ```
 User      { id, name, email, password, role: "admin"|"counsellor", avatarColor }
-Persona   { id, name, category, label, coreAnxiety, behaviourPrompt, description, createdAt, updatedAt }
+Persona   { id, name, category, label, coreAnxiety, behaviourPrompt, description,
+            personality: { talkativeness:1-5, humour:1-5, skepticism:1-5, formality:1-5, quirks:[string] },
+            createdAt, updatedAt }
 Scenario  { title, difficulty: "easy"|"medium"|"hard", situation, contextNotes }   // embedded in assignment/session
 Course    { id: "course-<8hex>", slug: "<institute>/<course>", name, category,    // one of the 9 domain keys
             institute,                       // "IIM Ranchi", "IIT Patna", ...
@@ -68,14 +70,27 @@ Assignment{ id, counsellorId, personaId, personaPromptOverride|null, scenario:Sc
             revealPersona: boolean,          // default true; false = "blind call" (GreenRoom hides persona card)
             status: "assigned"|"in_progress"|"completed", createdBy, createdAt, sessionId|null, reportId|null }
 Session   { id, assignmentId|null, counsellorId, mode:"assigned"|"practice",
-            personaSnapshot:{name,category,label,coreAnxiety,behaviourPrompt},
+            personaSnapshot:{name,category,label,coreAnxiety,behaviourPrompt,voiceName?,voiceGender?,personality?},
+            personalityFlavour: { mood, activeQuirks:[string], talkativeness, humour, skepticism, formality, notes },
+            voice:{key,name,gender,elevenLabsVoiceId},  // student TTS voice picked at start (server/voices.js); absent on pre-voice sessions
             scenarioSnapshot:Scenario,
             courseSnapshot:Course|null,      // full Course record snapshotted at session start
             rubricSnapshot:{templateId,name,criteria}|null,  // snapshotted at session start from assignment or default
+            promptSnapshot:string,           // composed student system prompt at session start (phase 1, score 50, no turn hint)
             milestones:{ discoveryDone:bool, presentationDone:bool, paymentAsked:bool, objectionsRaised:number },
+            objectionState:[{ category, status:"open"|"addressed", firstRaisedTurn, lastRaisedTurn, addressedTurn|null, timesRaised }],
+            //   objection lifecycle tracker (server/objections.js). Seeded empty at start; fail-soft to []
+            //   for sessions created before it existed. category ∈ the 11 objection keys (fee, emi_affordability,
+            //   parents_family, time_commitment, competing_priorities, trust_legitimacy, job_guarantee_placement,
+            //   course_fit_relevance, language_english, tech_access) + "other".
             currentPhase:1..5, satisfactionScore:0..100,
+            lastTurnVerbosity:"open"|"short"|null,  // per-turn verbosity override rolled server-side each
+            //   counsellor turn (probability of "open" scales with personality talkativeness; phase 3 forces
+            //   "short" unless turnType==="invite"; never two "open" in a row). null on pre-roll/old sessions.
             scoreHistory:[{turn,score,adjustment,reason}],
-            transcript:[{role:"counsellor"|"student", text, phase, scoreAfter, ts}],
+            transcript:[{role:"counsellor"|"student", text, phase, scoreAfter, ts,
+                         turnType?, scoreReason?,   // counsellor entries
+                         emotion? }],                // student entries
             status:"active"|"ended", startedAt, endedAt|null }
 Report    { id, sessionId, assignmentId|null, counsellorId, counsellorName, personaName, scenarioTitle,
             overall:{ percent:0..100, band:"Needs Work"|"Good"|"Excellent", outcome:"Converted"|"Not Converted", outcomeDetail },
@@ -111,8 +126,8 @@ Legacy reports without a `rubricSnapshot` use the fixed 6-criterion list noted a
 | POST | `/login` | `{email,password}` | `{user}` or 401 `{error}` |
 | GET | `/counsellors` | — | `[{id,name,email,role,avatarColor}]` |
 | GET | `/personas` | — | `[Persona]` |
-| POST | `/personas` | `{name,category,label,coreAnxiety,behaviourPrompt,description}` | `Persona` |
-| PUT | `/personas/:id` | partial Persona | `Persona` |
+| POST | `/personas` | `{name,category,label,coreAnxiety,behaviourPrompt,description,personality?}` | `Persona` |
+| PUT | `/personas/:id` | partial Persona (incl. personality) | `Persona` |
 | DELETE | `/personas/:id` | — | `{ok:true}` |
 | GET | `/courses` | — | `[Course]` (supports `?active=1` to filter active only) |
 | POST | `/courses` | `{name,institute,category?,duration?,format?,feeTotal?,feeBooking?,feeNote?,emiNote?,curriculum?,outcomes?,eligibility?,usps?,batchInfo?,sourceUrl?,active?}` | `Course` |
@@ -126,19 +141,64 @@ Legacy reports without a `rubricSnapshot` use the fixed 6-criterion list noted a
 | POST | `/assignments` | `{counsellorId,personaId,courseId,rubricTemplateId?,personaPromptOverride?,scenario,revealPersona?}` (`courseId` required; `rubricTemplateId` optional, must exist if provided; `revealPersona` boolean, default true) | `Assignment` |
 | GET | `/assignments/:id` | — | enriched `Assignment` |
 | DELETE | `/assignments/:id` | — | `{ok:true}` |
-| POST | `/sessions/start` | `{mode,counsellorId,assignmentId?,personaId?,scenario?,courseId?}` (`courseId` optional; assigned sessions inherit from assignment; fallback to IIM Ranchi BA course) | `{sessionId,firstMessage,emotion,currentPhase,satisfactionScore,milestones}` |
-| POST | `/sessions/:id/message` | `{message,deliveryMetrics?}` | `{reply,emotion,currentPhase,satisfactionScore,scoreReason,milestones}` |
-| POST | `/sessions/:id/end` | — | `{reportId}` |
+| POST | `/sessions/start` | `{mode,counsellorId,assignmentId?,personaId?,scenario?,courseId?}` (`courseId` optional; assigned sessions inherit from assignment; fallback to IIM Ranchi BA course) | `{sessionId,firstMessage,emotion,currentPhase,satisfactionScore,milestones,voice}` |
+| POST | `/sessions/:id/message` | `{message,deliveryMetrics?}` | `{reply,emotion,currentPhase,satisfactionScore,scoreReason,turnType,milestones,cue}` (409 if session ended; SSE when `Accept: text/event-stream` — see below) |
+| POST | `/sessions/:id/cue` | — | `{cue,source}` — richer on-demand coaching cue: one deterministic LLM call (`llmCue`) over recent context, falling back to the synchronous corpus `instantCue` on any failure/timeout. `source` ∈ `"llm"\|"corpus"`. Admin/counsellor-agnostic (no auth layer). |
+| POST | `/sessions/:id/end` | — | `{reportId}` (idempotent; regenerates in place when the existing report is a neutral fallback) |
 | GET | `/sessions/:id` | — | `Session` |
+| GET | `/sessions/:id/prompt` | — | `{studentSystemPrompt, scoringPrompt, reportPrompt}` (composed, current; admin-only at UI layer) |
 | DELETE | `/sessions/:id` | — | `{ok:true}` (test/admin cleanup) |
 | GET | `/reports?counsellorId=` | — | `[Report]` (summaries ok; omit query ⇒ all) |
 | GET | `/reports/:id` | — | `Report` |
 | DELETE | `/reports/:id` | — | `{ok:true}` (test/admin cleanup) |
+| GET | `/config/prompts` | — | merged prompt-config (`prompt-config.json` over built-in defaults) |
+| PUT | `/config/prompts` | prompt-config object | merged prompt-config (persisted; loaders fail soft to defaults) |
+| GET | `/config/scoring` | — | scoring-config (`scoring-config.json` over built-in defaults) |
+| PUT | `/config/scoring` | scoring-config object | persisted scoring-config (coerced) |
 
 Server owns the transcript: `/sessions/:id/message` appends to the stored session; the client
 does NOT send history. `start` for `mode:"assigned"` derives persona+scenario from the assignment
 and flips assignment status to `in_progress`; `end` generates the report and sets `reportId` +
 status `completed`.
+
+**Per-turn pipeline** (`/sessions/:id/message`): 409 ended-session guard FIRST → classify the
+counsellor message into `turnType` (`statement`|`question`|`invite`) → push the counsellor
+transcript entry (with `turnType` + sanitized `deliveryMetrics`) → roll this turn's
+`lastTurnVerbosity` (`open`/`short`; talkativeness-scaled, phase-3 short unless `invite`, never two
+`open` in a row) and persist it on the session BEFORE the reply path → run scoring (last-6-turns
+window, phase, turnType, courseName) and the student reply CONCURRENTLY (the reply prompt sees the
+PRE-message score and the previous turn's `adjustment` as the `lastAdjustment` momentum input — one
+turn of satisfaction-band lag in exchange for the reply starting sooner) →
+backfill `scoreAfter` + `scoreReason` onto the counsellor entry → resolve the addressed objection
+(`scoreMessage.addressedObjection` → `resolveObjection`) → milestone/phase advancement → raise the
+student's new objection (`advancePhase` category / `detectObjectionCategory` → `raiseObjection`) →
+persist `objectionState` → compute the instant counsellor `cue` (`instantCue`, zero-LLM; receives
+the cue v2 context `lastCounsellorAdjustment` + `lastCounsellorScoreReason` + live `objectionState`).
+Backchannel acknowledgements (`isBackchannel`) skip the scoring LLM (adjustment 0). The student
+reply passes a coherence gate (structural screen + near-deterministic VALID/INVALID check, fails
+OPEN): incoherent question/invite turns are regenerated once; incoherent statement turns get a
+canned Hinglish acknowledgement. An **anti-loop guard** then rejects a coherent reply that is >0.8
+token-overlap similar to any of the last 6 student turns: it regenerates once with a "do not repeat
+yourself" note, and on a second loop falls back to a short move-forward acknowledgement. The
+trailing `[emotion:X]` tag is always preserved (canned/regen/loop-fallback default to `neutral`).
+
+**Convincement** (persistence-pays-off): before each reply the server computes a hint
+(`resistant`|`warming`|`ready`) from the live score, the per-difficulty `convincement` thresholds
+(lowered defaults: easy 55 / medium 60 / hard 70 — so a well-run call can actually close instead of
+pinning near 50) / `effortTurns` (in `prompt-config.json`), and the objection state — `ready` when `score >= threshold`
+OR (no open objections AND `>= effortTurns` counsellor turns scored `>= +2` AND `score >= threshold-10`);
+`warming` when within 10 of threshold or half the raised objections are addressed. The hint plus the
+objection-state summary (which concerns are ANSWERED vs open) are injected into the student prompt so
+addressing concerns and persistence actually move the student toward "yes" and stop verbatim loops.
+
+**SSE protocol** — `POST /sessions/:id/message` with `Accept: text/event-stream` streams the reply:
+- `event: token` / `data: {text}` — raw reply tokens as the model generates them (perceived latency).
+- `event: done` / `data: <JSON>` — the canonical result; `data` is **byte-for-byte the same JSON
+  object** as the non-SSE response (`reply, emotion, currentPhase, satisfactionScore, scoreReason,
+  turnType, milestones, cue`). The coherence/anti-loop gate may have replaced the streamed tokens —
+  clients MUST swap in the `done` payload's `reply`/`emotion`.
+- `event: error` / `data: {error}` — on failure (includes `LLM_TIMEOUT`).
+Non-SSE requests keep today's JSON response shape exactly.
 
 ### Analytics (addendum to §3)
 
@@ -270,14 +330,23 @@ fallback; the sidecar is probed once per session and each capability is used ind
 
 | Method | Path | Body / params | Returns |
 |---|---|---|---|
-| GET | `/health` | — | `{ok:true, capabilities:{tts,stt,analyze}, ttsEngine}` |
-| POST | `/tts` | JSON `{text, emotion?, intensity?}` | `audio/wav` bytes |
-| POST | `/stt` | multipart `audio` (wav) | `{text, words:[{word,start,end}], durationSec}` |
+| GET | `/health` | — | `{ok:true, capabilities:{tts,stt,analyze}, ttsEngine, sttEngine}` |
+| POST | `/tts` | JSON `{text, emotion?, intensity?, voice?}` (`voice` = ElevenLabs voice ID override; ignored by chatterbox/kokoro fallbacks) | `audio/wav` bytes |
+| POST | `/stt` | multipart `audio` (wav) | `{text, words:[{word,start,end}], durationSec}` — routed by client only when sttEngine is "scribe"; kept as fallback and for smoke test |
 | POST | `/analyze` | multipart `audio` (wav) + form field `transcript` (optional) | prosody metrics + verdicts |
 
 **`/health` capability status values:** `"ready" | "loading" | "unloaded" | "off" | "error:<msg>"`
 
-**`/health` `ttsEngine`:** `"chatterbox" | "kokoro" | null`
+**`/health` `ttsEngine`:** `"elevenlabs" | "chatterbox" | "kokoro" | null`. TTS engine chain is
+`elevenlabs → chatterbox → kokoro`: ElevenLabs is tried first when `ELEVENLABS_API_KEY` is present
+in the repo-root `.env` (optional `VOICE_ELEVENLABS_VOICE_ID`); on a missing key or any failure the
+sidecar degrades silently to the next engine. Per-request ElevenLabs failures fall back at request
+time without permanently changing the global engine selection.
+
+**`/health` `sttEngine`:** `"scribe" | "whisper" | null`. STT engine chain is `scribe → whisper`:
+ElevenLabs Scribe is used when `ELEVENLABS_API_KEY` is present; auto-detects language (Hinglish
+supported). The client routes counsellor STT to the sidecar only when `sttEngine === "scribe"`;
+otherwise uses browser whisper-tiny to avoid stalling on the first-request faster-whisper download.
 
 **`/tts` emotion enum:** `"neutral" | "happy" | "hesitant" | "worried" | "frustrated" | "excited"`
 
@@ -309,13 +378,50 @@ hesitant 0.88 · worried 0.94 · frustrated 1.06.
   verdicts must be a `{pace, energy, pitchVariation}` object with string values ≤16 chars).
   Stored on the counsellor transcript entry.
 - `POST /api/sessions/start` response gains `emotion: string` (default `"neutral"`).
-- `POST /api/sessions/:id/message` response gains `emotion: string` (the student's current emotion).
+- `POST /api/sessions/:id/message` response gains `emotion: string` (the student's current emotion)
+  and `turnType: "statement"|"question"|"invite"` (the classified counsellor turn).
+- `POST /api/sessions/:id/message` response (and the SSE `done` payload) gains `cue:
+  { source:"corpus"|"llm", headline:string, points:string[], example:string|null }` — a real-time
+  counsellor coaching card derived from the student's just-raised objection + session state
+  (synchronous `instantCue`). The cue v2 context passed to `instantCue` (both here and on the
+  `/cue` fallback) is `{ session, lastStudentText, objectionCategory, lastCounsellorAdjustment,
+  lastCounsellorScoreReason, objectionState }` — the last scoring adjustment/reason and live
+  objection state let the card react to a good/bad move and surface still-open concerns.
+  `POST /api/sessions/:id/cue` returns `{cue, source}` for a richer
+  on-demand `llmCue` (one deterministic LLM call) that falls back to `instantCue` on any failure.
 
 ### Transcript entry fields (addendum to §2 Session shape)
 
 - Student entries: `{ role:"student", text, phase, scoreAfter, ts, emotion?: string }`
-- Counsellor entries: `{ role:"counsellor", text, phase, scoreAfter, ts, deliveryMetrics?: object }`
+- Counsellor entries: `{ role:"counsellor", text, phase, scoreAfter, ts, turnType?: string, scoreReason?: string, deliveryMetrics?: object }`
 
 The `emotion` field on student entries drives the sidecar TTS call for that reply.
 The `deliveryMetrics` field on counsellor entries is used by `report.js` to grade the
 `voice_delivery` rubric criterion (criterion is excluded and weights renormalized for text sessions).
+`turnType` (set at append time) and `scoreReason` (backfilled after scoring) are stored on
+counsellor entries for transparency and the coach view.
+
+### Config files (`server/data/`)
+
+Two admin-editable JSON config files, loaded fail-soft to built-in defaults if missing/corrupt:
+
+- `prompt-config.json` — student-prompt scaffolding: `generalProfile`, `knowledgeBoundsTemplate`,
+  `phaseInstructions` (keyed by the 5 phases), `phaseLadder`, `behaviourRules`, `registerNote`,
+  `faqIntro`/`faqUsage`, `turnDiscipline`, plus naturalness knobs: `naturalSpeech` + `naturalSpeechCarveOut`,
+  `verbosityIntro` + `verbosityFallback`, `registerRefIntro` + `registerRefBackchannelIntro`, `tangentRule`,
+  the `convincement` block (`thresholds {easy,medium,hard}`, `effortTurns {easy,medium,hard}`, `readyText`,
+  `warmingText`) and `objectionStateHeader` (persistence-pays-off / anti-loop steering),
+  and a `guidelines[]` array of plain-English editing guidance shown in the admin UI.
+  Served/persisted via `GET/PUT /api/config/prompts`.
+- `scoring-config.json` — leniency knobs: `severityBands`, `phaseExpectations` (keyed by the 5
+  phases), `backchannelWords`, `neverPenalizeAbsence:true`, `counterMoves`, `recentTurnsWindow`,
+  plus `guidelines[]`. Served/persisted via `GET/PUT /api/config/scoring`.
+
+### Single-model note
+
+All LLM calls (chat, scoring, coherence gate, report) use a **single model**
+`nemotron-3-nano:30b` (env override `OLLAMA_MODEL`). Sampling presets in `server/ollama.js`:
+`STUDENT_SAMPLING {temperature:0.9, top_p:0.95, repeat_penalty:1.3}` for roleplay;
+`DETERMINISTIC_SAMPLING {temperature:0.2}` for scoring/coherence/report. `chat()` accepts an
+options object (`timeoutMs`, `model` override, sampling knobs) and throws `Error{code:'LLM_TIMEOUT'}`
+on timeout (45s chat/scoring, 120s report); `chatStream()` is the async-generator streaming variant.

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import CoachPanel from "./CoachPanel";
+import CueCard from "./CueCard";
 import { scoreColor, TOKEN_HEX } from "../../../lib/format";
 
 // ── Chevron icons ─────────────────────────────────────────────────────────────
@@ -234,6 +235,8 @@ export default function CallSidebar({
   deliveryMetrics,
   milestones,
   emotion,
+  cue,
+  cueRefining,
   inputRef: externalInputRef,
 }) {
   const internalInputRef = useRef(null);
@@ -362,6 +365,7 @@ export default function CallSidebar({
             ) : (
               <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
                 <div style={{ flex: 1, overflowY: "auto" }}>
+                  <CueCard cue={cue} refining={cueRefining} />
                   <CoachPanel
                     satisfaction={satisfaction}
                     scoreHistory={scoreHistory}

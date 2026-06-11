@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useLocation, Link } from "react-router-dom";
 import { api } from "../../lib/api";
+import { postMessageStream, stripStreamingEmotionTag, createSentenceChunker } from "../../lib/stream";
 import { useAuth } from "../../lib/auth.jsx";
 import { useVoiceConversation } from "../../voice/useVoiceConversation";
 import Button from "../../ui/Button";
@@ -125,6 +126,69 @@ function WrappingScreen({ error, onRetry, onBackToCall }) {
   );
 }
 
+// ── Degradation toast stack ───────────────────────────────────────────────────
+// Lightweight, dependency-free banner stack for degradation notices:
+//   - SSE error events (e.g. reply timed out)
+//   - report fallback after session end (LLM unreachable → report degraded)
+function ToastStack({ toasts, onDismiss }) {
+  if (!toasts.length) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: 16,
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 60,
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        width: "min(92vw, 460px)",
+      }}
+    >
+      {toasts.map((t) => (
+        <div
+          key={t.id}
+          role="status"
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 10,
+            padding: "10px 12px",
+            borderRadius: 12,
+            background: t.tone === "danger" ? "rgba(45,18,18,0.96)" : "rgba(38,30,12,0.96)",
+            border: `1px solid ${t.tone === "danger" ? "#7f1d1d" : "#854d0e"}`,
+            color: t.tone === "danger" ? "#fca5a5" : "#fcd9a5",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+            fontSize: "0.8125rem",
+            lineHeight: 1.45,
+          }}
+        >
+          <span style={{ flex: 1 }}>{t.message}</span>
+          <button
+            type="button"
+            onClick={() => onDismiss(t.id)}
+            aria-label="Dismiss"
+            style={{
+              flexShrink: 0,
+              background: "transparent",
+              border: "none",
+              color: "inherit",
+              cursor: "pointer",
+              opacity: 0.7,
+              fontSize: "0.9375rem",
+              lineHeight: 1,
+              padding: 0,
+            }}
+          >
+            ×
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // ── Main Session component ────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════════════
@@ -161,6 +225,7 @@ export default function Session() {
   const [emotion, setEmotion] = useState("neutral");
   const [activeSessionId, setActiveSessionId] = useState(sessionId || null);
   const [timerStart, setTimerStart] = useState(null);
+  const [studentVoiceId, setStudentVoiceId] = useState(null);
 
   const [sending, setSending] = useState(false);
   const [ending, setEnding] = useState(false);
@@ -179,6 +244,24 @@ export default function Session() {
   const [milestones, setMilestones] = useState(null);
   const [lastDeliveryMetrics, setLastDeliveryMetrics] = useState(null);
 
+  // ── Live coaching cue ──────────────────────────────────────────────────────
+  // The instant (corpus) cue lands on each message done payload; we then
+  // fire-and-forget a richer LLM cue and swap it in — but only if no newer turn
+  // has arrived since (guarded by turnCounterRef).
+  const [cue, setCue] = useState(null);
+  const [cueRefining, setCueRefining] = useState(false);
+  const turnCounterRef = useRef(0);
+
+  // ── Degradation toasts ─────────────────────────────────────────────────────
+  const [toasts, setToasts] = useState([]);
+  const toastIdRef = useRef(0);
+  function pushToast(message, { tone = "warn", ttl = 6000 } = {}) {
+    const id = ++toastIdRef.current;
+    setToasts((prev) => [...prev, { id, message, tone }]);
+    if (ttl) setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), ttl);
+  }
+  const dismissToast = (id) => setToasts((prev) => prev.filter((t) => t.id !== id));
+
   const sendingRef = useRef(false);
   const submitRef = useRef(null);
   const spaceDownRef = useRef(false);
@@ -187,6 +270,7 @@ export default function Session() {
   // ── Voice pipeline ─────────────────────────────────────────────────────────
   const voice = useVoiceConversation({
     onUserUtterance: (t, meta) => submitRef.current?.(t, meta),
+    ttsVoiceId: studentVoiceId,
   });
 
   // ── Derived orbState ───────────────────────────────────────────────────────
@@ -356,6 +440,7 @@ export default function Session() {
 
         setPhase(s.currentPhase || 1);
         setScore(s.satisfactionScore ?? 0);
+        setStudentVoiceId(s.voice?.elevenLabsVoiceId ?? null);
         setTimerStart(s.startedAt ? new Date(s.startedAt).getTime() : Date.now());
         const transcript = Array.isArray(s.transcript) ? s.transcript : [];
         const msgs = transcript.map((m, i) => ({
@@ -434,41 +519,183 @@ export default function Session() {
     if (deliveryMetrics) setLastDeliveryMetrics(deliveryMetrics);
 
     const sid = activeSessionId || sessionId;
-    api
-      .sendMessage(sid, text, deliveryMetrics || undefined)
-      .then((res) => {
-        const reply = res?.reply ?? "";
-        const newEmotion = res?.emotion ?? "neutral";
-        setMessages((prev) => [
-          ...prev,
-          { id: `s${Date.now()}`, role: "student", text: reply, emotion: newEmotion },
-        ]);
-        if (res?.currentPhase) setPhase(res.currentPhase);
-        if (typeof res?.satisfactionScore === "number") {
-          setScore(res.satisfactionScore);
-          setScoreHistory((prev) => [
-            ...prev,
-            { turn: prev.length, score: res.satisfactionScore },
-          ]);
-        }
-        if (res?.milestones) setMilestones(res.milestones);
-        setEmotion(newEmotion);
-        if (voice.enabled && reply) voice.speak(reply, newEmotion);
-      })
-      .catch((e) => {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `e${Date.now()}`,
-            role: "system",
-            text: e?.message || "Something went wrong sending that message.",
-          },
-        ]);
-      })
-      .finally(() => {
-        sendingRef.current = false;
-        setSending(false);
+    const body = deliveryMetrics ? { message: text, deliveryMetrics } : { message: text };
+
+    // Stable id for the progressively-rendered student bubble. While streaming we
+    // mutate this single message in place; on `done` we overwrite its text/emotion
+    // with the CANONICAL reply (the coherence gate may have substituted it).
+    const streamId = `s${Date.now()}`;
+    let streamBuf = ""; // full raw streamed text so far (emotion tag still embedded)
+
+    // Apply the canonical done payload: reconcile bubble text + drive phase/score/
+    // milestones/emotion/TTS from the payload ONLY (never from streamed tokens).
+    //
+    // `streamCtx` (SSE path only) carries the sentence-streamed audio state:
+    //   { spoke: bool, streamedText: string, chunker }
+    // When the student already started speaking sentence-by-sentence, we reconcile
+    // the live audio against the canonical reply instead of re-speaking from scratch.
+    const applyDone = (res, streamCtx = null) => {
+      const reply = res?.reply ?? "";
+      const newEmotion = res?.emotion ?? "neutral";
+      setMessages((prev) => {
+        const idx = prev.findIndex((m) => m.id === streamId);
+        const entry = { id: streamId, role: "student", text: reply, emotion: newEmotion };
+        if (idx === -1) return [...prev, entry];
+        const next = [...prev];
+        next[idx] = entry;
+        return next;
       });
+      if (res?.currentPhase) setPhase(res.currentPhase);
+      if (typeof res?.satisfactionScore === "number") {
+        setScore(res.satisfactionScore);
+        setScoreHistory((prev) => [...prev, { turn: prev.length, score: res.satisfactionScore }]);
+      }
+      if (res?.milestones) setMilestones(res.milestones);
+      setEmotion(newEmotion);
+
+      // ── TTS reconciliation ───────────────────────────────────────────────────
+      // SSE + sentence-streamed audio already in progress: compare the canonical
+      // reply against what we actually streamed (whitespace-normalized). If the
+      // coherence gate substituted a different reply, stop and re-speak fresh;
+      // otherwise flush the tail sentence and let the in-flight read finish.
+      const norm = (s) => String(s || "").replace(/\s+/g, " ").trim();
+      if (streamCtx?.spoke) {
+        if (norm(streamCtx.streamedText) === norm(reply)) {
+          // Same reply: flush any trailing remainder, then finalize the utterance.
+          if (voice.enabled && reply) {
+            for (const sentence of streamCtx.chunker.flush(streamCtx.streamedText)) {
+              voice.speakChunk(sentence, newEmotion);
+            }
+          }
+          voice.endUtterance();
+        } else if (voice.enabled && reply) {
+          // Substituted reply: discard the partial read and speak the canonical one.
+          voice.stopSpeaking();
+          voice.speak(reply, newEmotion);
+        } else {
+          voice.endUtterance();
+        }
+      } else if (voice.enabled && reply) {
+        // Non-streamed path (non-SSE fallback, or voice toggled mid-turn): TTS
+        // always consumes the FINAL canonical reply — never partial tokens.
+        voice.speak(reply, newEmotion);
+      }
+
+      // ── Live coaching cue ──────────────────────────────────────────────────
+      // Bump the turn counter; capture it so a stale LLM-cue response can't
+      // clobber a fresher instant cue. Old sessions / missing cue → leave the
+      // last cue untouched (the payload simply omits it).
+      const turn = ++turnCounterRef.current;
+      if (res?.cue && typeof res.cue === "object") {
+        setCue(res.cue);
+        // Fire-and-forget the richer LLM cue; swap in only if still the latest turn.
+        setCueRefining(true);
+        api
+          .getSessionCue(sid)
+          .then((out) => {
+            if (turnCounterRef.current !== turn) return; // a newer turn arrived
+            if (out?.cue && typeof out.cue === "object") setCue(out.cue);
+          })
+          .catch(() => {
+            /* keep the instant cue on any failure */
+          })
+          .finally(() => {
+            if (turnCounterRef.current === turn) setCueRefining(false);
+          });
+      }
+    };
+
+    const applyError = (e) => {
+      setMessages((prev) => prev.filter((m) => m.id !== streamId).concat({
+        id: `e${Date.now()}`,
+        role: "system",
+        text: e?.message || "Something went wrong sending that message.",
+      }));
+    };
+
+    // ── Sentence-streamed speech state ─────────────────────────────────────────
+    // When voice is on, the student starts SPEAKING on their first complete
+    // sentence instead of after the whole reply. We feed the emotion-suppressed
+    // display text through a sentence chunker and speakChunk() each sentence into
+    // the gapless player; on `done` we reconcile against the canonical reply.
+    const streamCtx = {
+      spoke: false,
+      streamedText: "", // concatenated text actually handed to the chunker (= display)
+      chunker: createSentenceChunker(),
+    };
+    // lastKnownEmotion: the live tag arrives trailing, so during streaming we use
+    // the current student emotion (defaulting to neutral) per the spec.
+    const lastKnownEmotion = emotion || "neutral";
+
+    try {
+      await postMessageStream(sid, body, {
+        onToken: (chunk) => {
+          streamBuf += chunk;
+          // Re-derive display text from the full buffer each token so a tag split
+          // across chunks is always suppressed (see stripStreamingEmotionTag).
+          const { display } = stripStreamingEmotionTag(streamBuf);
+          // Updater stays pure (keyed by streamId), so a double-invoke can't dup.
+          setMessages((prev) => {
+            const idx = prev.findIndex((m) => m.id === streamId);
+            if (idx === -1) {
+              return [...prev, { id: streamId, role: "student", text: display, emotion: "neutral", streaming: true }];
+            }
+            const next = [...prev];
+            next[idx] = { ...next[idx], text: display };
+            return next;
+          });
+
+          // Feed complete sentences to TTS as they arrive (voice only).
+          if (voice.enabled) {
+            streamCtx.streamedText = display;
+            const sentences = streamCtx.chunker.push(display);
+            if (sentences.length) {
+              if (!streamCtx.spoke) {
+                voice.beginUtterance(); // bumps epoch once; chunks append after this
+                streamCtx.spoke = true;
+              }
+              for (const sentence of sentences) {
+                voice.speakChunk(sentence, lastKnownEmotion);
+              }
+            }
+          }
+        },
+        onDone: (res) => applyDone(res, streamCtx),
+      });
+    } catch (streamErr) {
+      // SSE failed. If the server emitted a structured `error` event (e.g.
+      // LLM_TIMEOUT), surface a toast and DON'T blindly re-fire the LLM — but to
+      // guarantee a turn is never lost on a transport-level failure, retry once
+      // via the plain JSON endpoint.
+      if (streamErr?.sseError) {
+        pushToast(
+          /timeout|timed out|LLM_TIMEOUT/i.test(streamErr.message || "")
+            ? "Student reply timed out — try again."
+            : (streamErr.message || "Student reply failed — try again."),
+          { tone: "danger" },
+        );
+        applyError(streamErr);
+      } else {
+        // Transport/fetch-level failure: retry once via the non-streaming path.
+        try {
+          const res = await api.sendMessage(sid, text, deliveryMetrics || undefined);
+          applyDone({
+            reply: res?.reply,
+            emotion: res?.emotion,
+            currentPhase: res?.currentPhase,
+            satisfactionScore: res?.satisfactionScore,
+            milestones: res?.milestones,
+            cue: res?.cue,
+          });
+        } catch (jsonErr) {
+          pushToast("Couldn't reach the student — connection issue.", { tone: "danger" });
+          applyError(jsonErr);
+        }
+      }
+    } finally {
+      sendingRef.current = false;
+      setSending(false);
+    }
   }
   useEffect(() => {
     submitRef.current = submit;
@@ -552,7 +779,25 @@ export default function Session() {
     const sid = activeSessionId || sessionId;
     api
       .endSession(sid)
-      .then((res) => navigate("/app/reports/" + res.reportId))
+      .then(async (res) => {
+        // Probe the freshly-generated report for a degraded (fallback) state so we
+        // can warn the counsellor. A failed probe must not block navigation.
+        let degraded = false;
+        try {
+          const report = await api.getReport(res.reportId);
+          degraded = report?.fallback === true;
+        } catch {
+          /* non-fatal — navigate anyway */
+        }
+        navigate("/app/reports/" + res.reportId, {
+          state: degraded
+            ? {
+                degradedNotice:
+                  "Coaching report degraded — LLM was unreachable; it can be regenerated.",
+              }
+            : undefined,
+        });
+      })
       .catch((e) => {
         setWrappingError(e?.message || "Could not generate the report.");
         setEnding(false);
@@ -674,6 +919,7 @@ export default function Session() {
 
   return (
     <div className="flex h-screen bg-stage">
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
       {/* ── Call stage (takes remaining space) ── */}
       <CallStage
         personaName={persona?.name}
@@ -701,6 +947,11 @@ export default function Session() {
         showSat={showSat}
         onToggleSat={() => setShowSat((s) => !s)}
         timerStart={timerStart}
+        cue={cue}
+        onOpenCoach={() => {
+          setSidebarOpen(true);
+          setSidebarTab("coach");
+        }}
       />
 
       {/* ── Glass sidebar: Transcript + Coach tabs ── */}
@@ -717,6 +968,8 @@ export default function Session() {
         deliveryMetrics={lastDeliveryMetrics}
         milestones={milestones}
         emotion={emotion}
+        cue={cue}
+        cueRefining={cueRefining}
         inputRef={sidebarInputRef}
       />
 

@@ -17,7 +17,14 @@ export function capabilityReady(status) {
 /**
  * Probe GET /health with a 1-second timeout.
  * Result is cached per session unless force=true.
- * Returns { ok, capabilities, ttsEngine } — on any error: { ok: false, capabilities: {} }.
+ * Returns { ok, capabilities, ttsEngine, sttEngine } — on any error: { ok: false, capabilities: {} }.
+ *
+ * sttEngine: 'scribe' | 'whisper' | null
+ *   'scribe'  → ElevenLabs Scribe is active; client should route counsellor STT to sidecar
+ *               (fast HTTP API, no local model download stall).
+ *   'whisper' → faster-whisper loaded locally; client stays on browser whisper-tiny to avoid
+ *               the first-request model-download stall.
+ *   null      → STT disabled or sidecar unreachable; client uses browser whisper-tiny.
  */
 export async function probeSidecar(force = false) {
   if (probed && !force) return probed;
@@ -36,6 +43,7 @@ export async function probeSidecar(force = false) {
       ok: true,
       capabilities: data.capabilities || {},
       ttsEngine: data.ttsEngine || null,
+      sttEngine: data.sttEngine || null,
     };
     return probed;
   } catch {
@@ -53,13 +61,14 @@ export function sidecarStatus() {
  * POST /tts — returns ArrayBuffer (WAV bytes).
  * @param {string} text
  * @param {string} [emotion="neutral"]
+ * @param {string|null} [voice=null] - ElevenLabs voice ID override (per-session student voice)
  * @returns {Promise<ArrayBuffer>}
  */
-export async function sidecarTts(text, emotion = "neutral") {
+export async function sidecarTts(text, emotion = "neutral", voice = null) {
   const res = await fetch(`${BASE}/tts`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, emotion }),
+    body: JSON.stringify({ text, emotion, ...(voice ? { voice } : {}) }),
   });
   if (!res.ok) {
     const msg = await res.text().catch(() => res.status);

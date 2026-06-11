@@ -19,7 +19,7 @@ See `CONTRACT.md` (repo root) for the authoritative API shapes, data shapes, rou
 ## Commands
 
 ```bash
-# Server (port 3001) — needs OLLAMA_API_KEY in repo-root .env
+# Server (port 3001) — needs MINIMAX_API_KEY in repo-root .env
 cd server && npm install && npm start         # or: npm run dev (node --watch)
 
 # Client (Vite dev server, proxies /api -> :3001)
@@ -46,21 +46,25 @@ Note: if `npm run dev/build/lint` fails with "Permission denied" on a `node_modu
 
 ## Environment
 
-- `.env` at the **repo root** (server reads `../.env`); must contain `OLLAMA_API_KEY`.
-- The LLM is **Ollama Cloud** (`gpt-oss:120b` via `https://ollama.com` with a Bearer token) — not a local Ollama, and **not** Google Gemini despite the legacy project name. `server/ollama.js` is the client.
+- `.env` at the **repo root** (server reads `../.env`); must contain `MINIMAX_API_KEY` (LLM) and `ELEVENLABS_API_KEY` (student TTS + Scribe STT). `OLLAMA_API_KEY` is only needed for the offline mining/diarization scripts.
+- The LLM is **MiniMax** (`MiniMax-M3` via `https://api.minimax.io`, OpenAI-compatible; `MINIMAX_MODEL` to override) — `server/ollama.js` is the client (legacy filename kept; previously Ollama Cloud, and **not** Google Gemini despite the project name). M3 is a reasoning model: the client strips/suppresses the inline `<think>…</think>` block in both `chat()` and `chatStream()`.
 
 ## Server architecture (`server/`)
 
 `index.js` wires the REST API; logic is split into focused modules:
-- `store.js` — JSON file store under `server/data/*.json`. `users.json` + `personas.json` + `courses.json` + `rubric-templates.json` ship seeded (`courses.json` contains 15 scraped courses across 9 domains; `rubric-templates.json` contains the default "Grounded v2" template — regenerate via `node scripts/seed-rubric-template.mjs`); `assignments.json`/`sessions.json`/`reports.json` are created empty on first run. Sessions snapshot the course as `courseSnapshot` at start time (like `personaSnapshot`). Generic `getAll/getById/insert/update/remove`.
+- `store.js` — JSON file store under `server/data/*.json`. `users.json` + `personas.json` + `courses.json` + `rubric-templates.json` ship seeded (`courses.json` contains 15 scraped courses across 9 domains; `rubric-templates.json` contains the default "Grounded v2" template — regenerate via `node scripts/seed-rubric-template.mjs`); `assignments.json`/`sessions.json`/`reports.json` are created empty on first run. Sessions snapshot the course + persona (incl. personality) as `courseSnapshot`/`personaSnapshot` at start time. Generic `getAll/getById/insert/update/remove`.
 - `phases.js` — 5-phase non-strict machine (Opening → Discovery → Presentation → Objections & Negotiation → Close) + milestone tracking (`discoveryDone`/`presentationDone`/`paymentAsked` booleans, `objectionsRaised` counter). `advancePhase` mutates `session.currentPhase` and `session.milestones` based on message counts + corpus-derived keyword regexes; milestones are tracked independently of the linear phase pointer.
+- `register.js` — loads `server/data/seed/{register-lines,voice-bank,register-stats}.json` once (all PII-scrubbed real-call artifacts); exposes `registerLines()` (all diarized student/counsellor lines), `voiceBankFor(category, phase, n?)` (rotated sample of register-matched lines for a persona+phase), and `registerStatsFor(phase)` (word-band + filler stats) for grounding the natural-speech prompt sections.
+- `personality.js` — trait schema (talkativeness/humour/skepticism/formality 1–5 scales, quirks array), `DEFAULT_PERSONALITY`, `rollSessionFlavour(persona.personality)` (stochastic mood + active quirks), and `renderPersonalitySection(flavour)` for injecting into the prompt.
 - `grounding.js` — loads `server/data/seed/*` once (archetypes, objections, benchmarks, conversation-structure); exposes `archetypeForPersona(personaSnapshot)` (category→archetype mapping) and `objectionRepertoire(archetype, difficulty)` (difficulty-scaled objection list with real phrasings) for the student prompt and report engine.
-- `prompt.js` — composes the student system prompt from **persona + archetype + objection repertoire + scenario + phase + score** (the general profile, phase instructions, score bands, and `courseContext.js` are shared scaffolding; personas supply the variable identity; `grounding.js` adds archetype texture and corpus-derived objection phrasings).
-- `engine.js` — `getFirstMessage` / `getStudentReply`; builds the Ollama message array from the **server-owned** transcript (student→assistant, counsellor→user, with a synthetic opening trigger).
+- `prompt.js` — composes the student system prompt from **persona + personality flavour + archetype + objection repertoire + scenario + phase + score + convincement hint + objection state**; includes natural-speech rules, phase-aware verbosity (from register stats + talkativeness), register reference (real student lines), conditional tangents (mood/phase gated), the convincement section (`ready`/`warming` overrides) and the objection-state summary; all from editable `prompt-config.json` scaffolding. Exports `computeConvincementHint(session)` / `convincementParamsFor(difficulty)`.
+- `engine.js` — `getFirstMessage` / `getStudentReply`; builds the Ollama message array from the **server-owned** transcript (student→assistant, counsellor→user, with a synthetic opening trigger); threads `personalityFlavour` + the convincement hint + objection state into the prompt builder; runs the coherence gate **and** the anti-loop guard (>0.8 token-overlap with the last 6 student turns → regenerate once → move-forward fallback).
 - `scoring.js` — per-message −10..+10 LLM scoring → live satisfaction score; scoring prompt includes grounded counter-move guidance from real converting calls.
 - `report.js` — `generateReport`: one LLM call over the transcript → grades against the session's `rubricSnapshot` with anchor-quoted levels; renormalizes weights when `voice_delivery` is unscoreable (text sessions → 7 graded criteria); adds `keyMoments`/`drills`/`benchmarks`; falls back to `LEGACY_RUBRIC` (6 criteria) for pre-v2 sessions without a `rubricSnapshot`.
 
-**Per chat turn** (`POST /api/sessions/:id/message`): advance phase on counsellor msg → score it → append to transcript → generate student reply → advance phase on reply → persist. The server owns the transcript; the client never sends history.
+**Per chat turn** (`POST /api/sessions/:id/message`): advance phase on counsellor msg → score it (`scoreMessage` returns `{adjustment, reason, addressedObjection}`) → append to transcript → roll `session.lastTurnVerbosity` (`open`/`short`; talkativeness-scaled, phase-3 short unless `invite`, never two `open` in a row) and thread it + the previous turn's `adjustment` (one-turn-lag momentum) into the reply prompt → resolve the addressed objection (`resolveObjection`) → generate student reply → advance phase on reply → raise the student's new objection (`raiseObjection`) → persist `session.objectionState` → compute the instant counsellor `cue` (`instantCue`, given the cue v2 context: last adjustment/reason + live objection state). The server owns the transcript; the client never sends history.
+
+**Objection lifecycle + persistence (`objections.js`, `cues.js`):** `session.objectionState` (array of `{category,status,timesRaised,…}`, seeded empty, fail-soft to `[]` for old sessions) tracks each concern as `open`/`addressed`. The student prompt injects `summarizeForPrompt(state)` (which concerns are ANSWERED — do not repeat verbatim) plus a **convincement hint** (`resistant`/`warming`/`ready`) computed in `prompt.js` from the live score, the per-difficulty `convincement` thresholds/`effortTurns` in `prompt-config.json`, and the objection state — so addressing concerns and persistence actually raise the student toward "yes". `engine.js` adds an **anti-loop guard**: a coherent reply >0.8 token-overlap with any of the last 6 student turns is regenerated once ("do not repeat yourself"), then falls back to a short move-forward ack. The message endpoint returns a counsellor `cue` (`instantCue`); `POST /api/sessions/:id/cue` serves a richer `llmCue` (one deterministic LLM call) with `instantCue` fallback.
 
 **Sessions snapshot** the persona+scenario (`personaSnapshot`/`scenarioSnapshot`) at start, so later library edits don't rewrite history. A per-assignment `personaPromptOverride` replaces the persona's `behaviourPrompt` for that mock.
 
@@ -76,6 +80,13 @@ benchmarks) — validated by `node scripts/mine/validate-artifacts.mjs`.
 Re-run order: `prepare.py` → `sample.py` → `make_batches.py` → extraction workflow →
 `assemble-extractions.mjs` → `merge-extractions.mjs` → synthesis agents → validator. Audio:
 `audio/fetch.py` → `audio/analyze.py --all` (uv env in `scripts/mine/audio/`) → `audio/aggregate.py`.
+
+**Text diarization** (after `prepare.py`, before extraction workflow):
+`node scripts/mine/diarize.mjs [--all] [--n 50] [--concurrency 4]`
+Reads `scripts/mine/work/calls.json`, writes per-call JSON to `scripts/mine/work/diarized/<callId>.json`.
+Output shape: `{ callId, turns:[{speaker:'counsellor'|'student', phase:1-5|null, text}], diarizationConfidence, ambiguous, ambiguousNote }`.
+PII-containing; git-ignored under `scripts/mine/work/`. Requires `OLLAMA_API_KEY`.
+
 Tests: `python3 -m unittest discover -s scripts/mine/tests` ·
 `python3 -m unittest discover -s scripts/mine/audio/tests` · `node --test scripts/mine/tests/*.test.mjs`.
 
@@ -92,7 +103,7 @@ Tests: `python3 -m unittest discover -s scripts/mine/tests` ·
 
 ### Voice pipeline (`src/voice/*`, fully in-browser — reused, not rewritten)
 
-`Session.jsx` uses `useVoiceConversation({onUserUtterance})`. Push-to-talk = hold Space (interrupt while speaking). STT = `whisper-tiny.en` (`stt.js`), TTS = Kokoro-82M (`tts.js`), gapless playback with epoch-based barge-in (`audioPlayer.js`). Models download once, browser-cached, WebGPU→WASM fallback.
+`Session.jsx` uses `useVoiceConversation({onUserUtterance})`. Push-to-talk = hold Space (interrupt while speaking). STT = browser whisper-tiny (default) or sidecar ElevenLabs Scribe (if sttEngine="scribe") via `sidecarClient.js` routing; TTS = Kokoro-82M (`tts.js`), gapless playback with epoch-based barge-in (`audioPlayer.js`). Models download once, browser-cached, WebGPU→WASM fallback.
 
 ### Tailwind + Vite gotchas (do not "clean up")
 
@@ -122,10 +133,12 @@ as `ttsEngine: "chatterbox"|"kokoro"|null`.
 delivery via speed: neutral 1.0 · happy 1.05 · excited 1.12 · hesitant 0.88 · worried 0.94 ·
 frustrated 1.06.
 
-**Degradation matrix:** sidecar down → client falls back to browser Kokoro-82M (TTS) / whisper-tiny
-(STT) automatically; mic denied → text-only input; `VOICE_ANALYZE=off` or sidecar unreachable →
-no `deliveryMetrics` on transcript, `voice_delivery` rubric criterion excluded and weights
-renormalized to 100 for that session.
+**Degradation matrix:** sidecar down → client falls back to browser Kokoro-82M for TTS and browser
+whisper-tiny for STT; mic denied → text-only input; `VOICE_ANALYZE=off` or sidecar unreachable →
+no `deliveryMetrics` on transcript, `voice_delivery` rubric criterion excluded and weights renormalized
+to 100 for that session. Counsellor STT routes through the sidecar only when it reports `sttEngine`
+`"scribe"` (fast HTTP API with Hinglish auto-detect); otherwise uses browser whisper-tiny to avoid
+the first-request faster-whisper stall.
 
 **Smoke test:** `python3 voice-server/smoke.py` — hits `/health`, `/tts` (asserts RIFF header +
 >10 KB WAV), `/stt` (feeds the TTS output back, asserts non-empty transcript), `/analyze` (same

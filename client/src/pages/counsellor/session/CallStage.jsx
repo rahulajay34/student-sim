@@ -214,6 +214,111 @@ function VoiceStatusPill({ voice }) {
   );
 }
 
+// ── Stage hint chip (dismissible one-liner near the bottom) ───────────────────
+// Shows the live cue headline + first bullet with an "open coach" affordance.
+// Sits above the bottom controls bar so it never overlaps the orb or controls.
+function StageHintChip({ cue, onOpenCoach, onDismiss }) {
+  const headline = typeof cue?.headline === "string" ? cue.headline.trim() : "";
+  const firstPoint =
+    Array.isArray(cue?.points) && typeof cue.points[0] === "string" ? cue.points[0].trim() : "";
+  if (!headline && !firstPoint) return null;
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        bottom: 104,
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 5,
+        width: "min(92vw, 560px)",
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 10,
+        padding: "9px 12px",
+        borderRadius: 12,
+        background: "rgba(22,26,38,0.86)",
+        backdropFilter: "blur(10px)",
+        border: "1px solid rgba(99,102,241,0.32)",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.30)",
+        animation: "fadeup 0.3s ease-out",
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          marginTop: 3,
+          width: 6,
+          height: 6,
+          borderRadius: "50%",
+          flexShrink: 0,
+          background: "#818cf8",
+        }}
+      />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {headline && (
+          <p style={{ margin: 0, fontSize: "0.8125rem", fontWeight: 600, color: "#e7e9f4", lineHeight: 1.35 }}>
+            {headline}
+          </p>
+        )}
+        {firstPoint && (
+          <p
+            style={{
+              margin: "2px 0 0",
+              fontSize: "0.75rem",
+              color: "#a8b0c8",
+              lineHeight: 1.4,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+            }}
+          >
+            {firstPoint}
+          </p>
+        )}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+        <button
+          type="button"
+          onClick={onOpenCoach}
+          style={{
+            background: "rgba(99,102,241,0.18)",
+            border: "1px solid rgba(99,102,241,0.40)",
+            borderRadius: 8,
+            padding: "3px 9px",
+            fontSize: "0.6875rem",
+            fontWeight: 600,
+            color: "#c7d2fe",
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Open coach
+        </button>
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="Dismiss cue"
+          title="Dismiss"
+          style={{
+            background: "transparent",
+            border: "none",
+            color: "#8b90a8",
+            cursor: "pointer",
+            fontSize: "1rem",
+            lineHeight: 1,
+            padding: "2px 4px",
+          }}
+        >
+          ×
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Main CallStage ─────────────────────────────────────────────────────────────
 export default function CallStage({
   // session info
@@ -240,10 +345,38 @@ export default function CallStage({
   onToggleSat,
   // timer
   timerStart,
+  // live cue chip
+  cue,
+  onOpenCoach,
 }) {
   const timer = useTimer(timerStart);
   const [micHintShown] = useState(true); // always show once; no need to hide
   const em = EMOTION_META[emotion] || EMOTION_META.neutral;
+
+  // ── Live cue chip: enable toggle (persisted) + per-cue dismissal ───────────
+  const [cuesEnabled, setCuesEnabled] = useState(() => {
+    try {
+      return localStorage.getItem("mct_cues") !== "off";
+    } catch {
+      return true;
+    }
+  });
+  function toggleCues() {
+    setCuesEnabled((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("mct_cues", next ? "on" : "off");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
+
+  // Reset dismissal whenever a new cue arrives (keyed by headline + first point).
+  const cueKey = cue ? `${cue.headline || ""}|${(cue.points && cue.points[0]) || ""}` : "";
+  const [dismissedKey, setDismissedKey] = useState(null);
+  const chipVisible = cuesEnabled && !!cueKey && dismissedKey !== cueKey;
   const satColorKey = scoreColor(satisfaction ?? 0);
   const satHex = SCORE_COLOR_HEX[satColorKey] || "#8b90a8";
 
@@ -280,6 +413,39 @@ export default function CallStage({
         <Pill>
           <span style={{ fontVariantNumeric: "tabular-nums" }}>{timer}</span>
         </Pill>
+
+        {/* Cue chips toggle */}
+        <button
+          type="button"
+          onClick={toggleCues}
+          title={cuesEnabled ? "Hide live coaching cues" : "Show live coaching cues"}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            borderRadius: 9999,
+            padding: "4px 12px",
+            fontSize: "0.75rem",
+            color: cuesEnabled ? "#c7d2fe" : "#8b90a8",
+            background: "rgba(22,26,38,0.80)",
+            backdropFilter: "blur(8px)",
+            border: `1px solid ${cuesEnabled ? "rgba(99,102,241,0.40)" : "#262a36"}`,
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+            transition: "border-color 150ms ease, color 150ms ease",
+          }}
+        >
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: "50%",
+              flexShrink: 0,
+              background: cuesEnabled ? "#818cf8" : "#4b5167",
+            }}
+          />
+          {cuesEnabled ? "Cues on" : "Cues off"}
+        </button>
       </div>
 
       {/* ── Top-right: satisfaction pill ───────────────────────────────── */}
@@ -352,6 +518,15 @@ export default function CallStage({
           ) : null}
         </div>
       </div>
+
+      {/* ── Live cue hint chip (above the controls bar) ─────────────────── */}
+      {chipVisible && (
+        <StageHintChip
+          cue={cue}
+          onOpenCoach={() => onOpenCoach?.()}
+          onDismiss={() => setDismissedKey(cueKey)}
+        />
+      )}
 
       {/* ── Bottom controls bar ─────────────────────────────────────────── */}
       <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>

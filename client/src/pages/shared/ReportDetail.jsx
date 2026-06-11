@@ -2,15 +2,108 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import { bandColor, formatDate } from "../../lib/format";
+import { useAuth } from "../../lib/auth";
 import Card, { CardHeader } from "../../ui/Card";
 import Badge from "../../ui/Badge";
 import Spinner from "../../ui/Spinner";
 import EmptyState from "../../ui/EmptyState";
+import Modal from "../../ui/Modal";
+import Button from "../../ui/Button";
 import ScoreMeter from "../../ui/ScoreMeter";
 import RubricBar from "./RubricBar";
 import ScoreArcChart from "./ScoreArcChart";
 import TranscriptView from "./TranscriptView";
 import PhaseStepper from "./PhaseStepper";
+
+// Monospace code block with copy button — used in the prompts panel.
+function CodeBlock({ label, value }) {
+  const [copied, setCopied] = useState(false);
+  function copy() {
+    navigator.clipboard.writeText(value || "").then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    });
+  }
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</span>
+        <button
+          type="button"
+          onClick={copy}
+          className="rounded-lg px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:bg-canvas hover:text-ink"
+        >
+          {copied ? "Copied!" : "Copy"}
+        </button>
+      </div>
+      <pre className="max-h-60 overflow-y-auto whitespace-pre-wrap break-words rounded-xl border border-line bg-canvas p-3 font-mono text-xs leading-relaxed text-ink/80">
+        {value || "—"}
+      </pre>
+    </div>
+  );
+}
+
+// Admin-only modal showing the three composed prompts for the session.
+function PromptsModal({ open, onClose, sessionId }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!open || !sessionId) return;
+    let active = true;
+    setLoading(true);
+    setError("");
+    api
+      .getSessionPrompts(sessionId)
+      .then((d) => {
+        if (active) setData(d);
+      })
+      .catch((e) => {
+        if (active) setError(e.message || "Could not load prompts.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [open, sessionId]);
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Session prompts"
+      footer={
+        <Button variant="secondary" onClick={onClose}>
+          Close
+        </Button>
+      }
+    >
+      {loading && (
+        <div className="flex items-center justify-center py-10">
+          <Spinner size={24} />
+        </div>
+      )}
+      {error && (
+        <div className="rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-2.5 text-sm text-danger">
+          {error}
+        </div>
+      )}
+      {!loading && !error && data && (
+        <div className="space-y-5">
+          <p className="text-sm text-muted">
+            The three prompts the LLM saw for this session. Read-only.
+          </p>
+          <CodeBlock label="Student system prompt" value={data.studentSystemPrompt} />
+          <CodeBlock label="Scoring prompt (template)" value={data.scoringPrompt} />
+          <CodeBlock label="Report prompt" value={data.reportPrompt} />
+        </div>
+      )}
+    </Modal>
+  );
+}
 
 function BackLink({ to }) {
   return (
@@ -30,9 +123,13 @@ function Dot({ color }) {
 
 export default function ReportDetail({ backTo = "/app/reports" }) {
   const { id } = useParams();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [promptsOpen, setPromptsOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -114,7 +211,39 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <BackLink to={backTo} />
+      <div className="flex items-center justify-between gap-3">
+        <BackLink to={backTo} />
+        {isAdmin && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setPromptsOpen(true)}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4"
+              aria-hidden="true"
+            >
+              <path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+            </svg>
+            View prompts
+          </Button>
+        )}
+      </div>
+
+      {/* Admin: session prompts modal */}
+      {isAdmin && (
+        <PromptsModal
+          open={promptsOpen}
+          onClose={() => setPromptsOpen(false)}
+          sessionId={report?.sessionId}
+        />
+      )}
 
       {/* HERO */}
       <Card className="p-6">
@@ -402,9 +531,16 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
 
       {/* TRANSCRIPT */}
       <Card className="p-6">
-        <CardHeader title="Transcript" subtitle="Full conversation with phase markers" />
+        <CardHeader
+          title="Transcript"
+          subtitle={
+            isAdmin
+              ? "Full conversation with phase markers, turn types, and score notes"
+              : "Full conversation with phase markers"
+          }
+        />
         {transcript.length ? (
-          <TranscriptView transcript={transcript} />
+          <TranscriptView transcript={transcript} showScoreReason={isAdmin} />
         ) : (
           <EmptyState title="No transcript" hint="This session has no recorded turns." />
         )}

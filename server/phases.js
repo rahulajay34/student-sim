@@ -4,6 +4,8 @@
 // tracked independently of the linear pointer, because real objections erupt
 // in any phase.
 
+import { detectObjectionCategory } from "./objections.js";
+
 export const PHASE_NAMES = {
   1: "Opening",
   2: "Discovery",
@@ -26,6 +28,26 @@ export function initMilestones() {
   return { discoveryDone: false, presentationDone: false, paymentAsked: false, objectionsRaised: 0 };
 }
 
+/**
+ * Advance the phase machine one step for `role`'s message `msg`.
+ *
+ * Mutates `session.currentPhase`, `session.milestones`, and
+ * `session.phaseCounters` in place (existing callers unchanged).
+ *
+ * Additionally, when role === "student" and the text matches an objection, the
+ * function returns the detected objection category string so the caller
+ * (integration agent) can update the per-session objection state via
+ * objections.js.  Returns `null` when no objection was detected or when
+ * role === "counsellor".
+ *
+ * Backward-compatible: existing callers that ignore the return value are
+ * unaffected.
+ *
+ * @param {object} session
+ * @param {"counsellor"|"student"} role
+ * @param {string} msg
+ * @returns {string|null} Detected objection category key, or null.
+ */
 export function advancePhase(session, role, msg) {
   const c = session.phaseCounters || (session.phaseCounters = initPhaseCounters());
   const m = session.milestones || (session.milestones = initMilestones());
@@ -39,7 +61,15 @@ export function advancePhase(session, role, msg) {
     m.paymentAsked = true;
     if (session.currentPhase === 4) askedNow = true;
   }
-  if (role === "student" && session.currentPhase >= 3 && OBJECTION_RE.test(text)) m.objectionsRaised += 1;
+
+  // Detect objection category for student messages. The broader OBJECTION_RE
+  // gate keeps the objectionsRaised counter in sync; detectObjectionCategory
+  // provides the fine-grained category key for the lifecycle tracker.
+  let detectedCategory = null;
+  if (role === "student" && session.currentPhase >= 3 && OBJECTION_RE.test(text)) {
+    m.objectionsRaised += 1;
+    detectedCategory = detectObjectionCategory(text);
+  }
 
   switch (session.currentPhase) {
     case 1: // Opening -> Discovery: after greetings settle (2+ exchanges) or discovery probing starts
@@ -63,4 +93,6 @@ export function advancePhase(session, role, msg) {
     default: // 5: Close — terminal
       break;
   }
+
+  return detectedCategory;
 }

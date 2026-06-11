@@ -105,6 +105,7 @@ if ok:
     for k, v in caps.items():
         print(f"    {k:10s} : {v}")
     print(f"  ttsEngine    : {health.get('ttsEngine')}")
+    print(f"  sttEngine    : {health.get('sttEngine')}")
 
 # ── /tts ─────────────────────────────────────────────────────────────────────
 print("\n── /tts ────────────────────────────────────────────────────────────────")

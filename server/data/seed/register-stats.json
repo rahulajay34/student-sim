@@ -1,0 +1,112 @@
+{
+  "generatedAt": "2026-06-10T00:00:00.000Z",
+  "source": "real-call sample (PII scrubbed, path redacted)",
+  "note": "Phase numbering remapped to 5-phase arc: 1=Opening, 2=Discovery, 3=Presentation, 4=Objections+Negotiation, 5=Close. Old phase 3 covered Presentation+Objections combined; split approximation applied.",
+  "sample": {
+    "calls": 16,
+    "studentTurns": 182
+  },
+  "byPhase": {
+    "1": {
+      "turnCount": 77,
+      "medianWords": 8,
+      "p25Words": 4,
+      "p75Words": 22
+    },
+    "2": {
+      "turnCount": 54,
+      "medianWords": 12,
+      "p25Words": 4,
+      "p75Words": 34
+    },
+    "3": {
+      "turnCount": 26,
+      "medianWords": 15,
+      "p25Words": 7,
+      "p75Words": 55
+    },
+    "5": {
+      "turnCount": 25,
+      "medianWords": 6,
+      "p25Words": 2,
+      "p75Words": 11
+    },
+    "4": {
+      "turnCount": 26,
+      "medianWords": 15,
+      "p25Words": 7,
+      "p75Words": 55,
+      "note": "approximated from old phase 3 (presentation+objections combined)"
+    }
+  },
+  "hinglish": {
+    "turnRatio": 0,
+    "topHindiTokens": []
+  },
+  "fillers": [
+    {
+      "value": "like",
+      "count": 27
+    },
+    {
+      "value": "actually",
+      "count": 11
+    },
+    {
+      "value": "you know",
+      "count": 7
+    },
+    {
+      "value": "kind of",
+      "count": 4
+    },
+    {
+      "value": "i mean",
+      "count": 2
+    },
+    {
+      "value": "okay so",
+      "count": 1
+    },
+    {
+      "value": "um",
+      "count": 1
+    }
+  ],
+  "objections": {
+    "4": [
+      "Is there a doubt‑clearing support team?",
+      "Can I join later after my exams?",
+      "Can I pay the remaining amount later?",
+      "I need to discuss with my parents.",
+      "I've spoken to my parents.",
+      "I'm not married, I need to discuss with my parents. Can you call them? No, I will connect them myself."
+    ],
+    "5": [
+      "Can I pay it in EMI?",
+      "Yes, ma'am, I have asked my parents for the payment and registration."
+    ]
+  },
+  "phaseWordBands": {
+    "1": [
+      5,
+      60
+    ],
+    "2": [
+      2,
+      45
+    ],
+    "3": [
+      3,
+      60
+    ],
+    "5": [
+      2,
+      50
+    ],
+    "4": [
+      3,
+      60
+    ]
+  }
+}

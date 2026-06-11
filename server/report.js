@@ -1,7 +1,16 @@
 // Report v2 — grades against the session's rubricSnapshot (anchor-quoted),
 // adds key moments, benchmark comparisons, and practice drills.
 // Falls back to the legacy 6-criterion rubric for pre-v2 sessions.
-import { chat } from "./ollama.js";
+//
+// Contract decisions:
+//   - Single model: nemotron-3-nano:30b (OLLAMA_MODEL override) for all calls.
+//   - Sampling: DETERMINISTIC_SAMPLING with timeoutMs:120000.
+//   - Retry: 2 attempts on LLM call + JSON parse failure; on final failure a
+//     neutral rubric-v2-shaped fallback report is returned with
+//     {fallback:true, regenerable:true} so the caller can replace it later.
+//   - Exported needsRegeneration(report): true when report.fallback === true.
+//   - Exported reportPromptForInspection(session): the exact prompt text.
+import { chat, DETERMINISTIC_SAMPLING, extractJson } from "./ollama.js";
 import { BENCHMARKS, STRUCTURE } from "./grounding.js";
 
 export const LEGACY_RUBRIC = [
@@ -105,13 +114,6 @@ Return ONLY a JSON object with this exact shape:
 Score honestly and specifically. Do not output anything except the JSON object.`;
 }
 
-function extractJson(text) {
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start === -1 || end === -1) throw new Error("no JSON in report response");
-  return JSON.parse(text.slice(start, end + 1));
-}
-
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, Math.round(Number(n) || 0)));
 
 const OBJECTION_ENUM = new Set([
@@ -129,11 +131,85 @@ function sanitizeObjectionCategory(raw) {
   return "other";
 }
 
-export async function generateReport(session, { counsellorName = "" } = {}) {
-  const { criteria } = effectiveCriteria(session);
-  const text = await chat([{ role: "user", content: buildPrompt(session, criteria) }]);
-  const raw = extractJson(text);
+// ─── LLM call options ───────────────────────────────────────────────────────
+// Single model per contract (nemotron-3-nano:30b or OLLAMA_MODEL override).
+// 120 second timeout for the longer report generation call.
+const REPORT_OPTIONS = { ...DETERMINISTIC_SAMPLING, timeoutMs: 120_000 };
 
+// ─── Retry helper ───────────────────────────────────────────────────────────
+// Tries fn() up to maxAttempts times. Returns {ok:true, value} or {ok:false, error}.
+async function retryLlmCall(fn, maxAttempts = 2) {
+  let lastError;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const value = await fn();
+      return { ok: true, value };
+    } catch (err) {
+      lastError = err;
+      console.warn(`[report] LLM attempt ${attempt}/${maxAttempts} failed: ${err.message}`);
+    }
+  }
+  return { ok: false, error: lastError };
+}
+
+// ─── Neutral fallback builder ────────────────────────────────────────────────
+// Builds a full rubric-v2-shaped report with neutral mid-band scores.
+// Uses effectiveCriteria(session) so voice_delivery is excluded/included correctly.
+function buildFallbackReport(session) {
+  const { criteria } = effectiveCriteria(session);
+  const totalWeight = criteria.reduce((n, c) => n + c.weight, 0) || 100;
+
+  const rubric = criteria.map((c) => ({
+    key: c.key,
+    label: c.label,
+    weight: Math.round((c.weight / totalWeight) * 1000) / 10,
+    score: 3,
+    level: LEVEL_LABELS[3],   // "Competent" — honest neutral placeholder
+    justification: "Report generation failed — neutral placeholder.",
+  }));
+
+  // Neutral mid-band percent: score 3 / max 5 = 60%
+  const percent = Math.round(rubric.reduce((sum, r) => sum + (3 / 5) * r.weight, 0));
+
+  const phaseBreakdown = PHASE_NAMES_V2.map((name, i) => ({
+    phase: i + 1,
+    name,
+    summary: "Report generation failed — neutral placeholder.",
+    didWell: "",
+    toImprove: "",
+  }));
+
+  const sessionMinutes = session.startedAt
+    ? Math.round((Date.now() - new Date(session.startedAt).getTime()) / 60000 * 10) / 10
+    : null;
+
+  return {
+    overall: {
+      percent,
+      band: bandFor(percent),
+      outcome: "Not Converted",
+      outcomeDetail: "Report generation failed — neutral placeholder.",
+    },
+    rubric,
+    phaseBreakdown,
+    strengths: [],
+    improvements: [],
+    keyMoments: [],
+    drills: [],
+    benchmarks: {
+      sessionMinutes,
+      medianPaidMinutes: BENCHMARKS.text?.paidVsUnpaid?.durationMedianPaid ?? null,
+      paymentAskSeen: !!session.milestones?.paymentAsked,
+      paymentAskNormPct: STRUCTURE.paymentAskNorms?.presentInPaidPct ?? null,
+    },
+    scoreArc: (session.scoreHistory || []).map((h) => ({ turn: h.turn, score: h.score })),
+    fallback: true,
+    regenerable: true,
+  };
+}
+
+// ─── Assemble report from LLM-parsed raw object ──────────────────────────────
+function assembleReport(session, raw, criteria) {
   const byKey = new Map((raw.rubric || []).map((r) => [r.key, r]));
   const totalWeight = criteria.reduce((n, c) => n + c.weight, 0) || 100;
   const rubric = criteria.map((c) => {
@@ -185,4 +261,56 @@ export async function generateReport(session, { counsellorName = "" } = {}) {
     },
     scoreArc: (session.scoreHistory || []).map((h) => ({ turn: h.turn, score: h.score })),
   };
+}
+
+// ─── Public: report prompt for inspection endpoint ───────────────────────────
+/**
+ * reportPromptForInspection(session)
+ * Returns the exact prompt text that generateReport() would send to the LLM.
+ * Used by GET /api/sessions/:id/prompt.
+ */
+export function reportPromptForInspection(session) {
+  const { criteria } = effectiveCriteria(session);
+  return buildPrompt(session, criteria);
+}
+
+// ─── Public: does this report need regeneration? ─────────────────────────────
+/**
+ * needsRegeneration(report)
+ * Returns true when report is a neutral fallback that should be regenerated.
+ * Used by the /end endpoint (Integration agent) to skip the idempotent short-
+ * circuit when a fallback:true report already exists for the session.
+ */
+export function needsRegeneration(report) {
+  return report?.fallback === true;
+}
+
+// ─── Public: generate (or fallback) ──────────────────────────────────────────
+/**
+ * generateReport(session, {counsellorName?})
+ *
+ * Attempts the LLM call up to 2 times (DETERMINISTIC_SAMPLING, 120 s timeout).
+ * On final failure returns a neutral placeholder in the full rubric-v2 shape with
+ * {fallback:true, regenerable:true} so ReportDetail v2 renders immediately and
+ * the report can be regenerated later (see needsRegeneration).
+ */
+export async function generateReport(session, { counsellorName = "" } = {}) {
+  const { criteria } = effectiveCriteria(session);
+  const prompt = buildPrompt(session, criteria);
+
+  const result = await retryLlmCall(async () => {
+    const text = await chat(
+      [{ role: "user", content: prompt }],
+      REPORT_OPTIONS,
+    );
+    // extractJson strips markdown fences and throws on bad JSON
+    return extractJson(text);
+  }, 2);
+
+  if (!result.ok) {
+    console.error("[report] All LLM attempts failed; returning neutral fallback.", result.error?.message);
+    return buildFallbackReport(session);
+  }
+
+  return assembleReport(session, result.value, criteria);
 }
