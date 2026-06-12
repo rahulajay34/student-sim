@@ -80,21 +80,39 @@ export async function authenticate(req) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// assertAdmin(user) — throws 403 if the user is not an admin.
+// isAdmin(user) — internal helper: true for 'admin' OR 'superadmin'.
+// ─────────────────────────────────────────────────────────────────────────────
+function isAdmin(user) {
+  return user && (user.role === "admin" || user.role === "superadmin");
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// assertAdmin(user) — throws 403 if the user is not an admin or superadmin.
 // ─────────────────────────────────────────────────────────────────────────────
 export function assertAdmin(user) {
-  if (!user || user.role !== "admin") {
+  if (!isAdmin(user)) {
     throw httpError(403, "Admin access required.");
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// assertSuperadmin(user) — throws 403 if the user is not a superadmin.
+// Matches the Express server/index.js wording exactly.
+// ─────────────────────────────────────────────────────────────────────────────
+export function assertSuperadmin(user) {
+  if (!user || user.role !== "superadmin") {
+    throw httpError(403, "Superadmin access required.");
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // assertOwnerOrAdmin(user, ownerId) — throws 403 if user is neither the owner
-// nor an admin. ownerId is the resource's owner/counsellor id (UUID string).
+// nor an admin (admin or superadmin). ownerId is the resource's owner/counsellor
+// id (UUID string).
 // ─────────────────────────────────────────────────────────────────────────────
 export function assertOwnerOrAdmin(user, ownerId) {
   if (!user) throw httpError(403, "Forbidden.");
-  if (user.role === "admin") return;
+  if (isAdmin(user)) return;
   if (user.id === ownerId) return;
   throw httpError(403, "You do not have access to this resource.");
 }

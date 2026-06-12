@@ -39,6 +39,9 @@ const cases = [
   [makeReq("https://proj.supabase.co/functions/v1/api/api/counsellors"), "/counsellors"],
   [makeReq("https://proj.supabase.co/functions/v1/api/api/personas"), "/personas"],
   [makeReq("https://proj.supabase.co/functions/v1/api/api/sessions/start"), "/sessions/start"],
+  // Superadmin user management routes
+  [makeReq("https://proj.supabase.co/functions/v1/api/users"), "/users"],
+  [makeReq("https://proj.supabase.co/functions/v1/api/users/abc123/role"), "/users/abc123/role"],
   // Bare path (nothing stripped)
   [makeReq("https://proj.supabase.co/counsellors"), "/counsellors"],
   // Only /api prefix
@@ -73,6 +76,8 @@ const __dir = dirname(fileURLToPath(import.meta.url));
 const src = readFileSync(join(__dir, "index.ts"), "utf-8");
 
 const required = [
+  ['GET  /users',                 /app\.get\(['""]\/users['"",]/],
+  ['PUT  /users/:id/role',        /app\.put\(['""]\/users\/:id\/role/],
   ['GET  /counsellors',           /app\.get\(['""]\/counsellors/],
   ['GET  /personas',              /app\.get\(['""]\/personas/],
   ['POST /personas',              /app\.post\(['""]\/personas/],

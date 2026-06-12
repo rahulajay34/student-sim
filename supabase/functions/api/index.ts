@@ -7,7 +7,7 @@
 import { Hono } from "hono";
 import { normalizePath } from "../_shared/path.js";
 import { corsHeaders, handlePreflight } from "../_shared/cors.js";
-import { authenticate, assertAdmin, assertOwnerOrAdmin, httpError, errorResponse } from "../_shared/auth.js";
+import { authenticate, assertAdmin, assertSuperadmin, assertOwnerOrAdmin, httpError, errorResponse } from "../_shared/auth.js";
 import { getEnv } from "../_shared/env.js";
 import * as store from "../_shared/store.js";
 import { getSupabaseAdmin } from "../_shared/supabaseAdmin.js";
@@ -456,7 +456,7 @@ app.get("/assignments", wrap(async (c) => {
   const ctx = await authenticate(c.req.raw);
   let all = await store.getAll("assignments");
   // Non-admin counsellors can only see their own
-  if (ctx.role !== "admin") {
+  if (ctx.role !== "admin" && ctx.role !== "superadmin") {
     all = all.filter((a) => a.counsellorId === ctx.id);
   } else {
     const counsellorId = c.req.query("counsellorId");
@@ -651,7 +651,7 @@ app.post("/assignment-templates/:id/assign", wrap(async (c) => {
   for (let i = 0; i < counsellorIds.length; i++) {
     const profile = profileChecks[i];
     if (!profile) throw httpError(400, `counsellorId not found: ${counsellorIds[i]}`);
-    if (profile.role !== "counsellor" && profile.role !== "admin") {
+    if (profile.role !== "counsellor" && profile.role !== "admin" && profile.role !== "superadmin") {
       throw httpError(400, `counsellorId ${counsellorIds[i]} is not a counsellor or admin profile`);
     }
   }
@@ -713,7 +713,7 @@ app.post("/sessions/start", wrap(async (c) => {
     assignment = await store.getById("assignments", assignmentId);
     if (!assignment) throw httpError(404, "Assignment not found");
     // Ownership: assignment must belong to this counsellor (non-admin)
-    if (ctx.role !== "admin" && assignment.counsellorId !== ctx.id) {
+    if (ctx.role !== "admin" && ctx.role !== "superadmin" && assignment.counsellorId !== ctx.id) {
       throw httpError(403, "This assignment belongs to another counsellor.");
     }
     // Duplicate-start guard — rely on the DB unique partial index (23505 -> 409 below)
@@ -1047,7 +1047,7 @@ app.get("/reports", wrap(async (c) => {
   const sessionId = c.req.query("sessionId");
   let all = await store.getAll("reports");
   // Non-admin: only own reports
-  if (ctx.role !== "admin") {
+  if (ctx.role !== "admin" && ctx.role !== "superadmin") {
     all = all.filter((r) => r.counsellorId === ctx.id);
   } else {
     if (counsellorId) all = all.filter((r) => r.counsellorId === counsellorId);
@@ -1118,7 +1118,7 @@ app.get("/analytics/counsellor/:id", wrap(async (c) => {
   const ctx = await authenticate(c.req.raw);
   const id = c.req.param("id");
   // Self or admin
-  if (ctx.role !== "admin" && ctx.id !== id) {
+  if (ctx.role !== "admin" && ctx.role !== "superadmin" && ctx.id !== id) {
     throw httpError(403, "You do not have access to this resource.");
   }
   const user = await store.getById("users", id).catch(() => null);
@@ -1193,6 +1193,37 @@ app.put("/config/scoring", wrap(async (c) => {
   const saved = await getAppConfigValue("scoring");
   const cfg = loadScoringConfig(saved);
   return jsonResponse(cfg, 200, origin);
+}));
+
+// ─────────────────────────────────────────────────────────────────────────────
+// USER MANAGEMENT (superadmin only) — mirrors server/index.js semantics exactly.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// GET /users — list all users (id, name, email, role, avatarColor).
+app.get("/users", wrap(async (c) => {
+  const origin = getOrigin(c.req.raw);
+  const ctx = await authenticate(c.req.raw);
+  assertSuperadmin(ctx);
+  const all = await store.getAll("users");
+  return jsonResponse(all.map(publicUser), 200, origin);
+}));
+
+// PUT /users/:id/role — change a user's role (superadmin only).
+app.put("/users/:id/role", wrap(async (c) => {
+  const origin = getOrigin(c.req.raw);
+  const ctx = await authenticate(c.req.raw);
+  assertSuperadmin(ctx);
+  const id = c.req.param("id");
+  const body = await c.req.json().catch(() => ({}));
+  const { role } = body || {};
+  const VALID = ["counsellor", "admin", "superadmin"];
+  if (!role || !VALID.includes(role)) {
+    throw httpError(400, `role must be one of: ${VALID.join(", ")}`);
+  }
+  const existing = await store.getById("users", id);
+  if (!existing) throw httpError(404, "User not found");
+  const updated = await store.update("users", id, { role });
+  return jsonResponse(publicUser(updated), 200, origin);
 }));
 
 // ─────────────────────────────────────────────────────────────────────────────

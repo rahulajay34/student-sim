@@ -97,10 +97,25 @@ Library data (personas, courses, rubric templates, lead profiles) and the
 first signup can be auto-promoted to `admin` before the import script runs; the
 import script may overwrite/extend it.
 
-**Admin role assignment:** a user becomes `admin` automatically on first signup only
+## Roles
+
+Three-tier model: `counsellor` < `admin` < `superadmin`.
+
+| Role | Capabilities |
+|---|---|
+| `counsellor` | Owns sessions/reports; can start practice or assigned sessions |
+| `admin` | All counsellor capabilities + full CRUD on library (personas, courses, rubrics, assignments, templates) + analytics + config |
+| `superadmin` | All admin capabilities + user-role management via the in-app `/superadmin` page |
+
+**Bootstrap:** any email listed in `app_config.superadmins` (or `SUPERADMIN_EMAIL` env var for the import script) is automatically promoted to `superadmin` on first signup. The seed row in `0003_auth.sql` pre-lists `rahul.singh@masaischool.com` and `rahul.bhat@masaischool.com`.
+
+**In-app role management:** superadmins can view all users and change any user's role via `GET /api/users` → `PUT /api/users/:id/role`. The client page at `/superadmin` (`client/src/pages/superadmin/UserManagement.jsx`) calls `api.getUsers()` and `api.updateUserRole(id, role)` for this.
+
+**Manual override:** edit `profiles.role` directly in the Supabase table editor (Studio → Table Editor → profiles).
+
+**Admin role assignment:** a user becomes `superadmin` automatically on first signup only
 if their (lowercased) email is in `app_config.superadmins`. Otherwise everyone
-defaults to `counsellor`; promote others by editing `profiles.role` directly in the
-Supabase table (there is no in-app role-change endpoint).
+defaults to `counsellor`; promote others via the UserManagement UI or the table editor.
 
 ## Concurrency model (why RPCs, not advisory locks)
 
