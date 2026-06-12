@@ -17,12 +17,13 @@ Each entry: focus area, findings (incl. refuted), fixes (file:line), verificatio
 - [x] stream.js SSE parsing edge cases (iter 5)
 - [x] lib/format.js helpers (iter 6)
 - [x] CallSidebar/CallStage UI state (iter 6)
-- [ ] Keyboard/a11y
-- [ ] smoke-api gaps
+- [x] Keyboard/a11y (iter 7)
+- [x] smoke-api gaps (iter 7) — rotation COMPLETE; further iterations go deeper on open items + re-sweeps
 
 ## Open items
 - Session routes have no ownership check (any counsellor can read/message/end another's session by URL). Dummy auth is by design (CLAUDE.md), but a light counsellorId check on /sessions/:id routes would prevent accidental cross-ending. Deferred — needs an identity header the client doesn't send yet.
 - EndedScreen "View reports" links to the list, not the session's own report (minor UX; needs reportId lookup on the ended path).
+- Smoke checks still worth adding: referenced-persona/rubric delete 409s, POST /sessions/:id/cue, practice-mode (no assignment) lifecycle, GET /lead-profiles, config GET/PUT round-trips.
 
 ## Iterations
 
@@ -122,3 +123,21 @@ Refuted: "logout leaves voice running" — the hook's unmount cleanup (hardened 
 Refuted/OK: corrupt mct_user fails soft to logged-out; role guards clean on cross-role deep links; bad report ids → EmptyState; login error handling; Personas/Courses/Rubrics N-guards include their modals; scoreColor/bandColor/difficultyColor on null/unknown; useCountUp on NaN/Infinity; StreamingBubble sink cleared on all exit paths; hidden Coach tab stays current (props flow while display:none); transcript auto-scroll respects user scroll-up; sendingRef double-submit guard; timer derives from origin (no background-throttle drift); Space PTT ignored while composer focused; MicPicker listener hygiene; orb rAF idle in text mode; analyser re-acquired after changeVoice; cue turn-counter guard covers both text and observe paths.
 
 Verification: server tests 142/142 pass · client lint 0 errors · build success · probes: relativeDate ""/initials "?"/emoji initials correct.
+
+### Iteration 7 — 2026-06-12 ~07:10–07:30 IST
+Focus: keyboard/a11y · smoke-api gaps + live run (2 sonnet hunters; smoke hunter ran live probes with cleanup).
+
+A11y: 7 functional breakages, all fixed:
+1. Space PTT hijacked button activation in voice calls (focused "End call" + Space = mic unmute, every control Space-unreachable) → BUTTON/A/SELECT exempted from the PTT key handler (Session.jsx isTyping).
+2. ToastStack live region early-returned when empty — AT ignores regions injected with their content → container always renders (Session.jsx:126).
+3. Prompts admin toast silent to AT → persistent aria-live wrapper around the toast slot (Prompts.jsx).
+4. Clickable table rows (reports lists) keyboard-unreachable → tabIndex + Enter/Space activation + focus-visible ring (ui/Table.jsx).
+5. VoicePicker dropdown had no Escape/click-outside close and no aria-haspopup/expanded → mirrored MicPicker behavior (CallStage.jsx).
+6. Input with label but no id rendered <label for="undefined"> → useId fallback (ui/Input.jsx).
+7. GreenRoom mic permission status changes unannounced → role="status" on the always-mounted line (GreenRoom.jsx).
+
+Smoke: live run 80/80 on the old suite; hunter's "regressions" were a STALE server process running pre-fix code since 05:07 (killed). Added 4 checks (now 84/84 on a fresh server at HEAD): duplicate-assignment-start → 409 with existing sessionId; delete-active-session → 409; /message and /observe after /end → 409. Deferred to open items: smoke checks for referenced-persona/rubric 409s, /cue endpoint, practice-mode lifecycle, lead-profiles, config round-trips.
+
+Solid (verified): Modal trap incl. zero-focusables + Escape-during-loading; Table aria-sort semantics; native Slider semantics; SearchInput labels; Login form a11y; MicPicker dropdown a11y; cue turn guards.
+
+Verification: server tests 142/142 · smoke 84/84 (fresh server) · lint 0 errors · build success.

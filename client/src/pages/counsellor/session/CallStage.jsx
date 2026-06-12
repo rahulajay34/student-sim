@@ -6,12 +6,30 @@ import { OPENAI_VOICES, loadStoredMicDevice } from "../../../voice/engines";
 // ── In-call voice picker (audition voices live; a change reconnects briefly) ───
 function VoicePicker({ voices, voice, onChange }) {
   const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
   const current = voices.find((v) => v.id === voice) || voices[0];
+
+  // Escape + click-outside dismissal, mirroring MicPicker — without these a
+  // keyboard user could open the dropdown but never close it.
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
+    const onClick = (e) => { if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("mousedown", onClick);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("mousedown", onClick);
+    };
+  }, [open]);
+
   return (
-    <div style={{ position: "relative" }}>
+    <div ref={rootRef} style={{ position: "relative" }}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
         title="Change the student's voice (reconnects briefly)"
         style={{
           display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 9999,

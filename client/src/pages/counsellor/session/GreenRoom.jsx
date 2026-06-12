@@ -226,7 +226,9 @@ function MicCheck() {
           <p className="text-sm font-medium" style={{ color: "#e7e9f4" }}>
             Microphone
           </p>
-          <p className="text-xs" style={{ color: "#8b90a8" }}>
+          {/* role=status makes this a live region (it's mounted from first render,
+              so permission-state changes are actually announced by AT). */}
+          <p className="text-xs" role="status" style={{ color: "#8b90a8" }}>
             {state === "granted"
               ? "Access granted"
               : state === "denied"

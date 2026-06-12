@@ -911,9 +911,13 @@ export default function Prompts() {
         </>
       )}
 
-      {toast && (
-        <Toast msg={toast.msg} color={toast.color} onDismiss={dismissToast} />
-      )}
+      {/* Persistent live region: AT only announces content placed into a region
+          that already existed in the DOM, so the wrapper always renders. */}
+      <div aria-live="polite">
+        {toast && (
+          <Toast msg={toast.msg} color={toast.color} onDismiss={dismissToast} />
+        )}
+      </div>
     </div>
   );
 }

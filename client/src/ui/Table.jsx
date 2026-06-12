@@ -105,8 +105,22 @@ export default function Table({ columns = [], rows = [], onRowClick, toolbar }) 
               <tr
                 key={row.id ?? i}
                 onClick={clickable ? () => onRowClick(row) : undefined}
+                // Clickable rows must also work for keyboard users.
+                tabIndex={clickable ? 0 : undefined}
+                onKeyDown={
+                  clickable
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onRowClick(row);
+                        }
+                      }
+                    : undefined
+                }
                 className={`border-t border-line ${
-                  clickable ? "cursor-pointer transition-colors hover:bg-canvas" : ""
+                  clickable
+                    ? "cursor-pointer transition-colors hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500 focus-visible:bg-canvas"
+                    : ""
                 }`}
               >
                 {columns.map((col) => (

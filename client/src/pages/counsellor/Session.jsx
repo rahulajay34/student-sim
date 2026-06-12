@@ -123,7 +123,9 @@ function WrappingScreen({ error, elapsedLabel, onRetry, onBackToCall }) {
 
 // ── Degradation toast stack ───────────────────────────────────────────────────
 function ToastStack({ toasts, onDismiss }) {
-  if (!toasts.length) return null;
+  // The live region must exist BEFORE a toast lands in it — screen readers
+  // ignore announcements in a region injected together with its content, so we
+  // never early-return here; an empty fixed container costs nothing.
   return (
     <div
       aria-live="polite"
@@ -767,7 +769,9 @@ export default function Session() {
 
     const isTyping = (el) => {
       const tag = el?.tagName;
-      return tag === "TEXTAREA" || tag === "INPUT" || el?.isContentEditable;
+      // BUTTON/A/SELECT included: Space ACTIVATES a focused button — hijacking it
+      // for push-to-talk made every control unreachable for keyboard users.
+      return tag === "TEXTAREA" || tag === "INPUT" || tag === "BUTTON" || tag === "A" || tag === "SELECT" || el?.isContentEditable;
     };
     const onKeyDown = (e) => {
       if (e.code !== "Space" || e.repeat) return;

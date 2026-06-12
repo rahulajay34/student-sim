@@ -101,6 +101,12 @@ async function main() {
   check("start response has milestones", typeof start.data.milestones?.objectionsRaised === "number");
   check("start echoes sessionMode=text + voiceEngine=text", start.data.sessionMode === "text" && start.data.voiceEngine === "text");
   const sid = start.data.sessionId;
+  // One live session per assignment: a second start must 409 with the live id.
+  const dupStart = await call("/sessions/start", { method: "POST", body: { mode: "text", counsellorId: counsellor.id, assignmentId: asn.data.id } });
+  check("duplicate assignment start -> 409 with existing sessionId", dupStart.status === 409 && dupStart.data.sessionId === sid);
+  // Active sessions cannot be deleted (in-flight turn writes would silently no-op).
+  const delActive = await call(`/sessions/${sid}`, { method: "DELETE" });
+  check("delete active session -> 409", delActive.status === 409);
   const sessionGet = await call(`/sessions/${sid}`);
   check("session origin is assigned (assignmentId-driven)", sessionGet.data.mode === "assigned");
   check("session has courseSnapshot", sessionGet.data.courseSnapshot && /Cyber Security|Ethical Hacking/i.test(sessionGet.data.courseSnapshot.name));
@@ -151,6 +157,12 @@ async function main() {
     await new Promise((res) => setTimeout(res, 2000));
   }
   check("report finished generating (ready, not fallback)", r?.status === "ready" || r?.status === undefined);
+
+  // Ended sessions reject further turns on both engines' paths.
+  const postEndMsg = await call(`/sessions/${sid}/message`, { method: "POST", body: { message: "hello again" } });
+  check("message after end -> 409", postEndMsg.status === 409);
+  const postEndObs = await call(`/sessions/${sid}/observe`, { method: "POST", body: { counsellorText: "hello again" } });
+  check("observe after end -> 409", postEndObs.status === 409);
   check("report has overall % + band + outcome", r.overall && typeof r.overall.percent === "number" && r.overall.band && r.overall.outcome);
   // deliveryMetrics were sent on message 2, so this counts as a voice session: voice_delivery is graded -> 8 criteria
   check("report has 8 rubric criteria (voice session)", Array.isArray(r.rubric) && r.rubric.length === 8 && r.rubric.every((x) => x.level && x.label));
