@@ -409,6 +409,20 @@ app.delete("/api/assignments/:id", (req, res) => {
 
 // --- Sessions --------------------------------------------------------------
 app.post("/api/sessions/start", async (req, res) => {
+  // Serialize starts per assignment: the duplicate-session 409 guard and the
+  // store.insert sit either side of an LLM await on the legacy student-opening
+  // path, so two concurrent starts could both pass the guard and orphan the
+  // first session. Practice starts (no assignmentId) need no lock.
+  const startKey = req.body?.assignmentId ? `start:${req.body.assignmentId}` : null;
+  const run = () => startSessionHandler(req, res);
+  if (!startKey) return run();
+  return withSessionLock(startKey, run).catch((err) => {
+    console.error("Error in locked session start:", err?.message);
+    if (!res.headersSent) res.status(500).json({ error: err?.message || "internal error" });
+  });
+});
+
+async function startSessionHandler(req, res) {
   try {
     const { mode, counsellorId, assignmentId, personaId, scenario, courseId, rubricTemplateId: bodyRubricTemplateId, profileId } = req.body || {};
     if (!counsellorId) return res.status(400).json({ error: "counsellorId is required" });
@@ -604,7 +618,7 @@ app.post("/api/sessions/start", async (req, res) => {
     console.error("Error in /sessions/start:", err.message);
     res.status(500).json({ error: err.message });
   }
-});
+}
 
 function sanitizeDeliveryMetrics(raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
@@ -713,9 +727,18 @@ app.post("/api/sessions/:id/message", lockedHandler(async (req, res) => {
     // Open objections THIS session is tracking, so the scorer resolves the same key.
     const openObjForScore = openObjections(session.objectionState).map(({ category }) => ({ key: category }));
 
+    let heartbeat = null;
     if (wantsSSE) {
       res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" });
-      send = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+      send = (event, data) => {
+        if (heartbeat) { clearInterval(heartbeat); heartbeat = null; }
+        res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+      };
+      // Comment-frame heartbeat until the first real event: with thinking mode on,
+      // MiniMax can be silent for 30s+ before the first token, and idle proxies
+      // (nginx/ALB default 60s) would cut the connection. The client parser skips
+      // comment frames. Cleared on first send; also cleared in the catch below.
+      heartbeat = setInterval(() => { try { res.write(": ping\n\n"); } catch { /* closed */ } }, 15000);
     }
 
     // Backchannel acks skip the scoring LLM entirely (no penalty, no call).
@@ -1158,6 +1181,13 @@ app.get("/api/sessions/:id", (req, res) => {
 });
 
 app.delete("/api/sessions/:id", (req, res) => {
+  // Deleting a live session would make any in-flight /message //observe turn's
+  // final store.update silently no-op (the record is gone), dropping that turn.
+  // End it first; assignments already guard the same way.
+  const s = store.getById("sessions", req.params.id);
+  if (s && s.status !== "ended") {
+    return res.status(409).json({ error: "Session is still active — end it before deleting." });
+  }
   store.remove("sessions", req.params.id);
   res.json({ ok: true });
 });

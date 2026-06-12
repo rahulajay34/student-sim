@@ -26,16 +26,31 @@ function read(name) {
   const p = join(DATA_DIR, `${name}.json`);
   try {
     return JSON.parse(fs.readFileSync(p, "utf-8"));
-  } catch {
+  } catch (err) {
+    // A missing file is normal pre-bootstrap; anything else means the collection
+    // is corrupt and we're about to serve (and on next write, persist) an empty
+    // one — that must not happen silently.
+    if (err?.code !== "ENOENT") {
+      console.error(`[store] ${name}.json unreadable (${err.message}) — treating as empty`);
+    }
     return [];
   }
 }
 
 function write(name, data) {
-  fs.writeFileSync(join(DATA_DIR, `${name}.json`), JSON.stringify(data, null, 2) + "\n");
+  // Atomic write: writeFileSync alone truncates first, so a crash mid-write
+  // leaves partial JSON and read() would silently wipe the collection. Writing
+  // to a tmp file then rename(2)-ing is atomic on the same filesystem.
+  const p = join(DATA_DIR, `${name}.json`);
+  const tmp = `${p}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2) + "\n");
+  fs.renameSync(tmp, p);
 }
 
-export const newId = (prefix) => `${prefix}-${randomUUID().slice(0, 8)}`;
+// 12 hex chars = 48 bits. The old 8-char slice was 32 bits — ~1.2% birthday
+// collision odds by 10k records, and getById would silently serve the older
+// record forever on a collision.
+export const newId = (prefix) => `${prefix}-${randomUUID().replace(/-/g, "").slice(0, 12)}`;
 
 // Generic collection helpers ------------------------------------------------
 export function getAll(name) {

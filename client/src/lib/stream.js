@@ -140,11 +140,12 @@ export function createSentenceChunker({ minChunkLen = MIN_CHUNK_LEN } = {}) {
       // 2. Soft boundary (comma/semicolon/em-dash): only when pending >= SOFT_MIN.
       //    Only use it if it fires BEFORE a hard boundary (or no hard boundary found).
       if (emitEnd === -1 && pending.length >= SOFT_MIN) {
-        // Check em-dash pattern first (3-char sequence).
+        // Check em-dash pattern first (3-char sequence). Only when the dash sits
+        // past SOFT_MIN — an early dash ("So — ...") used to emit a 4-char
+        // fragment because the fallback branch skipped the minimum entirely.
         let softIdx = -1;
         const dashM = DASH_BOUNDARY.exec(pending);
         if (dashM && dashM.index >= SOFT_MIN) softIdx = dashM.index + 3; // after " — "
-        else if (dashM) softIdx = dashM.index + 3;
 
         for (let i = 0; i < pending.length; i++) {
           if (SOFT_BOUNDARY.test(pending[i])) {
@@ -196,13 +197,14 @@ export function createSentenceChunker({ minChunkLen = MIN_CHUNK_LEN } = {}) {
   };
 }
 
-export async function postMessageStream(sessionId, body, { onToken, onDone, onError } = {}) {
+export async function postMessageStream(sessionId, body, { onToken, onDone, onError, signal } = {}) {
   let res;
   try {
     res = await fetch(`/api/sessions/${sessionId}/message`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
       body: JSON.stringify(body || {}),
+      signal,
     });
   } catch (err) {
     // Network / fetch-level failure — surface so the caller can retry via JSON.

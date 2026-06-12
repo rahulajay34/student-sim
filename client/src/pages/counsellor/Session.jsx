@@ -262,6 +262,10 @@ export default function Session() {
   const [cue, setCue] = useState(null);
   const [cueRefining, setCueRefining] = useState(false);
   const turnCounterRef = useRef(0);
+  // In-flight text-reply stream; aborted on end-call/unmount so a late reply
+  // can't mutate wrapping-screen state or fire a stale cue fetch.
+  const streamAbortRef = useRef(null);
+  useEffect(() => () => { try { streamAbortRef.current?.abort(); } catch { /* settled */ } }, []);
 
   // ── Degradation toasts ─────────────────────────────────────────────────────
   const [toasts, setToasts] = useState([]);
@@ -631,7 +635,10 @@ export default function Session() {
     };
 
     try {
+      const ac = new AbortController();
+      streamAbortRef.current = ac;
       await postMessageStream(sid, body, {
+        signal: ac.signal,
         onToken: (chunk) => {
           streamBuf += chunk;
           const { display } = stripStreamingEmotionTag(streamBuf);
@@ -641,7 +648,11 @@ export default function Session() {
         onDone: (res) => applyDone(res),
       });
     } catch (streamErr) {
-      if (streamErr?.sseError) {
+      if (streamErr?.name === "AbortError") {
+        // Deliberate cancel (end-call or unmount): clear the streaming bubble and
+        // stop — no error toast, no JSON retry against an ended session.
+        streamSinkRef.current?.("");
+      } else if (streamErr?.sseError) {
         pushToast(
           /timeout|timed out|LLM_TIMEOUT/i.test(streamErr.message || "")
             ? "Student reply timed out — try again."
@@ -795,6 +806,9 @@ export default function Session() {
     setShowEndConfirm(false);
     setEnding(true);
     setWrappingError(null);
+    // Cancel any in-flight student reply stream — its late events must not
+    // mutate the wrapping screen or fetch a cue for an ended session.
+    try { streamAbortRef.current?.abort(); } catch { /* already settled */ }
     // Compute an elapsed-time-aware label for the brief transition copy.
     if (timerStart) {
       const secs = Math.max(0, Math.floor((Date.now() - timerStart) / 1000));

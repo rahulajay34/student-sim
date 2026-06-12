@@ -13,8 +13,8 @@ Each entry: focus area, findings (incl. refuted), fixes (file:line), verificatio
 - [x] Report fallback + regenerate paths (iter 3)
 - [x] useOpenAIRealtime lifecycle (reconnect, unmount, voice/mic change) (iter 4)
 - [x] GreenRoom flows (mic denied, assignment vs practice) (iter 4)
-- [ ] store.js concurrency + data integrity
-- [ ] stream.js SSE parsing edge cases
+- [x] store.js concurrency + data integrity (iter 5)
+- [x] stream.js SSE parsing edge cases (iter 5)
 - [ ] lib/format.js helpers
 - [ ] CallSidebar/CallStage UI state
 - [ ] Keyboard/a11y
@@ -88,3 +88,19 @@ Found 7 real bugs, all fixed:
 Refuted/OK: StrictMode double-mount guarded; changeVoice/changeMic/enable interleavings via generation counter; PTT mute-latch across reconnects; RMS sampler cleanup; metric division guards; no handler stacking or AudioContext growth across reconnects; steering never sends response.create; unmount teardown closes pc/mic/ctx; mic-device ideal-fallback wired through join+changeMic; devicechange listener cleanup; assignment override/rubric/profile threading; router state shape compatibility (assigned vs practice vs voice/text); back-navigation replace semantics; double-click Start guards; Safari permissions API absence.
 
 Verification: server tests 142/142 pass · client lint 0 errors · build success.
+
+### Iteration 5 — 2026-06-12 ~06:42–07:05 IST
+Focus: store.js concurrency/durability · stream.js SSE parsing (2 read-only sonnet hunters with node -e probes).
+
+Found 7 real bugs, all fixed:
+1. Non-atomic writeFileSync: a crash mid-write truncates a collection and read()'s silent [] fallback wipes it permanently (sessions.json is written every turn) → tmp + renameSync atomic write, and corrupt reads now log loudly (server/store.js).
+2. newId at 32 bits (~1.2% birthday collision by 10k records; getById silently serves the older record forever) → 48-bit 12-hex ids (server/store.js).
+3. TOCTOU duplicate-session race on /sessions/start for assignments via the legacy counsellorFirst=false path (409 guard and insert straddle an LLM await) → per-assignment start lock reusing withSessionLock (server/index.js).
+4. DELETE /api/sessions/:id on an ACTIVE session made in-flight turn writes silently no-op → 409 unless ended (server/index.js).
+5. No SSE heartbeat before the first token (thinking mode can be silent 30s+; nginx/ALB idle defaults cut at 60s) → ": ping" comment frames every 15s until the first event (server/index.js /message).
+6. Sentence chunker emitted tiny fragments on an early em-dash ("Ha —") via an unguarded fallback branch → branch removed; probe confirms no fragment + flush remainder intact (client/src/lib/stream.js:147).
+7. No AbortController on the reply stream: late tokens/done could mutate wrapping-screen state and fire stale cue fetches after end-call/unmount → signal threaded through postMessageStream; aborted in doEndSession + unmount; AbortError clears the bubble quietly (stream.js, Session.jsx).
+
+Refuted/OK (probed): cross-session concurrent /observe writes safe (store.update re-reads synchronously; single-threaded event loop); background report job's check+update atomic in one tick; withSessionLock covers reads; half-frame SSE buffering correct; JSON-escaped newlines make frame injection impossible; heartbeat comment frames skipped by the client parser; applyDone single-call; anti-loop substitution swap clean; sendingRef never deadlocks; abbreviation/ellipsis/danda/currency chunking correct; MAX_CHUNK force-flush correct; server error mid-stream sends an explicit error event.
+
+Verification: server tests 142/142 pass · client lint 0 errors · build success · probes: newId 12-hex, chunker fragment gone + flush intact.
