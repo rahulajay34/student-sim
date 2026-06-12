@@ -60,12 +60,26 @@ function timeoutError(ms) {
   return err;
 }
 
-// Strip the leading <think>...</think> reasoning block from a complete response.
-function stripThink(text) {
+// Strip the <think>...</think> reasoning block from a complete response.
+// Two hard-won edge cases:
+// - NO closing tag (model truncated mid-think): returning the raw string leaked
+//   the model's internal monologue into the student's transcript — strip the
+//   whole unclosed block instead (empty result is fine; engine.ensureNonEmpty
+//   substitutes a fallback line).
+// - Visible text BEFORE the think block: slicing from </think> silently dropped
+//   it — preserve both sides.
+export function stripThink(text) {
   const s = String(text);
   const idx = s.indexOf(THINK_CLOSE);
-  if (idx === -1) return s.trim();
-  return s.slice(idx + THINK_CLOSE.length).replace(/^\s+/, "");
+  if (idx === -1) {
+    const openIdx = s.indexOf("<think>");
+    if (openIdx === -1) return s.trim();
+    return s.slice(0, openIdx).trim();
+  }
+  const openIdx = s.indexOf("<think>");
+  const before = openIdx > -1 && openIdx < idx ? s.slice(0, openIdx).trim() : "";
+  const after = s.slice(idx + THINK_CLOSE.length).replace(/^\s+/, "");
+  return before ? `${before} ${after}`.trim() : after;
 }
 
 /**

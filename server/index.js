@@ -411,7 +411,8 @@ app.post("/api/assignments", (req, res) => {
   const assignment = {
     id: store.newId("asn"),
     counsellorId, personaId, courseId,
-    personaPromptOverride: personaPromptOverride || null,
+    // ?? (not ||): "" is a deliberate blank-the-prompt override.
+    personaPromptOverride: personaPromptOverride ?? null,
     // The lead profile chosen at assignment time, so the session can resolve the
     // student's real name + structured lead card at start. null = bare persona.
     profileId: profileId || null,
@@ -568,7 +569,7 @@ async function startSessionHandler(req, res) {
 
     const personaSnapshot = {
       name: persona.name, category: persona.category, label: persona.label,
-      coreAnxiety: persona.coreAnxiety, behaviourPrompt: override || persona.behaviourPrompt,
+      coreAnxiety: persona.coreAnxiety, behaviourPrompt: override != null ? override : persona.behaviourPrompt,
       // The student goes by their lead-profile name when one was chosen; the
       // voice matches that name's gender. Bare personas fall back to the voice's
       // own name/gender so older flows are unchanged.

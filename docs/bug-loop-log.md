@@ -217,3 +217,21 @@ Found 5 real bugs (2 live, 3 latent), all fixed:
 Refuted/OK (probed): objectionRepertoire keys match objections.js detection categories (no drift); difficulty variants fall to medium; voiceBankFor safe on custom/unknown categories, phase 5, n>pool; registerStatsFor all phases + deterministic rotation; inferGenderFromName full-name/caps/whitespace handling; profile.gender precedence over name inference (Kiran case); all 170 lead profiles canonical genders; lead-profiles category filter correct (note: no "graduate" profiles exist — data gap, not code); courses.json fees all finite; LEGACY_COURSE_CONTEXT path composes cleanly.
 
 Verification: server tests 142/142 · smoke 104/104 live · lint 0 errors · build success · probes (custom-persona repertoire, fmtINR, gender normalization) pass.
+
+### Iteration 13 — 2026-06-12 ~08:41–09:00 IST
+Focus: ollama.js LLM client internals · persona personality-editor + AssignmentCreate round-trip (2 hunters).
+
+Found 7 real bugs, all fixed:
+1. stripThink with a MISSING closing tag returned the raw string — a model truncated mid-think leaked its internal reasoning monologue into the student transcript (both chat() and chatStream's end-of-stream flush) → unclosed think blocks now strip to "" (engine's ensureNonEmpty covers); locked in by 5 new unit tests (server/ollama.js:64, tests/strip-think.test.mjs).
+2. stripThink discarded visible text BEFORE the think block → preserved (same rewrite).
+3. (counted with 1 — chatStream flush shared the root cause.)
+4. personaPromptOverride empty-string trap: an admin could not deliberately BLANK a persona prompt for one mock ("" collapsed to null at three layers) → falsiness checks replaced with explicit null/undefined semantics (AssignmentCreate.jsx:192, server/index.js:414+571).
+5. Rubric dropdown could visually show a selection while React state was "" (no isDefault template) → auto-select falls back to the first template (AssignmentCreate.jsx:98).
+6. revealPersona (blind-call feature) had NO checkbox in AssignmentCreate — server+green room support it but every UI-created assignment forced reveal=true → checkbox added with explanation copy (AssignmentCreate.jsx).
+7. Quirk chips deduped case-sensitively ("Talks fast"/"talks fast" both saved) → case-insensitive (Personas.jsx:101).
+
+Noted (design limitation, not fixed): chatStream's timeout covers only first-chunk arrival; a stream that stalls mid-reply is unbounded until TCP close. Logged for a future keepalive-watchdog if it ever bites.
+
+Refuted/OK: chat() timeout covers the full call, timers never leak; HTTP error bodies never JSON.parsed; null content throws descriptively; extractJson outermost-match + retry behavior; scoreMessage/llmCue degrade gracefully; all sampling/thinking plumbing correct per call site; split-across-chunks </think> handled; personality key names match exactly (humour/quirks); modal merges existing personality (no silent reset of tuned seeds); slider coercion both layers; PersonalitySummary safe without personality; zero-counsellor guard; behaviourPrompt "" PUT persists.
+
+Verification: server tests 147/147 (5 new) · lint 0 errors · build success.

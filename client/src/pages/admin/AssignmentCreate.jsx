@@ -63,6 +63,7 @@ export default function AssignmentCreate() {
   const [counsellorId, setCounsellorId] = useState("");
   const [personaId, setPersonaId] = useState("");
   const [personaPrompt, setPersonaPrompt] = useState("");
+  const [revealPersona, setRevealPersona] = useState(true);
   const [title, setTitle] = useState("");
   const [difficulty, setDifficulty] = useState("medium");
   const [situation, setSituation] = useState("");
@@ -94,8 +95,10 @@ export default function AssignmentCreate() {
       setProfiles(Array.isArray(profs) ? profs : []);
       const rtList = Array.isArray(rts) ? rts : [];
       setRubricTemplates(rtList);
-      // Default-select the isDefault template
-      const defaultTpl = rtList.find((t) => t.isDefault);
+      // Default-select the isDefault template; fall back to the first one so
+      // React state never silently disagrees with what the dropdown displays
+      // (an "" state submitted null while the browser showed option 1 selected).
+      const defaultTpl = rtList.find((t) => t.isDefault) || rtList[0];
       if (defaultTpl) setRubricTemplateId(defaultTpl.id);
     } catch (e) {
       setLoadError(e.message || "Failed to load data.");
@@ -189,7 +192,9 @@ export default function AssignmentCreate() {
 
     const original = (selectedPersona?.behaviourPrompt || "").trim();
     const edited = personaPrompt.trim();
-    const personaPromptOverride = edited && edited !== original ? edited : null;
+    // "" is a deliberate override (admin blanked the prompt for this mock) — the
+    // old `edited && …` falsiness check made blanking impossible.
+    const personaPromptOverride = edited !== original ? edited : null;
 
     try {
       setSubmitting(true);
@@ -198,6 +203,7 @@ export default function AssignmentCreate() {
         counsellorId,
         personaId,
         personaPromptOverride,
+        revealPersona,
         profileId: profileId || null,
         rubricTemplateId: rubricTemplateId || null,
         scenario: {
@@ -424,6 +430,24 @@ export default function AssignmentCreate() {
                   placeholder="How the student should behave during this call…"
                 />
               )}
+
+              {/* Blind-call toggle: server + green room already support
+                  revealPersona=false, but the form never exposed it, so the
+                  feature was unreachable from the UI. */}
+              <label className="flex items-start gap-2.5 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  checked={revealPersona}
+                  onChange={(e) => setRevealPersona(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-line accent-brand-600"
+                />
+                <span>
+                  Reveal the persona brief to the counsellor
+                  <span className="block text-xs text-muted">
+                    Uncheck for a blind call — the counsellor joins without seeing who the student is or their backstory.
+                  </span>
+                </span>
+              </label>
             </Section>
 
             <div className="border-t border-line" />

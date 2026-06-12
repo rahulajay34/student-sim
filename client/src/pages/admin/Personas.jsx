@@ -98,7 +98,8 @@ function QuirksInput({ quirks, onChange }) {
   function commit() {
     const text = draft.trim();
     if (!text) return;
-    if (!quirks.includes(text)) {
+    // Case-insensitive dedup: "Talks fast" and "talks fast" are the same quirk.
+    if (!quirks.some((q) => q.toLowerCase() === text.toLowerCase())) {
       onChange([...quirks, text]);
     }
     setDraft("");
