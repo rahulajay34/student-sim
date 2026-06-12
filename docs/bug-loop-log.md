@@ -277,3 +277,19 @@ Fuzz findings, 3 fixed:
 3. No per-turn length cap below the 100KB body limit (an 80KB paste would balloon the prompt + LLM bill) → /message rejects >4000 chars with a clear 400; /observe transcripts slice to 4000 (rejecting would drop a real spoken turn mid-call).
 
 Verification: server tests 147/147 · smoke 104/104 live · lint 0 errors · build success · fuzz re-probe returns JSON on all paths.
+
+## Closing summary — loop ended early by owner, 2026-06-12 ~09:45 IST
+
+16 iterations, 2026-06-12 05:52–09:45 IST (cron 29bf0f2b, every 10 minutes).
+
+Totals: **88 real bugs fixed + 4 cross-iteration consistency fixes**, ~60 suspected issues adversarially REFUTED and documented, 15 stranded sessions cleaned from the store, CLAUDE.md/CONTRACT.md synced, smoke suite grown 73→104 checks, server tests 97→147.
+
+Highest-impact fixes of the day: crash-safe atomic store writes; think-block leak into transcripts; premature "agree to pay" with zero objections raised; "today only" phase teleport; zombie WebRTC mic after navigation; keyboard Space hijacking buttons in calls; session ownership guard; voice reconnect on refresh; report stuck-at-generating recovery paths; the calibrated voice contradictions (sir-in-ma'am-calls, conflicting Hinglish dials, phase-3 carve-out).
+
+Final end-to-end validation (post-iteration-16): full browser drive — login → dashboard → practice → text session (calibrated ma'am reply) → instant report navigation → live-fill (headline/rubric/drills) → zero console errors; plus a live OpenAI voice session earlier (iter 14) confirming the calibrated voice. All gates green at push time.
+
+Owner follow-ups (not bugs):
+- ses-4fe39c73 is still active and linked to in-progress asn-7e2725c3 — end it if abandoned.
+- 3 legacy fallback reports are regenerable if you want them re-graded (rep-c6b991f3 is counsellor-visible).
+- No lead profiles exist for the "graduate" category — recent-graduate personas always run bare.
+- Design limitation logged: chatStream has no mid-stream stall watchdog (never observed; documented in iter 13).
