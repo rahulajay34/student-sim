@@ -21,8 +21,15 @@
 const RULES = [
   {
     // Fee / Affordability
+    // Covers both affordability framing ("can't afford", "fee too high") AND
+    // neutral price asks ("tell me the fee", "the fees part", "what is the fee",
+    // "exact amount", "how much does it cost"). The neutral alternatives are
+    // written so they CANNOT swallow EMI ("per month"/"monthly" stays with the
+    // emi_affordability rule below) or time questions ("how much time per week"
+    // has no fee/cost token), and so generic "how long is the program" matches
+    // nothing.
     key: "fee",
-    re: /(can'?t afford|cannot afford|fee.{0,20}(too (much|high|expensive|costly))|too (much|expensive|costly|high).{0,20}fee|afford.{0,30}fee|fee.{0,30}afford|middle class.{0,30}(fee|spend|paying)|spending.{0,20}(here|on this).{0,10}difficult|fee.{0,20}problem|fee.{0,20}high|fee.{0,20}lot|pay.{0,20}later|4,?000.{0,20}(now|right now|immediately)|(price|fee|cost).{0,20}different|brochure.{0,20}(fee|price)|scholarship|discount.{0,15}fee)/i,
+    re: /(can'?t afford|cannot afford|fee.{0,20}(too (much|high|expensive|costly))|too (much|expensive|costly|high).{0,20}fee|afford.{0,30}fee|fee.{0,30}afford|middle class.{0,30}(fee|spend|paying)|spending.{0,20}(here|on this).{0,10}difficult|fee.{0,20}problem|fee.{0,20}high|fee.{0,20}lot|pay.{0,20}later|4,?000.{0,20}(now|right now|immediately)|(price|fee|cost).{0,20}different|brochure.{0,20}(fee|price)|scholarship|discount.{0,15}fee|(tell|share|give|know|ask).{0,20}(the )?(exact |total |full )?fees?\b|fees?\b.{0,5}part|(what|whats|what'?s).{0,10}(is|are|s)?.{0,10}(the )?(exact |total |full )?fees?\b|(exact|total|full)\s+fees?\b|exact.{0,12}(amount|figure).{0,15}(fee|cost|pay|rupee|rs\b|inr|₹)|fees?\b.{0,10}(exact|exactly)|how much.{0,30}(cost|costs|costing)|fees?\b.{0,10}kitni|kitni.{0,10}fees?\b)/i,
   },
   {
     // EMI / Monthly Affordability (before generic fee check)
@@ -289,14 +296,14 @@ function labelFor(category) {
 /**
  * Produce a short prompt fragment describing the current objection state.
  * This is injected into the student system prompt so the LLM knows which
- * concerns have been answered and stops repeating them verbatim.
+ * concerns have been answered and stops looping on them.
  *
  * Format:
  *   "Concerns you have raised: <concern A> (ANSWERED by the counsellor — do not
  *   repeat it; accept, ask ONE specific follow-up, or move on), <concern B> (still
- *   open — you have already said this N times; vary your wording or escalate/
- *   de-escalate). If ALL your concerns are answered and the counsellor closes well,
- *   it is okay to agree."
+ *   open — you have already pressed this N times; you have made your point, so
+ *   FOLLOW the counsellor if they have moved on rather than re-raising it). If ALL
+ *   your concerns are answered and the counsellor closes well, it is okay to agree."
  *
  * Returns "" when state is empty (no objections yet).
  *
@@ -320,8 +327,10 @@ export function summarizeForPrompt(state) {
       return `${label} (ANSWERED by the counsellor — do not raise it again verbatim; you may accept, ask ONE specific concrete follow-up question, or move on.${banClause(o)})`;
     }
     // Open objection — loop-break nudge once it has been raised 2+ times.
+    // Firm topic-following: you have already made your point; if the counsellor
+    // has moved on, FOLLOW them instead of re-raising it.
     const timesNote = o.timesRaised >= 2
-      ? ` — you have raised this ${o.timesRaised} times already; do NOT repeat the same wording; either escalate your doubt with new specifics or shift to a different concern.${banClause(o)}`
+      ? ` — you have already pressed this ${o.timesRaised} times; you have made your point. If the counsellor has moved on to another topic, FOLLOW them; do NOT bring this up again unless they invite it or it is genuinely unresolved at decision time. Push back on any single concern at most once after a pivot.${banClause(o)}`
       : "";
     return `${label} (still open${timesNote})`;
   });
@@ -352,6 +361,14 @@ export function steeringSummary(state) {
       return o.lastPhrasing ? `${base} (do not reuse: "${o.lastPhrasing}")` : base;
     });
     lines.push(`Open concerns: ${items.join("; ")}.`);
+    // Loop-break: any concern raised 2+ times gets an explicit "stop returning to
+    // it" line so the voice model follows a counsellor's pivot instead of dragging
+    // the call back to the same point. This is what gets injected mid-call.
+    for (const o of open) {
+      if (o.timesRaised >= 2) {
+        lines.push(`You have raised ${labelFor(o.category)} ${o.timesRaised} times — stop returning to it; if the counsellor changed the subject, follow their lead and do not bring it up again unless they invite it.`);
+      }
+    }
   }
   if (addressed.length) {
     const items = addressed.map((o) => {

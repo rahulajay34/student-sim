@@ -109,7 +109,7 @@ Report    { id, sessionId, assignmentId|null, counsellorId, counsellorName, pers
             overall:{ percent:0..100, band:"Needs Work"|"Good"|"Excellent", headline:string,
                       outcome:"Converted"|"Not Converted", outcomeDetail },
             //   headline: "Next session, focus on …" — one punchy sentence from Call B; "" while generating or if B failed.
-            rubric:[{key,label,weight,score:1..5,level,justification}],
+            rubric:[{key,label,weight,score:1..10,level,justification}],
             // rubric length = number of graded criteria (voice_delivery excluded in text sessions);
             // weights are renormalized so they always sum to ~100.
             phaseBreakdown:[{phase:1..5,name,summary,didWell,toImprove}],
@@ -217,12 +217,12 @@ Non-SSE requests keep today's JSON response shape exactly.
 
 There is now **one voice engine**: OpenAI Realtime speech-to-speech over WebRTC. `session.voiceEngine` = `"openai"` for voice sessions, `"text"` for text sessions. (Old stored sessions may carry `"classic"` or `"elevenlabs"` — read fail-soft; the Session page resumes them as text.)
 
-In voice sessions the live voice/conversation runs browser↔OpenAI for minimal latency (no STT→LLM→TTS hops). MiniMax remains the analytics brain: every completed turn pair is POSTed to `/observe`, which runs the same scoring/objection/phase/cue pipeline as `/message` minus reply generation.
+In voice sessions the live voice/conversation runs browser↔OpenAI for minimal latency (no STT→LLM→TTS hops). Claude Sonnet 4.6 remains the analytics brain: every completed turn pair is POSTed to `/observe`, which runs the same scoring/objection/phase/cue pipeline as `/message` minus reply generation.
 
 | Method | Path | Body | Returns |
 |---|---|---|---|
 | POST | `/sessions/:id/realtime/openai-token` | `{voice?}` (any valid OpenAI realtime voice key, or `"auto"` for gender-matched default; re-mint to audition live) | `{value, model, voice, expiresAt}` — `value` is an ephemeral `ek_…` client secret for the browser WebRTC peer connection (`POST https://api.openai.com/v1/realtime/calls`, `Content-Type: application/sdp`). The token is pre-loaded with the persona instructions, voice, `input_audio_transcription` (`gpt-4o-mini-transcribe` by default), and `semantic_vad`. |
-| POST | `/sessions/:id/observe` | `{counsellorText?, studentText?, deliveryMetrics?}` | `{currentPhase, satisfactionScore, scoreReason, turnType, milestones, cue, steering}` — runs classify+phase+**MiniMax scoring** on the counsellor text and objection/phase tracking on the student text, appends both to the server-owned transcript. `steering` is a compact plain-text block (disposition narrative + open/answered objections with banned phrasings + current phase + turn-length reminder, ≤~120 words) injected mid-call over the data channel. 409 if ended; serialized per session. |
+| POST | `/sessions/:id/observe` | `{counsellorText?, studentText?, deliveryMetrics?}` | `{currentPhase, satisfactionScore, scoreReason, turnType, milestones, cue, steering}` — runs classify+phase+**LLM scoring** on the counsellor text and objection/phase tracking on the student text, appends both to the server-owned transcript. `steering` is a compact plain-text block (disposition narrative + open/answered objections with banned phrasings + current phase + turn-length reminder, ≤~120 words) injected mid-call over the data channel. 409 if ended; serialized per session. |
 
 `deliveryMetrics` in `/observe` arrives with the counsellor turn only and carries the in-browser computed `{ wpm, pauses, energyVar, durationMs }` (+ derived `paceVerdict`/`energyVerdict`/`tone` where available). Stored on the counsellor transcript entry under the same `deliveryMetrics` field as `/message`. `voice_delivery` is excluded and weights renormalized for text sessions (no delivery metrics). OpenAI voices are American-base, instructed to speak natural Indian English; `"auto"` gender-matches (female→`marin`, male→`cedar`) from the session's student profile/persona.
 
@@ -404,14 +404,19 @@ Two admin-editable JSON config files, loaded fail-soft to built-in defaults if m
 
 ### Single-model note
 
-All LLM calls (chat, scoring, coherence gate, report) use **MiniMax-M3** via `https://api.minimax.io`
-(OpenAI-compatible; env override `MINIMAX_MODEL`). The client lives in `server/ollama.js` (legacy
-filename kept). Sampling presets: `STUDENT_SAMPLING {temperature:0.9, top_p:0.95, repeat_penalty:1.3}`
-for roleplay; `DETERMINISTIC_SAMPLING {temperature:0.2}` for scoring/coherence/report. `chat()`
-accepts an options object (`timeoutMs`, `model` override, sampling knobs) and throws
-`Error{code:'LLM_TIMEOUT'}` on timeout (45 s chat/scoring, 120 s per report call); `chatStream()` is
-the async-generator streaming variant. M3 is a reasoning model: `<think>…</think>` blocks are
-stripped from both `chat()` and `chatStream()` output. `stripThink` is also exported for callers that
-need to post-process raw content themselves; an unclosed `<think>` block (model truncated mid-think)
-is stripped to empty rather than leaking the internal monologue. In voice sessions MiniMax is NOT used
-for the student's spoken replies (OpenAI Realtime owns those); it remains the analytics brain via `/observe`.
+All LLM calls (chat, scoring, coherence gate, cues, report) use **Claude Sonnet 4.6**
+(`claude-sonnet-4-6`) via the official `@anthropic-ai/sdk`; env `ANTHROPIC_API_KEY`, override
+`ANTHROPIC_MODEL`. The client lives in `server/llm.js`; `server/ollama.js` is a thin re-export shim
+kept so legacy import paths keep working. Two latency modes drive thinking + effort:
+`mode:"fast"` (thinking disabled, effort low — student replies, coherence gate, per-turn scoring)
+and `mode:"reasoning"` (adaptive thinking, effort high — report calls A/B/C and the `/cue` coaching
+card). `temperature` is honoured in fast mode only (it is incompatible with adaptive thinking);
+legacy sampling knobs `top_p`/`repeat_penalty` are accepted and silently dropped. Structured output:
+scoring, breakdown, cue, and report calls pass a `jsonSchema` option that maps to
+`output_config.format` (schema-enforced JSON; `extractJson` remains as the parse step). `chat()`
+accepts an options object (`timeoutMs`, `maxRetries`, `mode`, `jsonSchema`, `model` override) and
+throws `Error{code:'LLM_TIMEOUT'}` on timeout (45 s chat/scoring, 8 s coherence, 30 s cue, 60 s per
+report call attempt); `chatStream()` is the async-generator streaming variant (yields plain text
+tokens; thinking deltas are never yielded). `stripThink` survives as a legacy no-op shim for old
+`<think>`-format text. In voice sessions Claude is NOT used for the student's spoken replies
+(OpenAI Realtime owns those); it remains the analytics brain via `/observe`.

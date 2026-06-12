@@ -66,6 +66,42 @@ function objectionKeySet() {
 // as undefined, and chat() simply uses model defaults.
 const SCORING_SAMPLING = DETERMINISTIC_SAMPLING || { temperature: 0.2 };
 
+// JSON schema for the main score result — drives structured output in Claude.
+// No minimum/maximum/minLength constraints (Anthropic API restriction).
+// type:["string","null"] for addressedObjection lets the model return either.
+const SCORE_SCHEMA = {
+  type: "object",
+  properties: {
+    adjustment: { type: "number" },
+    reason: { type: "string" },
+    addressedObjection: { type: ["string", "null"] },
+  },
+  required: ["adjustment", "reason", "addressedObjection"],
+  additionalProperties: false,
+};
+
+// JSON schema for the breakdown result.
+const BREAKDOWN_SCHEMA = {
+  type: "object",
+  properties: {
+    pieces: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          text: { type: "string" },
+          rating: { type: "number" },
+          reason: { type: "string" },
+        },
+        required: ["text", "rating", "reason"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["pieces"],
+  additionalProperties: false,
+};
+
 // ---------------------------------------------------------------------------
 // Built-in defaults (used verbatim if the config file is missing or corrupt).
 // Keep these in sync with data/scoring-config.json — they are the fail-soft
@@ -328,7 +364,12 @@ async function scoreBreakdown({ message, recentTurns = [], phase = 1, courseName
   if (wordCount(message) < INFO_HEAVY_WORDS) return null;
   try {
     const prompt = buildBreakdownPrompt({ message, recentTurns, phase, courseName });
-    const raw = await chat([{ role: "user", content: prompt }], { ...SCORING_SAMPLING, timeoutMs: 12000 });
+    const raw = await chat([{ role: "user", content: prompt }], {
+      ...SCORING_SAMPLING,
+      mode: "fast",
+      jsonSchema: BREAKDOWN_SCHEMA,
+      timeoutMs: 12000,
+    });
     const result = extractJson(raw);
     if (!Array.isArray(result?.pieces) || !result.pieces.length) return null;
     return result.pieces
@@ -394,7 +435,7 @@ export async function scoreMessage(message, opts, legacyCourseName, chatOpts = {
     // chatOpts may carry a timeoutMs so a raced caller (e.g. /observe's 15s
     // Promise.race) can abort the in-flight LLM fetch instead of leaving it dangling.
     const [raw, breakdown] = await Promise.all([
-      chat([{ role: "user", content: prompt }], { ...SCORING_SAMPLING, ...chatOpts }),
+      chat([{ role: "user", content: prompt }], { ...SCORING_SAMPLING, mode: "fast", jsonSchema: SCORE_SCHEMA, ...chatOpts }),
       breakdownPromise,
     ]);
     const result = extractJson(raw);

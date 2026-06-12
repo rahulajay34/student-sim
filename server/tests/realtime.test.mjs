@@ -80,8 +80,9 @@ test("S2: realtime prompt carries the C6 language policy + VOICE DELIVERY block"
   const out = buildRealtimeInstructions(sampleSession());
   assert.ok(out.includes(LANGUAGE_POLICY), "language policy must appear verbatim");
   assert.ok(out.includes("VOICE DELIVERY"), "VOICE DELIVERY block must be present");
-  // Real numbers from the research doc, baked in (not read at runtime).
-  assert.ok(out.includes("125-155 WPM"), "VOICE DELIVERY should carry the WPM band");
+  // Real numbers from the research doc, baked in (not read at runtime). The pace
+  // band is the deliberately-slow 90–115 wpm the VOICE DELIVERY block specifies.
+  assert.ok(/90.?115 words per minute/.test(out), "VOICE DELIVERY should carry the WPM band");
 });
 
 test("S2: the eight required sections are present and ordered", () => {

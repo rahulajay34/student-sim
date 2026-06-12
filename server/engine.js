@@ -63,7 +63,7 @@ export async function getFirstMessage(persona, scenario, course, flavour = null)
       content:
         "Start the conversation. Your very first message must be only a self-introduction of 2-3 sentences. Improvise it fresh in your own words from your real facts (your name, what you do or study, your city, and why you took the test) — never a rehearsed-sounding script, and phrase it differently than a generic intro would. Nothing else.",
     },
-  ], STUDENT_SAMPLING);
+  ], { ...STUDENT_SAMPLING, mode: "fast" });
   return parseEmotion(raw);
 }
 
@@ -105,7 +105,7 @@ Counsellor said: "${counsellorMsg}"
 Student replied: "${replyText}"
 
 Is the student's reply coherent and logically sensible as a response (not garbled, not half-finished nonsense, not answering something never asked)? Reply with exactly one word: VALID or INVALID.`,
-    }], { ...DETERMINISTIC_SAMPLING, timeoutMs: COHERENCE_TIMEOUT_MS });
+    }], { ...DETERMINISTIC_SAMPLING, mode: "fast", timeoutMs: COHERENCE_TIMEOUT_MS, maxRetries: 0 });
     return !/\bINVALID\b/i.test(verdict);
   } catch (e) {
     console.warn("[engine] coherence check failed open:", e.message);
@@ -221,12 +221,11 @@ function prepareReply(session) {
 }
 
 // Per-session thinking control for the STUDENT reply call only. session.thinkingMode
-// is 'on' | 'off' (default 'off'); 'on' re-enables M3's reasoning block for the
-// reply (quality > latency), 'off' keeps it disabled. The coherence/anti-loop regen
-// calls deliberately keep the default (disabled) — they never read this.
+// is 'on' | 'off' (default 'off'); 'on' uses reasoning mode for quality > latency,
+// 'off' uses fast mode. The coherence/anti-loop regen calls deliberately stay fast.
 function studentSampling(session) {
-  const thinking = session?.thinkingMode === "on" ? { type: "adaptive" } : { type: "disabled" };
-  return { ...STUDENT_SAMPLING, thinking };
+  const on = session?.thinkingMode === "on";
+  return { ...STUDENT_SAMPLING, mode: on ? "reasoning" : "fast" };
 }
 
 // Anti-loop guard: a coherent reply still gets rejected if it is >0.8 similar to
@@ -238,7 +237,7 @@ async function guardLoop({ text, emotion }, { systemPrompt, transcript }) {
 
   const retryRaw = await chat(
     [{ role: "system", content: systemPrompt + REPEAT_NOTE }, ...transcriptToMessages(transcript)],
-    STUDENT_SAMPLING,
+    { ...STUDENT_SAMPLING, mode: "fast" },
   );
   const retry = parseEmotion(retryRaw);
   console.warn(`[engine] looping reply regenerated: "${text}" -> "${retry.text}"`);
@@ -262,7 +261,7 @@ async function gateReply({ text, emotion }, { last, turnHint, systemPrompt, tran
     // ONE regeneration with the REGEN_NOTE appended to the same system prompt.
     const retryRaw = await chat(
       [{ role: "system", content: systemPrompt + REGEN_NOTE }, ...transcriptToMessages(transcript)],
-      STUDENT_SAMPLING,
+      { ...STUDENT_SAMPLING, mode: "fast" },
     );
     const retry = parseEmotion(retryRaw);
     console.warn(`[engine] incoherent ${turnHint} reply regenerated: "${text}" -> "${retry.text}"`);

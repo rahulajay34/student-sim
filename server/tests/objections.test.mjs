@@ -16,6 +16,7 @@ import {
   openObjections,
   addressedObjections,
   summarizeForPrompt,
+  steeringSummary,
 } from "../objections.js";
 
 // ---------------------------------------------------------------------------
@@ -306,7 +307,11 @@ test("summarizeForPrompt shows loop-break nudge when timesRaised >= 3", () => {
   raiseObjection(state, "fee", 5);
   const s = summarizeForPrompt(state);
   assert.ok(s.includes("3 times"), `expected '3 times' in: ${s}`);
-  assert.ok(s.includes("do NOT repeat"), `expected loop-break nudge in: ${s}`);
+  // New firm topic-following nudge (replaces the old "do NOT repeat the wording"
+  // guidance that actually encouraged reworded repeats).
+  assert.ok(/made your point/i.test(s), `expected 'made your point' loop-break nudge in: ${s}`);
+  assert.ok(/FOLLOW/.test(s), `expected topic-following ('FOLLOW') instruction in: ${s}`);
+  assert.ok(!/escalate your doubt with new specifics/i.test(s), `must not encourage reworded repeats: ${s}`);
 });
 
 test("summarizeForPrompt suggests agreement when all addressed", () => {
@@ -327,4 +332,105 @@ test("summarizeForPrompt with mixed open and addressed", () => {
   assert.ok(s.includes("still open"), "open entry should show still open");
   // Not all addressed → no agreement note
   assert.ok(!s.includes("okay to agree"), "should not suggest agreement when open entries remain");
+});
+
+// ---------------------------------------------------------------------------
+// detectObjectionCategory — neutral fee questions (loop-fix A1).
+// Neutral price asks must be tracked as "fee" (previously returned null, so the
+// objection was never tracked and the student looped on it). The EMI rule must
+// still win for "per month" phrasings, and a time question must NOT be swallowed
+// by the broadened fee regex.
+// ---------------------------------------------------------------------------
+
+test("detect fee: neutral 'can you tell me the fees, like the exact amount?' (turn 23)", () => {
+  assert.equal(
+    detectObjectionCategory("Can you tell me the fees, like the exact amount?"),
+    "fee",
+  );
+});
+
+test("detect fee: 'that's clearer now, but the main thing is still the fees part, na?' (turn 31)", () => {
+  assert.equal(
+    detectObjectionCategory("Okay that's clearer now, but the main thing is still the fees part, na?"),
+    "fee",
+  );
+});
+
+test("detect emi_affordability: 'And EMI options, like, how much per month roughly, ma'am?'", () => {
+  assert.equal(
+    detectObjectionCategory("And EMI options, like, how much per month roughly, ma'am?"),
+    "emi_affordability",
+  );
+});
+
+test("detect: 'how much time per week are we talking, roughly?' is NOT fee", () => {
+  // Current behaviour: this maps to null (the time_commitment regex needs a
+  // 'time manage'/'no time'/'night shift'-type token, not a bare 'time per week').
+  // The important property for the loop fix is that the broadened fee regex does
+  // NOT swallow a time question. Assert both: not fee, and the current null result.
+  const cat = detectObjectionCategory("how much time per week are we talking, roughly?");
+  assert.notEqual(cat, "fee", "a time question must not be miscategorised as fee");
+  assert.equal(cat, null, "current behaviour for this phrasing is null");
+});
+
+test("detect: a neutral curriculum question returns null", () => {
+  assert.equal(
+    detectObjectionCategory("What topics will the curriculum cover in the first month?"),
+    null,
+  );
+});
+
+test("detect: generic 'how long is the program?' returns null (no fee/cost token)", () => {
+  assert.equal(detectObjectionCategory("How long is the program?"), null);
+});
+
+// ---------------------------------------------------------------------------
+// steeringSummary — mid-call loop-break (A3). Open concerns raised 2+ times get
+// an explicit "stop returning to it" line; a concern raised once must NOT.
+// ---------------------------------------------------------------------------
+
+test("steeringSummary returns '' for empty/invalid state", () => {
+  assert.equal(steeringSummary([]), "");
+  assert.equal(steeringSummary(null), "");
+});
+
+test("steeringSummary adds a stop-returning line when an open objection has timesRaised >= 3", () => {
+  const state = initObjectionState();
+  raiseObjection(state, "fee", 1);
+  raiseObjection(state, "fee", 3);
+  raiseObjection(state, "fee", 5); // timesRaised = 3
+  const s = steeringSummary(state);
+  assert.ok(/stop returning to it/i.test(s), `expected a stop-returning line in: ${s}`);
+  assert.ok(s.includes("3 times"), `expected the raised count in: ${s}`);
+  assert.ok(/follow their lead/i.test(s), `expected topic-following guidance in: ${s}`);
+});
+
+test("steeringSummary does NOT add a stop-returning line when timesRaised == 1", () => {
+  const state = initObjectionState();
+  raiseObjection(state, "fee", 1); // timesRaised = 1
+  const s = steeringSummary(state);
+  assert.ok(s.includes("Open concerns:"), `expected the concern still listed in: ${s}`);
+  assert.ok(!/stop returning to it/i.test(s), `must NOT nudge to stop after a single raise: ${s}`);
+});
+
+// ---------------------------------------------------------------------------
+// Regression: "exact amount/figure" must require a money token nearby —
+// otherwise time/timeline questions misfile as fee objections.
+// ---------------------------------------------------------------------------
+
+test("'exact amount of time' does NOT misfile as a fee objection", () => {
+  const cat = detectObjectionCategory(
+    "what is the exact amount of time I need to study each week",
+  );
+  assert.notEqual(cat, "fee", `time question must not be a fee objection, got: ${cat}`);
+});
+
+test("'exact figure for the timeline' does NOT misfile as a fee objection", () => {
+  const cat = detectObjectionCategory("exact figure please for the timeline");
+  assert.notEqual(cat, "fee", `timeline question must not be a fee objection, got: ${cat}`);
+});
+
+test("'exact amount' WITH a money token still detects fee", () => {
+  const cat = detectObjectionCategory("what is the exact amount I have to pay");
+  assert.equal(cat, "fee");
 });

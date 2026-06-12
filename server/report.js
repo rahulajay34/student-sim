@@ -3,12 +3,12 @@
 // Falls back to the legacy 6-criterion rubric for pre-v2 sessions.
 //
 // Contract decisions:
-//   - Model: MiniMax-M3 (MINIMAX_MODEL override) via ./ollama.js chat().
+//   - Model: Claude Sonnet 4.6 via ./llm.js (./ollama.js shim).
 //   - Parallel fan-out: Call A (rubric + 5-phase phaseBreakdown) and Call B
 //     (strengths/improvements/keyMoments + overall.headline) run via Promise.all;
 //     Call C (drills) runs after A because it needs A's weakest criteria.
-//   - Adaptive thinking ONLY when session.transcript.length > 20 (else disabled).
-//   - Per-call retry: attempt 1 as configured (60s); attempt 2 thinking-disabled (60s).
+//   - All calls use mode:"reasoning" for report quality.
+//   - Per-call retry: attempt 1 (60s); attempt 2 (60s). Both reasoning mode.
 //   - If Call A fails entirely → neutral fallback report (fallback:true,
 //     regenerable:true). If only B or C fails → assemble what succeeded, mark
 //     report.partial = true and leave that section to minimal defaults.
@@ -266,25 +266,134 @@ function sanitizeObjectionCategory(raw) {
 }
 
 // ─── LLM call options ───────────────────────────────────────────────────────
-// Each fan-out call gets a focused prompt with a 60s timeout. Adaptive thinking
-// is enabled ONLY for longer transcripts (> 20 turns); otherwise disabled to
-// keep latency low. Attempt 2 always runs thinking-disabled (see runCall).
+// Each fan-out call uses mode:"reasoning" for quality, with a 60s timeout.
+// Two retry attempts; both use reasoning mode.
 const CALL_TIMEOUT_MS = 60_000;
 
-function thinkingForSession(session) {
-  return (session.transcript || []).length > 20
-    ? { type: "adaptive" }
-    : { type: "disabled" };
-}
+// ─── JSON schemas for structured output ─────────────────────────────────────
+// Call A: rubric grading + phase breakdown.
+// Criterion keys and phaseBreakdown entries — shapes derived from assembleRubric
+// and assembleNarrative assembly code. No min/max constraints (API restriction).
+const REPORT_A_SCHEMA = {
+  type: "object",
+  properties: {
+    rubric: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          key: { type: "string" },
+          score: { type: "number" },
+          justification: { type: "string" },
+        },
+        required: ["key", "score", "justification"],
+        additionalProperties: false,
+      },
+    },
+    phaseBreakdown: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          phase: { type: "number" },
+          summary: { type: "string" },
+          didWell: { type: "string" },
+          toImprove: { type: "string" },
+        },
+        required: ["phase", "summary", "didWell", "toImprove"],
+        additionalProperties: false,
+      },
+    },
+    outcome: { type: "string" },
+    outcomeDetail: { type: "string" },
+  },
+  required: ["rubric", "phaseBreakdown", "outcome", "outcomeDetail"],
+  additionalProperties: false,
+};
+
+// Call B: strengths / improvements / keyMoments / headline.
+const REPORT_B_SCHEMA = {
+  type: "object",
+  properties: {
+    headline: { type: "string" },
+    strengths: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          point: { type: "string" },
+          quote: { type: "string" },
+        },
+        required: ["point", "quote"],
+        additionalProperties: false,
+      },
+    },
+    improvements: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          point: { type: "string" },
+          quote: { type: "string" },
+          suggestion: { type: "string" },
+        },
+        required: ["point", "quote", "suggestion"],
+        additionalProperties: false,
+      },
+    },
+    keyMoments: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          turn: { type: "number" },
+          type: { type: "string" },
+          note: { type: "string" },
+        },
+        required: ["turn", "type", "note"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["headline", "strengths", "improvements", "keyMoments"],
+  additionalProperties: false,
+};
+
+// Call C: drills.
+const REPORT_C_SCHEMA = {
+  type: "object",
+  properties: {
+    drills: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          title: { type: "string" },
+          focusCriterion: { type: "string" },
+          objectionCategory: { type: "string" },
+          instruction: { type: "string" },
+        },
+        required: ["title", "focusCriterion", "objectionCategory", "instruction"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["drills"],
+  additionalProperties: false,
+};
 
 // ─── Per-call runner with 2-attempt retry ────────────────────────────────────
-// Attempt 1: configured thinking, 60s. Attempt 2: thinking disabled, 60s.
+// Attempt 1 and 2: both use mode:"reasoning", 60s timeout.
 // Returns { ok:true, value } or { ok:false, error }.
-async function runCall(label, prompt, thinking) {
-  const attempts = [
-    { ...DETERMINISTIC_SAMPLING, timeoutMs: CALL_TIMEOUT_MS, thinking },
-    { ...DETERMINISTIC_SAMPLING, timeoutMs: CALL_TIMEOUT_MS, thinking: { type: "disabled" } },
-  ];
+async function runCall(label, prompt, jsonSchema) {
+  const callOpts = {
+    ...DETERMINISTIC_SAMPLING,
+    mode: "reasoning",
+    timeoutMs: CALL_TIMEOUT_MS,
+    maxRetries: 0,
+    jsonSchema,
+  };
+  const attempts = [callOpts, callOpts];
   let lastError;
   for (let i = 0; i < attempts.length; i++) {
     try {
@@ -461,8 +570,9 @@ export function needsRegeneration(report) {
  *     concurrently via Promise.all.
  *   - Call C (drills) runs after A because it needs A's weakest criteria scores.
  *
- * Adaptive thinking only when transcript.length > 20. Each call retries once
- * (attempt 2 thinking-disabled), both with a 60s timeout.
+ * All calls run in mode:"reasoning" (adaptive thinking + high effort) with
+ * structured-output schemas. Each call retries once; both attempts identical,
+ * 60s timeout each.
  *
  * If Call A fails entirely → neutral fallback report (fallback:true,
  * regenerable:true). If only B or C fails → assemble what succeeded and mark
@@ -473,15 +583,14 @@ export function needsRegeneration(report) {
  */
 export async function generateReport(session) {
   const { criteria } = effectiveCriteria(session);
-  const thinking = thinkingForSession(session);
 
   const rubricPrompt = buildRubricPrompt(session, criteria);
   const narrativePrompt = buildNarrativePrompt(session);
 
   // A and B are independent → run in parallel.
   const [resultA, resultB] = await Promise.all([
-    runCall("Call A (rubric)", rubricPrompt, thinking),
-    runCall("Call B (narrative)", narrativePrompt, thinking),
+    runCall("Call A (rubric)", rubricPrompt, REPORT_A_SCHEMA),
+    runCall("Call B (narrative)", narrativePrompt, REPORT_B_SCHEMA),
   ]);
 
   // Call A is the spine of the report. If it failed entirely → fallback.
@@ -493,7 +602,7 @@ export async function generateReport(session) {
   const { rubric, percent, phaseBreakdown } = assembleRubric(session, resultA.value, criteria);
 
   // Call C depends on A's graded rubric (weakest criteria), so it runs after A.
-  const resultC = await runCall("Call C (drills)", buildDrillsPrompt(session, rubric), thinking);
+  const resultC = await runCall("Call C (drills)", buildDrillsPrompt(session, rubric), REPORT_C_SCHEMA);
 
   let partial = false;
   const narrative = resultB.ok

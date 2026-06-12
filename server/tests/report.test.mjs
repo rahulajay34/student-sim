@@ -198,7 +198,7 @@ test("A failure produces the neutral fallback report", async () => {
   // Fallback is full-shaped with neutral scores.
   assert.equal(report.rubric.length, 6);
   assert.equal(report.phaseBreakdown.length, 5);
-  assert.ok(report.rubric.every((r) => r.score === 3), "fallback rubric is neutral mid-band");
+  assert.ok(report.rubric.every((r) => r.score === 7), "fallback rubric is neutral mid-band (7 on the 1-10 scale)");
   assert.equal(report.overall.outcome, "Not Converted");
 });
 

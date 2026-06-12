@@ -10,8 +10,8 @@ const DATA_DIR = join(__dirname, "data");
 
 // users.json + personas.json ship seeded. courses.json and rubric-templates.json also ship seeded
 // but are included here so that an empty bootstrap file is created if somehow missing at startup.
-// assignments.json, sessions.json, and reports.json start empty on first run.
-const RUNTIME_FILES = ["assignments.json", "sessions.json", "reports.json", "courses.json", "rubric-templates.json"];
+// assignments.json, sessions.json, reports.json, and assignmentTemplates.json start empty on first run.
+const RUNTIME_FILES = ["assignments.json", "sessions.json", "reports.json", "courses.json", "rubric-templates.json", "assignmentTemplates.json"];
 
 function ensureData() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });

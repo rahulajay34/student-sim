@@ -233,7 +233,7 @@ function buildNarrative(session, ev) {
   // 3) What is still in the way (the strongest open concern).
   if (open.length) {
     const o = open[open.length - 1];
-    sentences.push(`But nobody has properly settled ${categoryPhrase(o.category)} yet, and until that lands you are not going to commit.`);
+    sentences.push(`Nobody has fully settled ${categoryPhrase(o.category)} yet, so it still feels unsettled and you would want it addressed before you commit — though you are open to hearing about other things in the meantime rather than blocking on it.`);
   }
 
   // 4) Stage-specific closer — the crucial "ready" behavior preserved here.

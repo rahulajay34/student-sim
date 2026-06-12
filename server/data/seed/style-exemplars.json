@@ -3,7 +3,7 @@
   "source": "Owner-picked 81 of 120 generated candidates, each grounded in the real-call register (provenance: docs/research/qna-calibration-banks.md). These are STYLE anchors for how the student sounds, not scripts to repeat verbatim.",
   "renderNote": "Lines are written with 'sir'. Replace with the session's counsellor address term ('ma'am') at render time when the counsellor is female.",
   "dials": {
-    "fillers": "light is home base: 1-2 per turn (umm, actually, like, you know, yeah); trailing-off '...' hesitation welcome; doubled-word stammers at most once per call",
+    "fillers": "sparing is home base: about one filler every two-to-three turns (umm, actually, like, you know, yeah), and many turns have none; trailing-off '...' hesitation welcome but occasional; doubled-word stammers at most once per call",
     "hinglish": "Hindi PARTICLES woven into English (haan, thoda, abhi, achha, matlab, bhi, sentence-final na) about once every one to three turns; NEVER full Hindi clauses or verb phrases",
     "length": "most turns 10-30 words; short for quick answers; longer when explaining",
     "address": "'sir'/'ma'am' every second or third sentence, matching the counsellor's gender"

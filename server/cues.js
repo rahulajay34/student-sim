@@ -13,7 +13,20 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { chat, extractJson, DETERMINISTIC_SAMPLING } from "./ollama.js";
+import { chat, extractJson, DETERMINISTIC_SAMPLING, REASONING_OPTIONS } from "./ollama.js";
+
+// JSON schema for the cue — drives structured output in Claude.
+// Fields match what the validation code at line ~365-377 checks.
+const CUE_SCHEMA = {
+  type: "object",
+  properties: {
+    headline: { type: "string" },
+    points: { type: "array", items: { type: "string" } },
+    example: { type: "string" },
+  },
+  required: ["headline", "points", "example"],
+  additionalProperties: false,
+};
 
 // ---------------------------------------------------------------------------
 // Seed data (loaded once — same pattern as grounding.js)
@@ -356,7 +369,7 @@ export async function llmCue(session) {
 
     const raw = await chat(
       [{ role: "user", content: prompt }],
-      { ...DETERMINISTIC_SAMPLING, timeoutMs: 20_000 },
+      { ...DETERMINISTIC_SAMPLING, ...REASONING_OPTIONS, timeoutMs: 30_000, jsonSchema: CUE_SCHEMA },
     );
 
     const parsed = extractJson(raw);

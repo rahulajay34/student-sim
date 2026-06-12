@@ -39,7 +39,7 @@ const voiceEngineForMode = (m) => (m === "text" ? "text" : "openai");
 
 const PROMPT_CONFIG_PATH = join(__dirname, "data", "prompt-config.json");
 
-console.log("Ollama API key loaded:", process.env.OLLAMA_API_KEY ? "YES" : "NO - KEY MISSING");
+console.log("Anthropic API key loaded:", process.env.ANTHROPIC_API_KEY ? "YES" : "NO - KEY MISSING");
 
 const app = express();
 app.use(cors());
@@ -1490,6 +1490,134 @@ app.post("/api/sessions/:id/cue", async (req, res) => {
     const cue = fallbackInstantCue();
     res.json({ cue, source: cue.source });
   }
+});
+
+// --- Assignment Templates (WS7) --------------------------------------------
+app.get("/api/assignment-templates", (_req, res) => {
+  res.json(store.getAll("assignmentTemplates"));
+});
+
+app.post("/api/assignment-templates", (req, res) => {
+  const b = req.body || {};
+  if (!b.name || typeof b.name !== "string" || !b.name.trim()) {
+    return res.status(400).json({ error: "name is required" });
+  }
+  // Validate optional foreign keys when provided.
+  if (b.personaId) {
+    const persona = store.getById("personas", b.personaId);
+    if (!persona) return res.status(400).json({ error: "personaId not found" });
+  }
+  if (b.courseId) {
+    const course = store.getById("courses", b.courseId);
+    if (!course) return res.status(400).json({ error: "courseId not found" });
+  }
+  if (b.rubricTemplateId) {
+    const tpl = store.getById("rubric-templates", b.rubricTemplateId);
+    if (!tpl) return res.status(400).json({ error: "rubricTemplateId not found" });
+  }
+  if (b.profileId && !loadLeadProfile(b.profileId)) {
+    return res.status(400).json({ error: "profileId not found in lead profiles" });
+  }
+  const template = {
+    id: store.newId("atpl"),
+    name: b.name.trim(),
+    personaId: b.personaId || null,
+    courseId: b.courseId || null,
+    rubricTemplateId: b.rubricTemplateId || null,
+    profileId: b.profileId || null,
+    scenario: normalizeScenario(b.scenario),
+    personaPromptOverride: b.personaPromptOverride ?? null,
+    revealPersona: b.revealPersona !== false,
+    createdBy: b.createdBy || requesterFor(req)?.id || "admin-1",
+    createdAt: new Date().toISOString(),
+  };
+  res.json(store.insert("assignmentTemplates", template));
+});
+
+app.put("/api/assignment-templates/:id", (req, res) => {
+  const existing = store.getById("assignmentTemplates", req.params.id);
+  if (!existing) return res.status(404).json({ error: "Assignment template not found" });
+  const b = req.body || {};
+  // Validate optional foreign keys when provided.
+  if (b.personaId !== undefined && b.personaId) {
+    const persona = store.getById("personas", b.personaId);
+    if (!persona) return res.status(400).json({ error: "personaId not found" });
+  }
+  if (b.courseId !== undefined && b.courseId) {
+    const course = store.getById("courses", b.courseId);
+    if (!course) return res.status(400).json({ error: "courseId not found" });
+  }
+  if (b.rubricTemplateId !== undefined && b.rubricTemplateId) {
+    const tpl = store.getById("rubric-templates", b.rubricTemplateId);
+    if (!tpl) return res.status(400).json({ error: "rubricTemplateId not found" });
+  }
+  if (b.profileId && !loadLeadProfile(b.profileId)) {
+    return res.status(400).json({ error: "profileId not found in lead profiles" });
+  }
+  const patch = {};
+  if (b.name !== undefined) {
+    if (typeof b.name !== "string" || !b.name.trim()) return res.status(400).json({ error: "name is required" });
+    patch.name = b.name.trim();
+  }
+  const editableKeys = ["personaId", "courseId", "rubricTemplateId", "profileId",
+    "personaPromptOverride", "revealPersona"];
+  for (const k of editableKeys) {
+    if (b[k] !== undefined) patch[k] = b[k];
+  }
+  if (b.scenario !== undefined) patch.scenario = normalizeScenario(b.scenario);
+  const updated = store.update("assignmentTemplates", req.params.id, patch);
+  if (!updated) return res.status(404).json({ error: "Assignment template not found" });
+  res.json(updated);
+});
+
+app.delete("/api/assignment-templates/:id", (req, res) => {
+  const existing = store.getById("assignmentTemplates", req.params.id);
+  if (!existing) return res.status(404).json({ error: "Assignment template not found" });
+  // Assignments snapshot template fields at creation, so no 409 guard needed.
+  store.remove("assignmentTemplates", req.params.id);
+  res.json({ ok: true });
+});
+
+app.post("/api/assignment-templates/:id/assign", (req, res) => {
+  const tmpl = store.getById("assignmentTemplates", req.params.id);
+  if (!tmpl) return res.status(404).json({ error: "Assignment template not found" });
+  const { counsellorIds } = req.body || {};
+  if (!Array.isArray(counsellorIds) || counsellorIds.length === 0) {
+    return res.status(400).json({ error: "counsellorIds must be a non-empty array" });
+  }
+  // Validate every counsellor exists.
+  const allUsers = store.getAll("users");
+  for (const cid of counsellorIds) {
+    if (!allUsers.find((u) => u.id === cid)) {
+      return res.status(400).json({ error: `User not found: ${cid}` });
+    }
+  }
+  const now = new Date().toISOString();
+  const createdBy = req.body?.createdBy || requesterFor(req)?.id || "admin-1";
+  const created = [];
+  for (const counsellorId of counsellorIds) {
+    const assignment = {
+      id: store.newId("asn"),
+      counsellorId,
+      personaId: tmpl.personaId || null,
+      courseId: tmpl.courseId || null,
+      rubricTemplateId: tmpl.rubricTemplateId || null,
+      profileId: tmpl.profileId || null,
+      scenario: tmpl.scenario || normalizeScenario({}),
+      personaPromptOverride: tmpl.personaPromptOverride ?? null,
+      revealPersona: tmpl.revealPersona !== false,
+      status: "assigned",
+      createdBy,
+      createdAt: now,
+      sessionId: null,
+      reportId: null,
+      // Provenance: track which template generated this assignment.
+      templateId: tmpl.id,
+    };
+    store.insert("assignments", assignment);
+    created.push(assignment);
+  }
+  res.json({ created: created.length, assignments: created });
 });
 
 // --- Analytics -------------------------------------------------------------

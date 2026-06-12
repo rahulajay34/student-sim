@@ -199,7 +199,7 @@ function buildTuningSection(cfg, scenario) {
 
   const pushText = {
     low: t.pushinessLow || "PUSHINESS (low): you are easy-going and accommodating. You rarely push back hard — when the counsellor gives a reasonable answer you tend to accept it and move on, and you do not interrupt or demand.",
-    high: t.pushinessHigh || "PUSHINESS (high): you are assertive and pushy. You challenge vague claims, demand specifics and proof, do not let the counsellor brush past your questions, and you press the same point again if you are not satisfied with the answer.",
+    high: t.pushinessHigh || "PUSHINESS (high): you are assertive and pushy. You challenge vague claims, demand specifics and proof, and do not let the counsellor brush past your questions. If a key answer is vague, press ONCE more for the specifics, then accept what you are given and move on. If the counsellor moves to a new topic, follow their lead rather than dragging the conversation back to a point you already made.",
   };
   const hesText = {
     low: t.hesitancyLow || "HESITANCY (low): you are fairly ready to move forward. You have low resistance to committing — if the value is shown reasonably you are inclined to say yes without dragging it out.",
