@@ -3,78 +3,8 @@ import Orb from "./Orb";
 import { scoreColor } from "../../../lib/format";
 import { loadStoredMicDevice } from "../../../voice/engines";
 
-// ── In-call voice picker (audition voices live; a change reconnects briefly) ───
-function VoicePicker({ voices, voice, onChange }) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef(null);
-  const current = voices.find((v) => v.id === voice) || voices[0];
-
-  // Escape + click-outside dismissal, mirroring MicPicker — without these a
-  // keyboard user could open the dropdown but never close it.
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
-    const onClick = (e) => { if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false); };
-    window.addEventListener("keydown", onKey);
-    window.addEventListener("mousedown", onClick);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener("mousedown", onClick);
-    };
-  }, [open]);
-
-  return (
-    <div ref={rootRef} style={{ position: "relative" }}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        title="Change the student's voice (reconnects briefly)"
-        style={{
-          display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 9999,
-          padding: "4px 12px", fontSize: "0.75rem", color: "#c7d2fe",
-          background: "rgba(22,26,38,0.80)", backdropFilter: "blur(8px)",
-          border: "1px solid rgba(99,102,241,0.40)", cursor: "pointer", whiteSpace: "nowrap",
-        }}
-      >
-        <span aria-hidden>🎙</span>
-        <span>Voice: {current.label}</span>
-        <span style={{ color: "#8b90a8", transform: open ? "rotate(180deg)" : "none", transition: "transform 150ms ease" }}>⌄</span>
-      </button>
-      {open && (
-        <div
-          style={{
-            position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 20,
-            width: 240, maxHeight: 280, overflowY: "auto", borderRadius: 12,
-            background: "rgba(18,21,31,0.97)", backdropFilter: "blur(10px)",
-            border: "1px solid #262a36", boxShadow: "0 12px 32px rgba(0,0,0,0.4)", padding: 4,
-          }}
-        >
-          {voices.map((v) => (
-            <button
-              key={v.id}
-              type="button"
-              onClick={() => { onChange?.(v.id); setOpen(false); }}
-              style={{
-                width: "100%", textAlign: "left", display: "flex", flexDirection: "column",
-                gap: 1, padding: "7px 10px", borderRadius: 8, border: "none", cursor: "pointer",
-                background: v.id === voice ? "rgba(99,102,241,0.18)" : "transparent",
-                color: v.id === voice ? "#c7d2fe" : "#e7e9f4",
-              }}
-            >
-              <span style={{ fontSize: "0.78rem", fontWeight: 600 }}>{v.label}</span>
-              <span style={{ fontSize: "0.66rem", color: "#8b90a8" }}>{v.note}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── In-call mic picker (switch input device live; replaceTrack, no reconnect) ──
-// Mirrors VoicePicker's styling/behaviour. Enumerates audioinput devices fresh on
+// Enumerates audioinput devices fresh on
 // open so a freshly-plugged headset shows up; the active device (from the stored
 // preference) is checked. Selecting calls voice.changeMic(deviceId), which hot-
 // swaps the track without re-minting the realtime token.
@@ -226,25 +156,6 @@ function MicPicker({ onChange }) {
   );
 }
 
-// ── Phase labels (1-indexed, 5 phases) ────────────────────────────────────────
-const PHASE_LABELS = {
-  1: "Opening",
-  2: "Discovery",
-  3: "Presentation",
-  4: "Objections",
-  5: "Close",
-};
-
-// ── Emotion → emoji + label ────────────────────────────────────────────────────
-const EMOTION_META = {
-  neutral:    { emoji: "🙂", label: "Neutral",    color: "#818cf8" },
-  happy:      { emoji: "😊", label: "Happy",      color: "#10b981" },
-  excited:    { emoji: "🤩", label: "Excited",    color: "#8b5cf6" },
-  hesitant:   { emoji: "😟", label: "Hesitant",   color: "#f59e0b" },
-  worried:    { emoji: "😰", label: "Worried",    color: "#f97316" },
-  frustrated: { emoji: "😤", label: "Frustrated", color: "#f43f5e" },
-};
-
 // ── Score color hex map ────────────────────────────────────────────────────────
 const SCORE_COLOR_HEX = {
   success: "#10b981",
@@ -322,15 +233,6 @@ function MicIcon() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ width: 20, height: 20 }}>
       <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z" />
       <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4" />
-    </svg>
-  );
-}
-
-function KeyboardIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ width: 20, height: 20 }}>
-      <rect x="2" y="6" width="20" height="12" rx="2" />
-      <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8" />
     </svg>
   );
 }
@@ -426,111 +328,6 @@ function VoiceStatusPill({ voice }) {
       {voice.error && (
         <Pill style={{ color: "#f43f5e", borderColor: "#7f1d1d" }}>{voice.error}</Pill>
       )}
-    </div>
-  );
-}
-
-// ── Stage hint chip (dismissible one-liner near the bottom) ───────────────────
-// Shows the live cue headline + first bullet with an "open coach" affordance.
-// Sits above the bottom controls bar so it never overlaps the orb or controls.
-function StageHintChip({ cue, onOpenCoach, onDismiss }) {
-  const headline = typeof cue?.headline === "string" ? cue.headline.trim() : "";
-  const firstPoint =
-    Array.isArray(cue?.points) && typeof cue.points[0] === "string" ? cue.points[0].trim() : "";
-  if (!headline && !firstPoint) return null;
-
-  return (
-    <div
-      style={{
-        position: "absolute",
-        bottom: 104,
-        left: "50%",
-        transform: "translateX(-50%)",
-        zIndex: 5,
-        width: "min(92vw, 560px)",
-        display: "flex",
-        alignItems: "flex-start",
-        gap: 10,
-        padding: "9px 12px",
-        borderRadius: 12,
-        background: "rgba(22,26,38,0.86)",
-        backdropFilter: "blur(10px)",
-        border: "1px solid rgba(99,102,241,0.32)",
-        boxShadow: "0 8px 24px rgba(0,0,0,0.30)",
-        animation: "fadeup 0.3s ease-out",
-      }}
-    >
-      <span
-        aria-hidden
-        style={{
-          marginTop: 3,
-          width: 6,
-          height: 6,
-          borderRadius: "50%",
-          flexShrink: 0,
-          background: "#818cf8",
-        }}
-      />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        {headline && (
-          <p style={{ margin: 0, fontSize: "0.8125rem", fontWeight: 600, color: "#e7e9f4", lineHeight: 1.35 }}>
-            {headline}
-          </p>
-        )}
-        {firstPoint && (
-          <p
-            style={{
-              margin: "2px 0 0",
-              fontSize: "0.75rem",
-              color: "#a8b0c8",
-              lineHeight: 1.4,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-            }}
-          >
-            {firstPoint}
-          </p>
-        )}
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-        <button
-          type="button"
-          onClick={onOpenCoach}
-          style={{
-            background: "rgba(99,102,241,0.18)",
-            border: "1px solid rgba(99,102,241,0.40)",
-            borderRadius: 8,
-            padding: "3px 9px",
-            fontSize: "0.6875rem",
-            fontWeight: 600,
-            color: "#c7d2fe",
-            cursor: "pointer",
-            whiteSpace: "nowrap",
-          }}
-        >
-          Open coach
-        </button>
-        <button
-          type="button"
-          onClick={onDismiss}
-          aria-label="Dismiss cue"
-          title="Dismiss"
-          style={{
-            background: "transparent",
-            border: "none",
-            color: "#8b90a8",
-            cursor: "pointer",
-            fontSize: "1rem",
-            lineHeight: 1,
-            padding: "2px 4px",
-          }}
-        >
-          ×
-        </button>
-      </div>
     </div>
   );
 }
@@ -690,7 +487,6 @@ function InfoPanel({ course, persona, leadCard, revealPersona }) {
 function CallStage({
   // session info
   personaName,
-  phase,
   emotion,
   satisfaction,
   // info panel (S8)
@@ -711,14 +507,8 @@ function CallStage({
   // voice
   voice,
   onToggleMic,
-  // openai realtime voice picker (voice mode)
-  openaiVoice,
-  onChangeOpenaiVoice,
   // mic input-device picker (voice mode, while connected)
   onChangeMic,
-  // keyboard / sidebar
-  onToggleKeyboard,
-  sidebarOpen,
   // end call
   onEndCall,
   // satisfaction toggle
@@ -726,9 +516,6 @@ function CallStage({
   onToggleSat,
   // timer
   timerStart,
-  // live cue chip
-  cue,
-  onOpenCoach,
 }) {
   const timer = useTimer(timerStart);
   const [micHintShown] = useState(true); // always show once; no need to hide
@@ -955,15 +742,6 @@ function CallStage({
               </CtrlBtn>
             );
           })()}
-
-          {/* Keyboard / sidebar toggle */}
-          <CtrlBtn
-            title={sidebarOpen ? "Close panel" : "Open chat panel"}
-            onClick={onToggleKeyboard}
-            style={sidebarOpen ? { borderColor: "#818cf8", color: "#818cf8" } : {}}
-          >
-            <KeyboardIcon />
-          </CtrlBtn>
 
           {/* End call */}
           <CtrlBtn

@@ -12,8 +12,33 @@ export default defineConfig({
   // optimizeDeps.exclude entries that kept Vite from mangling the kokoro-js /
   // transformers.js / vad-web WASM loaders were removed along with those deps.
   server: {
+    // ── ACTIVE: Express backend on :3001 (local dev while Express is live) ──────
+    // To switch to Supabase Edge Functions locally, comment this block out and
+    // uncomment the router proxy block below.
     proxy: {
       '/api': 'http://localhost:3001',
     },
+
+    // ── FUTURE: Supabase Edge Functions on :54321 (uncomment at cutover) ────────
+    // proxy: {
+    //   '/api': {
+    //     target: 'http://localhost:54321',
+    //     changeOrigin: true,
+    //     router: {
+    //       // Session hot-path routes → session Edge Function.
+    //       '/api/sessions': 'http://localhost:54321',
+    //     },
+    //     rewrite: (path) => {
+    //       // Session hot-path: /api/sessions/:id/(message|observe|cue|realtime/...)
+    //       //   → /functions/v1/session + original path
+    //       const sessionHot = /^\/api\/sessions\/[^/]+(\/(?:message|observe|cue|realtime(?:\/.*)?))/;
+    //       if (sessionHot.test(path)) {
+    //         return '/functions/v1/session' + path;
+    //       }
+    //       // Everything else: /api/* → /functions/v1/api + original path
+    //       return '/functions/v1/api' + path;
+    //     },
+    //   },
+    // },
   },
 })

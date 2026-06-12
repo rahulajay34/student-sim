@@ -2,42 +2,15 @@
 // and scoring calibration. Admin-only (enforced by route guard in main.jsx).
 // Includes a live preview of the scoring prompt, guidelines as callouts, and
 // Save (optimistic with error toast) + Restore (re-GET) per tab.
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
+import { useToast } from "../../ui/Toast";
 import Card, { CardHeader } from "../../ui/Card";
 import Button from "../../ui/Button";
 import Spinner from "../../ui/Spinner";
 import Textarea from "../../ui/Textarea";
 import Input from "../../ui/Input";
 import Badge from "../../ui/Badge";
-
-// ─── helpers ────────────────────────────────────────────────────────────────
-
-function Toast({ msg, color = "success", onDismiss }) {
-  useEffect(() => {
-    const t = setTimeout(onDismiss, 4000);
-    return () => clearTimeout(t);
-  }, [onDismiss]);
-  const bg =
-    color === "danger"
-      ? "border-danger/30 bg-danger-soft text-danger"
-      : "border-success/30 bg-success-soft text-success";
-  return (
-    <div
-      className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-medium shadow-lg ${bg}`}
-    >
-      {msg}
-      <button
-        type="button"
-        aria-label="Dismiss"
-        onClick={onDismiss}
-        className="ml-1 opacity-60 hover:opacity-100"
-      >
-        ×
-      </button>
-    </div>
-  );
-}
 
 function SectionLabel({ children }) {
   return (
@@ -745,6 +718,7 @@ const TABS = [
 
 export default function Prompts() {
   const [activeTab, setActiveTab] = useState("prompts");
+  const { pushToast } = useToast();
 
   const [promptConfig, setPromptConfig] = useState(null);
   const [scoringConfig, setScoringConfig] = useState(null);
@@ -752,10 +726,7 @@ export default function Prompts() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [toast, setToast] = useState(null); // {msg, color}
   const [loadKey, setLoadKey] = useState(0); // increment to retry
-
-  const dismissToast = useCallback(() => setToast(null), []);
 
   useEffect(() => {
     let active = true;
@@ -804,10 +775,10 @@ export default function Prompts() {
     try {
       const updated = await api.updatePromptConfig(form);
       setPromptConfig(updated);
-      setToast({ msg: "Prompt config saved.", color: "success" });
+      pushToast("Prompt config saved.", { tone: "success", variant: "light" });
       return updated;
     } catch (e) {
-      setToast({ msg: e.message || "Failed to save prompt config.", color: "danger" });
+      pushToast(e.message || "Failed to save prompt config.", { tone: "danger", variant: "light" });
       throw e;
     }
   }
@@ -816,10 +787,10 @@ export default function Prompts() {
     try {
       const updated = await api.updateScoringConfig(form);
       setScoringConfig(updated);
-      setToast({ msg: "Scoring config saved.", color: "success" });
+      pushToast("Scoring config saved.", { tone: "success", variant: "light" });
       return updated;
     } catch (e) {
-      setToast({ msg: e.message || "Failed to save scoring config.", color: "danger" });
+      pushToast(e.message || "Failed to save scoring config.", { tone: "danger", variant: "light" });
       throw e;
     }
   }
@@ -911,13 +882,6 @@ export default function Prompts() {
         </>
       )}
 
-      {/* Persistent live region: AT only announces content placed into a region
-          that already existed in the DOM, so the wrapper always renders. */}
-      <div aria-live="polite">
-        {toast && (
-          <Toast msg={toast.msg} color={toast.color} onDismiss={dismissToast} />
-        )}
-      </div>
     </div>
   );
 }

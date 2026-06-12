@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth, homePathFor } from "../lib/auth.jsx";
+import Button from "../ui/Button";
+import Input from "../ui/Input";
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-
+// Decorative soundwave bars referencing the voice-practice feature.
 const BARS = [22, 40, 64, 88, 56, 100, 72, 44, 80, 52, 92, 36, 60, 84, 48, 28, 68, 96, 40, 24];
 
 function Soundwave() {
@@ -36,23 +37,24 @@ function Soundwave() {
   );
 }
 
-function GoogleIcon() {
+// Inline Google "G" logo SVG (no icon library dependency).
+function GoogleG() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
       <path
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+        d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
         fill="#4285F4"
       />
       <path
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+        d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"
         fill="#34A853"
       />
       <path
-        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
+        d="M3.964 10.706A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"
         fill="#FBBC05"
       />
       <path
-        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+        d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z"
         fill="#EA4335"
       />
     </svg>
@@ -60,21 +62,39 @@ function GoogleIcon() {
 }
 
 export default function Login() {
-  const { loginWithGoogle, user } = useAuth();
+  const { login, signUp, signInWithGoogle, user } = useAuth();
   const navigate = useNavigate();
-  const btnRef = useRef(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [googleReady, setGoogleReady] = useState(false);
 
+  const [mode, setMode] = useState("signin"); // "signin" | "signup"
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [signupSuccess, setSignupSuccess] = useState(false);
+
+  // Already signed in — straight to the workspace instead of showing the form.
   if (user) return <Navigate to={homePathFor(user)} replace />;
 
-  async function handleGoogleCredential({ credential }) {
+  function switchMode(next) {
+    setMode(next);
+    setError("");
+    setSignupSuccess(false);
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const u = await loginWithGoogle(credential);
-      navigate(homePathFor(u));
+      if (mode === "signup") {
+        await signUp(email, password, name);
+        setSignupSuccess(true);
+      } else {
+        const u = await login(email, password);
+        navigate(homePathFor(u));
+      }
     } catch (err) {
       setError(err?.message || "Unable to sign in. Please try again.");
     } finally {
@@ -82,44 +102,25 @@ export default function Login() {
     }
   }
 
-  useEffect(() => {
-    if (!GOOGLE_CLIENT_ID) return;
-
-    function initGSI() {
-      if (!window.google?.accounts?.id || !btnRef.current) return;
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: handleGoogleCredential,
-      });
-      window.google.accounts.id.renderButton(btnRef.current, {
-        theme: "outline",
-        size: "large",
-        width: btnRef.current.offsetWidth || 400,
-        text: "continue_with",
-        shape: "rectangular",
-        logo_alignment: "left",
-      });
-      setGoogleReady(true);
+  async function handleGoogle() {
+    setError("");
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle();
+      // Redirect handled by OAuth flow; page will reload via detectSessionInUrl.
+    } catch (err) {
+      setError(err?.message || "Google sign-in failed. Please try again.");
+      setGoogleLoading(false);
     }
+  }
 
-    if (window.google?.accounts?.id) {
-      initGSI();
-    } else {
-      // GSI script is async — poll until it lands.
-      const interval = setInterval(() => {
-        if (window.google?.accounts?.id) {
-          clearInterval(interval);
-          initGSI();
-        }
-      }, 80);
-      return () => clearInterval(interval);
-    }
-  }, []);
+  const isSignUp = mode === "signup";
 
   return (
     <div className="flex min-h-screen bg-canvas">
       {/* Left brand panel (lg only) */}
       <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-brand-600 p-12 text-white lg:flex">
+        {/* Soft ambient glows */}
         <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-32 -right-16 h-80 w-80 rounded-full bg-brand-50/10 blur-3xl" />
 
@@ -166,53 +167,128 @@ export default function Login() {
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold tracking-tight text-ink">Welcome back</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">
+            {isSignUp ? "Create your account" : "Welcome back"}
+          </h1>
           <p className="mt-1.5 text-sm text-muted">
-            Sign in with your Google account to continue.
+            {isSignUp
+              ? "Use your @masaischool.com email to get started."
+              : "Sign in to continue to your training workspace."}
           </p>
 
-          <div className="mt-8 space-y-4">
-            {!GOOGLE_CLIENT_ID ? (
-              /* Dev/setup fallback — shown when VITE_GOOGLE_CLIENT_ID is not yet set */
-              <div className="rounded-xl border border-warn/30 bg-warn-soft px-4 py-3 text-sm text-warn">
-                <strong>Setup required:</strong> Add <code className="font-mono text-xs">VITE_GOOGLE_CLIENT_ID</code> to
-                your <code className="font-mono text-xs">.env</code> file, then restart the dev server.
+          {signupSuccess ? (
+            <div
+              role="alert"
+              className="mt-8 rounded-xl border border-success/30 bg-success/5 px-4 py-4 text-sm text-success"
+            >
+              <p className="font-semibold">Check your inbox!</p>
+              <p className="mt-1 text-success/80">
+                We sent a confirmation link to <strong>{email}</strong>. Click it to activate your
+                account, then come back here to sign in.
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+              {isSignUp && (
+                <Input
+                  id="name"
+                  label="Full name"
+                  type="text"
+                  autoComplete="name"
+                  placeholder="Priya Sharma"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              )}
+              <Input
+                id="email"
+                label="Email"
+                type="email"
+                autoComplete="email"
+                placeholder="you@masaischool.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <Input
+                id="password"
+                label="Password"
+                type="password"
+                autoComplete={isSignUp ? "new-password" : "current-password"}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+
+              {error && (
+                <div
+                  role="alert"
+                  className="rounded-xl border border-danger/30 bg-danger/5 px-3.5 py-2.5 text-sm text-danger"
+                >
+                  {error}
+                </div>
+              )}
+
+              <Button type="submit" disabled={loading} className="w-full">
+                {loading
+                  ? isSignUp
+                    ? "Creating account…"
+                    : "Signing in…"
+                  : isSignUp
+                  ? "Create account"
+                  : "Sign in"}
+              </Button>
+            </form>
+          )}
+
+          {/* Google sign-in divider + button */}
+          {!signupSuccess && (
+            <div className="mt-6">
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-line" />
+                <span className="text-xs font-medium uppercase tracking-wide text-muted">or</span>
+                <div className="h-px flex-1 bg-line" />
               </div>
+
+              <button
+                type="button"
+                onClick={handleGoogle}
+                disabled={googleLoading}
+                className="mt-4 inline-flex w-full items-center justify-center gap-2.5 rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-medium text-ink shadow-sm transition-colors hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-200 disabled:opacity-50 disabled:pointer-events-none"
+              >
+                <GoogleG />
+                {googleLoading ? "Redirecting…" : "Continue with Google"}
+              </button>
+            </div>
+          )}
+
+          {/* Toggle between sign-in and sign-up */}
+          <p className="mt-8 text-center text-sm text-muted">
+            {isSignUp ? (
+              <>
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => switchMode("signin")}
+                  className="font-medium text-brand-600 hover:underline focus-visible:outline-none"
+                >
+                  Sign in
+                </button>
+              </>
             ) : (
               <>
-                {/* Google renders its button into this div */}
-                <div ref={btnRef} className="w-full" />
-
-                {/* Fallback button shown while GSI loads */}
-                {!googleReady && (
-                  <button
-                    type="button"
-                    disabled
-                    className="inline-flex w-full items-center justify-center gap-3 rounded-lg border border-line bg-white px-4 py-3 text-sm font-medium text-ink opacity-60"
-                  >
-                    <GoogleIcon />
-                    Loading Google Sign-In…
-                  </button>
-                )}
+                New to Masai Counselling Trainer?{" "}
+                <button
+                  type="button"
+                  onClick={() => switchMode("signup")}
+                  className="font-medium text-brand-600 hover:underline focus-visible:outline-none"
+                >
+                  Create account
+                </button>
               </>
             )}
-
-            {loading && (
-              <p className="text-center text-sm text-muted">Signing in…</p>
-            )}
-
-            {error && (
-              <div
-                role="alert"
-                className="rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-2.5 text-sm text-danger"
-              >
-                {error}
-              </div>
-            )}
-          </div>
-
-          <p className="mt-8 text-center text-xs text-muted">
-            Your name and email from Google are used to personalise your workspace.
           </p>
         </div>
       </div>

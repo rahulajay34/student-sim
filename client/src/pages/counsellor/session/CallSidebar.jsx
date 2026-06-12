@@ -1,7 +1,4 @@
 import { memo, useEffect, useRef, useState, useCallback } from "react";
-import CoachPanel from "./CoachPanel";
-import CueCard from "./CueCard";
-import { scoreColor, TOKEN_HEX } from "../../../lib/format";
 
 // ── Chevron icons ─────────────────────────────────────────────────────────────
 function ChevronOpen() {
@@ -134,8 +131,10 @@ function SendIcon() {
   );
 }
 
-// ── Transcript tab ─────────────────────────────────────────────────────────────
-function TranscriptTab({ messages, awaitingReply, onSend, registerStreamSink, inputRef }) {
+// ── Transcript panel ───────────────────────────────────────────────────────────
+// `allowInput` controls whether the typed textarea is rendered. Voice sessions
+// set this to false (transcript-only); text sessions set it to true.
+function TranscriptTab({ messages, awaitingReply, onSend, registerStreamSink, inputRef, allowInput }) {
   const scrollRef = useRef(null);
   const userScrolledRef = useRef(false);
   const [inputVal, setInputVal] = useState("");
@@ -190,72 +189,47 @@ function TranscriptTab({ messages, awaitingReply, onSend, registerStreamSink, in
         </div>
       </div>
 
-      {/* Text input */}
-      <div style={{ borderTop: "1px solid #262a36", padding: 10, flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
-          <textarea
-            ref={inputRef}
-            rows={2}
-            value={inputVal}
-            onChange={(e) => setInputVal(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type a message… (Enter to send)"
-            disabled={awaitingReply}
-            style={{
-              flex: 1, resize: "none", borderRadius: 12,
-              padding: "8px 12px", fontSize: "0.875rem",
-              background: "#0f1117", border: "1px solid #262a36",
-              color: "#e7e9f4", outline: "none",
-              maxHeight: 120, lineHeight: 1.5,
-              opacity: awaitingReply ? 0.6 : 1,
-              fontFamily: "inherit",
-            }}
-          />
-          <button
-            type="button"
-            onClick={doSend}
-            disabled={awaitingReply || !inputVal.trim()}
-            style={{
-              width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-              background: "#4f46e5", border: "none", color: "#fff",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer",
-              opacity: awaitingReply || !inputVal.trim() ? 0.4 : 1,
-              transition: "opacity 150ms",
-            }}
-          >
-            <SendIcon />
-          </button>
+      {/* Text input — only in text mode (allowInput=true); voice mode is transcript-only */}
+      {allowInput && (
+        <div style={{ borderTop: "1px solid #262a36", padding: 10, flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+            <textarea
+              ref={inputRef}
+              rows={2}
+              value={inputVal}
+              onChange={(e) => setInputVal(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Type a message… (Enter to send)"
+              disabled={awaitingReply}
+              style={{
+                flex: 1, resize: "none", borderRadius: 12,
+                padding: "8px 12px", fontSize: "0.875rem",
+                background: "#0f1117", border: "1px solid #262a36",
+                color: "#e7e9f4", outline: "none",
+                maxHeight: 120, lineHeight: 1.5,
+                opacity: awaitingReply ? 0.6 : 1,
+                fontFamily: "inherit",
+              }}
+            />
+            <button
+              type="button"
+              onClick={doSend}
+              disabled={awaitingReply || !inputVal.trim()}
+              style={{
+                width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+                background: "#4f46e5", border: "none", color: "#fff",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer",
+                opacity: awaitingReply || !inputVal.trim() ? 0.4 : 1,
+                transition: "opacity 150ms",
+              }}
+            >
+              <SendIcon />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </>
-  );
-}
-
-// ── Foot strip (compact status line under both tabs) ──────────────────────────
-function FootStrip({ satisfaction, deliveryMetrics }) {
-  const satColorKey = scoreColor(satisfaction ?? 0);
-  const satHex = TOKEN_HEX[satColorKey] || "#8b90a8";
-
-  const tone = deliveryMetrics?.tone || "—";
-  const pace = deliveryMetrics?.paceVerdict || "—";
-
-  return (
-    <div style={{
-      borderTop: "1px solid #262a36",
-      padding: "5px 14px",
-      fontSize: "0.6875rem",
-      color: "#8b90a8",
-      flexShrink: 0,
-      display: "flex",
-      gap: 8,
-    }}>
-      <span>sat <span style={{ color: satHex, fontWeight: 600 }}>{satisfaction ?? 0}</span></span>
-      <span>·</span>
-      <span>tone <span style={{ color: "#c7d2fe" }}>{tone}</span></span>
-      <span>·</span>
-      <span>pace <span style={{ color: "#c7d2fe" }}>{pace}</span></span>
-    </div>
   );
 }
 
@@ -265,32 +239,23 @@ function FootStrip({ satisfaction, deliveryMetrics }) {
 export default function CallSidebar({
   open,
   onToggle,
-  tab,
-  scoreBreakdown,
-  onTab,
   messages,
   awaitingReply,
   onSend,
+  allowInput,
   registerStreamSink,
-  satisfaction,
-  scoreHistory,
-  deliveryMetrics,
-  milestones,
-  emotion,
-  cue,
-  cueRefining,
   inputRef: externalInputRef,
 }) {
   const internalInputRef = useRef(null);
   const inputRef = externalInputRef || internalInputRef;
 
-  // Focus textarea when switching to transcript tab or opening.
+  // Focus textarea when opening (text mode only).
   useEffect(() => {
-    if (open && tab === "transcript") {
+    if (open && allowInput) {
       const t = setTimeout(() => inputRef.current?.focus(), 60);
       return () => clearTimeout(t);
     }
-  }, [open, tab]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, allowInput]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div
@@ -350,95 +315,34 @@ export default function CallSidebar({
           flexDirection: "column",
           height: "100%",
         }}>
-          {/* Header: tabs + collapse hint */}
+          {/* Header */}
           <div style={{
             display: "flex",
             alignItems: "center",
-            gap: 6,
             padding: "10px 14px",
             borderBottom: "1px solid #262a36",
             flexShrink: 0,
           }}>
-            <button
-              type="button"
-              onClick={() => onTab("transcript")}
-              style={{
-                padding: "4px 12px",
-                borderRadius: 8,
-                border: "none",
-                cursor: "pointer",
-                fontSize: "0.875rem",
-                fontWeight: tab === "transcript" ? 600 : 400,
-                background: tab === "transcript" ? "rgba(38,42,54,0.6)" : "transparent",
-                color: tab === "transcript" ? "#e7e9f4" : "#8b90a8",
-                transition: "all 150ms",
-              }}
-            >
+            <span style={{
+              fontSize: "0.875rem",
+              fontWeight: 600,
+              color: "#e7e9f4",
+            }}>
               Transcript
-            </button>
-            <button
-              type="button"
-              onClick={() => onTab("coach")}
-              style={{
-                padding: "4px 12px",
-                borderRadius: 8,
-                border: "none",
-                cursor: "pointer",
-                fontSize: "0.875rem",
-                fontWeight: tab === "coach" ? 600 : 400,
-                background: tab === "coach" ? "rgba(38,42,54,0.6)" : "transparent",
-                color: tab === "coach" ? "#e7e9f4" : "#8b90a8",
-                transition: "all 150ms",
-              }}
-            >
-              Coach
-            </button>
+            </span>
           </div>
 
-          {/* Tab content — both panels stay mounted (display toggling, not
-              conditional render) so StreamingBubble's ref sink doesn't desync if
-              the user switches tabs mid-stream. */}
+          {/* Transcript panel */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-            <div
-              style={{
-                flex: 1,
-                flexDirection: "column",
-                overflow: "hidden",
-                display: tab === "transcript" ? "flex" : "none",
-              }}
-            >
-              <TranscriptTab
-                messages={messages}
-                awaitingReply={awaitingReply}
-                onSend={onSend}
-                registerStreamSink={registerStreamSink}
-                inputRef={inputRef}
-              />
-            </div>
-            <div
-              style={{
-                flex: 1,
-                flexDirection: "column",
-                overflow: "hidden",
-                display: tab === "coach" ? "flex" : "none",
-              }}
-            >
-              <div style={{ flex: 1, overflowY: "auto" }}>
-                <CueCard cue={cue} refining={cueRefining} />
-                <CoachPanel
-                  satisfaction={satisfaction}
-                  scoreHistory={scoreHistory}
-                  deliveryMetrics={deliveryMetrics}
-                  milestones={milestones}
-                  emotion={emotion}
-                  scoreBreakdown={scoreBreakdown}
-                />
-              </div>
-            </div>
+            <TranscriptTab
+              messages={messages}
+              awaitingReply={awaitingReply}
+              onSend={onSend}
+              allowInput={allowInput}
+              registerStreamSink={registerStreamSink}
+              inputRef={inputRef}
+            />
           </div>
-
-          {/* Foot strip */}
-          <FootStrip satisfaction={satisfaction} deliveryMetrics={deliveryMetrics} />
         </div>
       </div>
     </div>

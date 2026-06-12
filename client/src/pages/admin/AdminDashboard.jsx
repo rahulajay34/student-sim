@@ -283,6 +283,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
+  const [loadKey, setLoadKey] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -300,7 +301,7 @@ export default function AdminDashboard() {
       }
     })();
     return () => { alive = false; };
-  }, []);
+  }, [loadKey]);
 
   if (loading) return <Skeleton />;
 
@@ -395,7 +396,12 @@ export default function AdminDashboard() {
 
       {error && (
         <Card role="alert" className="border-danger/30 bg-danger-soft p-4">
-          <p className="text-sm font-medium text-danger">{error}</p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-medium text-danger">{error}</p>
+            <Button variant="secondary" size="sm" onClick={() => setLoadKey((k) => k + 1)}>
+              Retry
+            </Button>
+          </div>
         </Card>
       )}
 

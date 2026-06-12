@@ -12,6 +12,8 @@ const NAV = [
   { to: "/admin/courses", label: "Courses", icon: "courses" },
   { to: "/admin/rubrics", label: "Rubrics", icon: "rubrics" },
   { to: "/admin/assignments", label: "Assignments", icon: "assignments" },
+  { to: "/admin/templates", label: "Templates", icon: "templates" },
+  { to: "/admin/practice", label: "Practice", icon: "practice" },
   { to: "/admin/reports", label: "Reports", icon: "reports" },
   { to: "/admin/prompts", label: "Prompts & Scoring", icon: "prompts" },
 ];
@@ -23,6 +25,8 @@ function titleFor(path) {
   if (path.startsWith("/admin/rubrics")) return "Rubrics";
   if (path.startsWith("/admin/assignments/new")) return "New Assignment";
   if (path.startsWith("/admin/assignments")) return "Assignments";
+  if (path.startsWith("/admin/templates")) return "Templates";
+  if (path.startsWith("/admin/practice")) return "Practice";
   if (path.startsWith("/admin/reports")) return "Reports";
   if (path.startsWith("/admin/prompts")) return "Prompts & Scoring";
   return "Dashboard";

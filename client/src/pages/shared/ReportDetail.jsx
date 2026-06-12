@@ -234,9 +234,13 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
   // was already "generating" before the retry (isGenerating true → true never
   // re-runs the effect on its own, which left the timed-out page polling-dead).
   const [retryNonce, setRetryNonce] = useState(0);
+  // Consecutive poll failure tracking: after 3 failures, show the server-unavailable alert.
+  const pollFailCountRef = useRef(0);
+  const [pollFailed, setPollFailed] = useState(false);
   useEffect(() => {
     if (!isGenerating) {
       pollStartRef.current = null;
+      pollFailCountRef.current = 0;
       return undefined;
     }
     if (!pollStartRef.current) pollStartRef.current = Date.now();
@@ -251,10 +255,18 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
       api
         .getReport(id)
         .then((data) => {
-          if (active) setReport(data);
+          if (!active) return;
+          // Reset failure count on success.
+          pollFailCountRef.current = 0;
+          setPollFailed(false);
+          setReport(data);
         })
         .catch(() => {
-          /* transient — keep polling */
+          if (!active) return;
+          pollFailCountRef.current += 1;
+          if (pollFailCountRef.current >= 3) {
+            setPollFailed(true);
+          }
         });
     }, POLL_INTERVAL_MS);
     return () => {
@@ -268,6 +280,8 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
     if (!report?.sessionId || regenerating) return;
     setRegenerating(true);
     setPollTimedOut(false);
+    setPollFailed(false);
+    pollFailCountRef.current = 0;
     // Fresh 3-minute window + force the poll effect to restart.
     pollStartRef.current = null;
     setRetryNonce((n) => n + 1);
@@ -336,7 +350,6 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
     personaName,
     scenarioTitle,
     generatedAt,
-    delayedTurns,
   } = report;
 
   const converted = overall.outcome === "Converted";
@@ -354,7 +367,7 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       {/* GENERATING banner */}
-      {generating && !pollTimedOut && (
+      {generating && !pollTimedOut && !pollFailed && (
         <div
           className="flex items-center gap-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-700"
           aria-live="polite"
@@ -362,6 +375,34 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
           <Spinner size={18} />
           <span>Generating your coaching report… the score and transcript are ready below; coaching detail will fill in shortly.</span>
         </div>
+      )}
+
+      {/* POLL-FAILED banner — shown after 3 consecutive poll failures */}
+      {generating && pollFailed && !pollTimedOut && (
+        <Card
+          role="alert"
+          className="border-warn/40 bg-warn-soft/40 p-4"
+          aria-live="polite"
+        >
+          <p className="text-sm font-medium text-ink/80">
+            Report generation is taking longer than expected — the server may be unavailable.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setPollFailed(false);
+                pollFailCountRef.current = 0;
+              }}
+            >
+              Keep waiting
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleRegenerate} disabled={regenerating}>
+              {regenerating ? "Retrying…" : "Retry"}
+            </Button>
+          </div>
+        </Card>
       )}
 
       {/* TIMED-OUT banner (poll gave up after 3 minutes) */}

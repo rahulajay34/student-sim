@@ -4,7 +4,9 @@ import { api } from "../../lib/api";
 import { postMessageStream, stripStreamingEmotionTag } from "../../lib/stream";
 import { useAuth } from "../../lib/auth.jsx";
 import { useOpenAIRealtime } from "../../voice/useOpenAIRealtime";
-import { DEFAULT_OPENAI_VOICE, OPENAI_VOICE_STORAGE_KEY } from "../../voice/engines";
+import { DEFAULT_OPENAI_VOICE } from "../../voice/engines";
+import { useToast } from "../../ui/Toast";
+import { toUserMessage } from "../../lib/asyncError";
 import Button from "../../ui/Button";
 import Spinner from "../../ui/Spinner";
 import EmptyState from "../../ui/EmptyState";
@@ -34,7 +36,7 @@ function ConnectingScreen() {
 }
 
 // ── Ended session screen ──────────────────────────────────────────────────────
-function EndedScreen({ onViewReports, onBack, reportId }) {
+function EndedScreen({ onViewReports, onBack, reportId, reportPath }) {
   return (
     <div className="flex h-screen flex-col items-center justify-center gap-6 bg-stage px-6">
       <div className="w-full max-w-sm rounded-2xl border border-stage-line bg-stage-raised p-8 text-center shadow-xl">
@@ -43,9 +45,9 @@ function EndedScreen({ onViewReports, onBack, reportId }) {
           The session is complete. You can view your coaching report or return to your mocks.
         </p>
         <div className="mt-6 flex flex-col gap-3">
-          {reportId ? (
+          {reportId && reportPath ? (
             <Link
-              to={`/app/reports/${reportId}`}
+              to={reportPath}
               className="w-full rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 transition-opacity inline-block"
             >
               View report
@@ -130,68 +132,7 @@ function WrappingScreen({ error, elapsedLabel, onRetry, onBackToCall }) {
   );
 }
 
-// ── Degradation toast stack ───────────────────────────────────────────────────
-function ToastStack({ toasts, onDismiss }) {
-  // The live region must exist BEFORE a toast lands in it — screen readers
-  // ignore announcements in a region injected together with its content, so we
-  // never early-return here; an empty fixed container costs nothing.
-  return (
-    <div
-      aria-live="polite"
-      style={{
-        position: "fixed",
-        top: 16,
-        left: "50%",
-        transform: "translateX(-50%)",
-        zIndex: 60,
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
-        width: "min(92vw, 460px)",
-      }}
-    >
-      {toasts.map((t) => (
-        <div
-          key={t.id}
-          role="status"
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 10,
-            padding: "10px 12px",
-            borderRadius: 12,
-            background: t.tone === "danger" ? "rgba(45,18,18,0.96)" : "rgba(38,30,12,0.96)",
-            border: `1px solid ${t.tone === "danger" ? "#7f1d1d" : "#854d0e"}`,
-            color: t.tone === "danger" ? "#fca5a5" : "#fcd9a5",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
-            fontSize: "0.8125rem",
-            lineHeight: 1.45,
-          }}
-        >
-          <span style={{ flex: 1 }}>{t.message}</span>
-          <button
-            type="button"
-            onClick={() => onDismiss(t.id)}
-            aria-label="Dismiss"
-            style={{
-              flexShrink: 0,
-              background: "transparent",
-              border: "none",
-              color: "inherit",
-              cursor: "pointer",
-              opacity: 0.7,
-              fontSize: "0.9375rem",
-              lineHeight: 1,
-              padding: 0,
-            }}
-          >
-            ×
-          </button>
-        </div>
-      ))}
-    </div>
-  );
-}
+// (Local ToastStack removed — replaced by shared useToast / ToastProvider)
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ── Main Session component ────────────────────────────────────────────────────
@@ -201,6 +142,14 @@ export default function Session() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { pushToast } = useToast();
+
+  // Role-aware navigation helpers.
+  const isAdminUser = user?.role === "admin";
+  // Admin post-end lands on admin reports; counsellor on app reports.
+  const reportPathFor = (id) => isAdminUser ? `/admin/reports/${id}` : `/app/reports/${id}`;
+  // "Back to mocks" equivalent: admin goes to admin home; counsellor goes to mocks.
+  const homePath = isAdminUser ? "/admin" : "/app/mocks";
 
   // ── State machine ──────────────────────────────────────────────────────────
   // "greenroom" → "connecting" → "live"   (voice and text both land in "live")
@@ -224,6 +173,8 @@ export default function Session() {
   const [error, setError] = useState(null);
   const [persona, setPersona] = useState(null);
   const [messages, setMessages] = useState([]);
+  // phase is tracked server-side (drives report logic) but not displayed on screen (pill removed).
+  // eslint-disable-next-line no-unused-vars
   const [phase, setPhase] = useState(1);
   const [score, setScore] = useState(0);
   const [emotion, setEmotion] = useState("neutral");
@@ -262,35 +213,24 @@ export default function Session() {
   const [endedReportId, setEndedReportId] = useState(null);
 
   // ── UI state ───────────────────────────────────────────────────────────────
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState("transcript");
+  // Voice sessions start with sidebar CLOSED (call stage is the focus);
+  // text sessions start with it OPEN (the typed input is the primary interface).
+  // sessionMode may resolve after the live-load effect, so we also apply this
+  // in the live-load effect after resolvedMode is known (see sidebarInitialized).
+  const [sidebarOpen, setSidebarOpen] = useState(!isVoice);
+  const sidebarInitializedRef = useRef(false);
   const [showSat, setShowSat] = useState(true);
   const [pttHeld, setPttHeld] = useState(false);
 
-  // ── Coach data ─────────────────────────────────────────────────────────────
-  const [scoreHistory, setScoreHistory] = useState([]);
-  const [milestones, setMilestones] = useState(null);
-  const [lastDeliveryMetrics, setLastDeliveryMetrics] = useState(null);
-  const [lastScoreBreakdown, setLastScoreBreakdown] = useState(null);
 
-  // ── Live coaching cue ──────────────────────────────────────────────────────
-  const [cue, setCue] = useState(null);
-  const [cueRefining, setCueRefining] = useState(false);
-  const turnCounterRef = useRef(0);
   // In-flight text-reply stream; aborted on end-call/unmount so a late reply
   // can't mutate wrapping-screen state or fire a stale cue fetch.
   const streamAbortRef = useRef(null);
   useEffect(() => () => { try { streamAbortRef.current?.abort(); } catch { /* settled */ } }, []);
 
-  // ── Degradation toasts ─────────────────────────────────────────────────────
-  const [toasts, setToasts] = useState([]);
-  const toastIdRef = useRef(0);
-  function pushToast(message, { tone = "warn", ttl = 6000 } = {}) {
-    const id = ++toastIdRef.current;
-    setToasts((prev) => [...prev, { id, message, tone }]);
-    if (ttl) setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), ttl);
-  }
-  const dismissToast = (id) => setToasts((prev) => prev.filter((t) => t.id !== id));
+  // ── Observe failure counter (voice mode) ───────────────────────────────────
+  const observeFailCountRef = useRef(0);
+  const observeFailToastShownRef = useRef(false);
 
   const sendingRef = useRef(false);
   const spaceDownRef = useRef(false);
@@ -317,6 +257,8 @@ export default function Session() {
     sessionId: activeSessionId,
     defaultVoice: openaiVoice,
     onTranscript: (e) => realtimeTranscriptRef.current?.(e),
+    onError: (msg) =>
+      pushToast(typeof msg === "string" ? msg : toUserMessage(msg), { tone: "danger" }),
   });
 
   // ── Derived orbState ───────────────────────────────────────────────────────
@@ -342,7 +284,7 @@ export default function Session() {
 
     const state = location.state;
     if (!state) {
-      navigate("/app/mocks", { replace: true });
+      navigate(homePath, { replace: true });
       return;
     }
 
@@ -523,6 +465,13 @@ export default function Session() {
         // turns go through submit()→/message and actually produce a student reply.
         const resolvedMode = s.voiceEngine === "openai" ? "voice" : "text";
         setSessionMode(resolvedMode);
+        // Sidebar default: CLOSED for voice (call stage focus), OPEN for text.
+        // Apply once after mode is resolved; the initial useState used the pre-load
+        // mode guess which may have been wrong on a resume/refresh.
+        if (!sidebarInitializedRef.current) {
+          sidebarInitializedRef.current = true;
+          setSidebarOpen(resolvedMode === "text");
+        }
         if (s.openaiVoice) setOpenaiVoice(s.openaiVoice);
         setTimerStart(s.startedAt ? new Date(s.startedAt).getTime() : Date.now());
         const transcript = Array.isArray(s.transcript) ? s.transcript : [];
@@ -533,12 +482,6 @@ export default function Session() {
           emotion: m.emotion ?? "neutral",
         }));
         setMessages(msgs);
-        if (Array.isArray(s.scoreHistory)) {
-          setScoreHistory(s.scoreHistory);
-        } else if (s.satisfactionScore != null) {
-          setScoreHistory([{ turn: 0, score: s.satisfactionScore }]);
-        }
-        if (s.milestones) setMilestones(s.milestones);
         const lastStudent = [...msgs].reverse().find((m) => m.role === "student");
         if (lastStudent?.emotion) setEmotion(lastStudent.emotion);
         setJoining(false);
@@ -625,34 +568,15 @@ export default function Session() {
       if (res?.currentPhase) setPhase(res.currentPhase);
       if (typeof res?.satisfactionScore === "number") {
         setScore(res.satisfactionScore);
-        setScoreHistory((prev) => [...prev, { turn: prev.length, score: res.satisfactionScore }]);
       }
-      if (res?.milestones) setMilestones(res.milestones);
       setEmotion(newEmotion);
-      setLastScoreBreakdown(res?.scoreBreakdown ?? null);
 
       // ── Student hung up — auto-navigate to ended screen ───────────────────
       if (res?.studentHungUp) {
         setTimeout(() => setUiState("ended"), 1800);
         return;
       }
-
-      // ── Live coaching cue ──────────────────────────────────────────────────
-      const turn = ++turnCounterRef.current;
-      if (res?.cue && typeof res.cue === "object") {
-        setCue(res.cue);
-        setCueRefining(true);
-        api
-          .getSessionCue(sid)
-          .then((out) => {
-            if (turnCounterRef.current !== turn) return;
-            if (out?.cue && typeof out.cue === "object") setCue(out.cue);
-          })
-          .catch(() => { /* keep the instant cue on any failure */ })
-          .finally(() => {
-            if (turnCounterRef.current === turn) setCueRefining(false);
-          });
-      }
+      // Server still returns `cue` fields — we ignore them (cue feature removed).
     };
 
     const applyError = (e) => {
@@ -715,17 +639,15 @@ export default function Session() {
   // ══ Realtime (voice) coaching loop ═════════════════════════════════════════
   // In voice mode OpenAI owns the spoken conversation. Each final transcript
   // (counsellor or student) is shown as a bubble and posted to /observe so MiniMax
-  // keeps the live score/cue/phase/milestones updating. Counsellor turns carry
-  // delivery metrics; student-turn responses carry the steering string we inject
-  // back into the realtime model. Posts run through observeChainRef → transcript order.
+  // keeps the live score/phase/milestones updating. Counsellor turns carry delivery
+  // metrics; student-turn responses carry the steering string we inject back into
+  // the realtime model. Posts run through observeChainRef → transcript order.
   function applyObserve(res, role) {
     if (!res) return;
     if (res.currentPhase) setPhase(res.currentPhase);
     if (typeof res.satisfactionScore === "number") {
       setScore(res.satisfactionScore);
-      if (res.turnType) setScoreHistory((prev) => [...prev, { turn: prev.length, score: res.satisfactionScore }]);
     }
-    if (res.milestones) setMilestones(res.milestones);
 
     // Steering (C3, resolution (b)): after a STUDENT turn observe, inject the
     // newest steering over the data channel as a non-destructive system item.
@@ -739,16 +661,7 @@ export default function Session() {
       const sent = voice.sendSteering?.(pendingSteeringRef.current);
       if (sent) pendingSteeringRef.current = null;
     }
-
-    const turn = ++turnCounterRef.current;
-    if (res.cue && typeof res.cue === "object") {
-      setCue(res.cue);
-      setCueRefining(true);
-      api.getSessionCue(activeSessionId || sessionId)
-        .then((out) => { if (turnCounterRef.current === turn && out?.cue) setCue(out.cue); })
-        .catch(() => { /* keep instant cue */ })
-        .finally(() => { if (turnCounterRef.current === turn) setCueRefining(false); });
-    }
+    // Server still returns `cue` fields — ignored (cue feature removed).
   }
 
   // Phrases that indicate the counsellor is requesting time to think — these
@@ -775,7 +688,6 @@ export default function Session() {
       { id: `${role[0]}${Date.now()}-${prev.length}`, role, text: clean, emotion: "neutral" },
     ]);
     if (role === "student") setEmotion("neutral");
-    if (role === "counsellor" && deliveryMetrics) setLastDeliveryMetrics(deliveryMetrics);
     const sid = activeSessionId || sessionId;
 
     // Detect a suspiciously slow response: counsellor took >15s to start speaking
@@ -797,8 +709,23 @@ export default function Session() {
     observeChainRef.current = observeChainRef.current
       .catch(() => {})
       .then(() => api.observeTurn(sid, body))
-      .then((res) => applyObserve(res, role))
-      .catch((e) => { console.warn("[observe] failed:", e?.message); });
+      .then((res) => {
+        // Reset consecutive failure count on success.
+        observeFailCountRef.current = 0;
+        observeFailToastShownRef.current = false;
+        applyObserve(res, role);
+      })
+      .catch((e) => {
+        console.warn("[observe] failed:", e?.message);
+        observeFailCountRef.current += 1;
+        if (observeFailCountRef.current >= 3 && !observeFailToastShownRef.current) {
+          observeFailToastShownRef.current = true;
+          pushToast(
+            "Live scoring paused — the call audio still works; scoring resumes automatically.",
+            { tone: "warn", ttl: 10000 },
+          );
+        }
+      });
   }
   useEffect(() => {
     realtimeTranscriptRef.current = handleRealtimeTranscript;
@@ -809,7 +736,16 @@ export default function Session() {
   function handleToggleMic() {
     if (!isVoice) return;
     if (!voice.enabled) {
-      voice.enable(openaiVoiceRef.current).then(() => voice.setMuted?.(true)).catch(() => {});
+      voice.enable(openaiVoiceRef.current)
+        .then(() => voice.setMuted?.(true))
+        .catch((e) => {
+          pushToast(
+            typeof e?.message === "string" && e.message
+              ? e.message
+              : "Mic connection failed — check mic permissions and try again.",
+            { tone: "warn" },
+          );
+        });
     } else {
       voice.setMuted?.(!voice.muted);
     }
@@ -889,7 +825,7 @@ export default function Session() {
       .catch(() => {})
       .then(() => api.endSession(sid))
       .then((res) => {
-        navigate("/app/reports/" + res.reportId);
+        navigate(reportPathFor(res.reportId));
       })
       .catch((e) => {
         setWrappingError(e?.message || "Could not generate the report.");
@@ -916,7 +852,7 @@ export default function Session() {
             <p className="mt-2 text-sm text-stage-muted">{grError}</p>
             <button
               className="mt-6 rounded-xl border border-stage-line bg-stage-raised px-4 py-2 text-sm font-medium text-stage-text"
-              onClick={() => navigate("/app/mocks")}
+              onClick={() => navigate(homePath)}
             >
               Back to my mocks
             </button>
@@ -951,9 +887,10 @@ export default function Session() {
   if (uiState === "ended") {
     return (
       <EndedScreen
-        onViewReports={() => navigate("/app/reports")}
-        onBack={() => navigate("/app/mocks")}
+        onViewReports={() => navigate(isAdminUser ? "/admin/reports" : "/app/reports")}
+        onBack={() => navigate(homePath)}
         reportId={endedReportId}
+        reportPath={endedReportId ? reportPathFor(endedReportId) : null}
       />
     );
   }
@@ -1003,7 +940,7 @@ export default function Session() {
             </svg>
           }
           action={
-            <Button as={Link} to="/app/mocks" variant="secondary" size="sm">
+            <Button as={Link} to={homePath} variant="secondary" size="sm">
               Back to my mocks
             </Button>
           }
@@ -1014,11 +951,9 @@ export default function Session() {
 
   return (
     <div className="flex h-screen bg-stage">
-      <ToastStack toasts={toasts} onDismiss={dismissToast} />
       {/* ── Call stage (takes remaining space) ── */}
       <CallStage
         personaName={leadCard?.name || persona?.voiceName || persona?.name}
-        phase={phase}
         emotion={emotion}
         satisfaction={score}
         // ── Info panel ──
@@ -1037,54 +972,23 @@ export default function Session() {
         awaitingReply={awaitingReply}
         hasMessages={messages.length > 0}
         voice={voice}
-        // ── OpenAI voice picker (voice mode) ──
-        openaiVoice={openaiVoice}
-        onChangeOpenaiVoice={(v) => {
-          setOpenaiVoice(v);
-          try { localStorage.setItem(OPENAI_VOICE_STORAGE_KEY, v); } catch { /* noop */ }
-          voice.changeVoice?.(v);
-        }}
         onChangeMic={(deviceId, label) => voice.changeMic?.(deviceId, label)}
         onToggleMic={handleToggleMic}
-        onToggleKeyboard={() => {
-          if (!sidebarOpen) {
-            setSidebarOpen(true);
-            setSidebarTab("transcript");
-            setTimeout(() => sidebarInputRef.current?.focus(), 80);
-          } else {
-            setSidebarOpen(false);
-          }
-        }}
-        sidebarOpen={sidebarOpen}
         onEndCall={confirmEnd}
         showSat={showSat}
         onToggleSat={() => setShowSat((s) => !s)}
         timerStart={timerStart}
-        cue={cue}
-        onOpenCoach={() => {
-          setSidebarOpen(true);
-          setSidebarTab("coach");
-        }}
       />
 
-      {/* ── Glass sidebar: Transcript + Coach tabs ── */}
+      {/* ── Glass sidebar: Transcript ── */}
       <CallSidebar
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((o) => !o)}
-        tab={sidebarTab}
-        onTab={setSidebarTab}
         messages={messages}
         awaitingReply={sending}
-        onSend={(text) => (isVoice ? voice.sendText?.(text) : submit(text))}
+        onSend={(text) => submit(text)}
+        allowInput={!isVoice}
         registerStreamSink={streamSinkRef}
-        satisfaction={score}
-        scoreHistory={scoreHistory}
-        deliveryMetrics={lastDeliveryMetrics}
-        milestones={milestones}
-        scoreBreakdown={lastScoreBreakdown}
-        emotion={emotion}
-        cue={cue}
-        cueRefining={cueRefining}
         inputRef={sidebarInputRef}
       />
 

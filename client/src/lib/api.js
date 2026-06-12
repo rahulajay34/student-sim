@@ -1,15 +1,30 @@
-// Flat API client. Every method hits the Express server (Vite proxies /api -> :3001)
-// and throws Error(data.error) on a non-2xx response.
+// Flat API client. Every method hits the server (Vite proxies /api) and throws
+// ApiError on failure (network → isNetwork:true; non-2xx → status set).
+import { supabase } from "./supabase";
 
-// Read the current user id from localStorage fail-soft (returns null on any error
-// or absence). Used to populate the X-User-Id ownership header (also imported by
-// stream.js for the SSE path).
-export function getUserId() {
+// ── ApiError ──────────────────────────────────────────────────────────────────
+// Extends Error so existing `catch (e) { ... e.message ... }` sites continue to
+// work without any changes. Extra fields allow typed handling in new code.
+export class ApiError extends Error {
+  /**
+   * @param {string} message   Human-readable reason (same contract as before)
+   * @param {number|undefined} status  HTTP status code (absent for network errors)
+   * @param {boolean} isNetwork  true when the fetch itself failed (no HTTP response)
+   */
+  constructor(message, status, isNetwork = false) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.isNetwork = isNetwork;
+  }
+}
+
+// Retrieve the current Supabase access token for the Authorization header.
+// Returns null when there is no active session (unauthenticated requests).
+async function getAccessToken() {
   try {
-    const raw = localStorage.getItem("mct_user");
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed?.id || null;
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token || null;
   } catch {
     return null;
   }
@@ -18,31 +33,39 @@ export function getUserId() {
 async function req(path, { method = "GET", body } = {}) {
   const headers = {};
   if (body) headers["Content-Type"] = "application/json";
-  const uid = getUserId();
-  if (uid) headers["X-User-Id"] = uid;
-  const res = await fetch(`/api${path}`, {
-    method,
-    headers: Object.keys(headers).length ? headers : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const token = await getAccessToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  let res;
+  try {
+    res = await fetch(`/api${path}`, {
+      method,
+      headers: Object.keys(headers).length ? headers : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (networkErr) {
+    throw new ApiError(
+      networkErr?.message || "Network request failed",
+      undefined,
+      true,
+    );
+  }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  if (!res.ok) {
+    throw new ApiError(
+      data.error || `Request failed (${res.status})`,
+      res.status,
+    );
+  }
   return data;
 }
 
 const qs = (counsellorId) => (counsellorId ? `?counsellorId=${encodeURIComponent(counsellorId)}` : "");
 
 export const api = {
-  // auth
-  login: (email, password) => req("/login", { method: "POST", body: { email, password } }).then((d) => d.user),
-  loginWithGoogle: (idToken) => req("/auth/google", { method: "POST", body: { idToken } }).then((d) => d.user),
-
-  // users (superadmin)
-  getUsers: () => req("/users"),
-  updateUserRole: (id, role) => req(`/users/${id}/role`, { method: "PUT", body: { role } }),
-
-  // counsellors
+  // users
   getCounsellors: () => req("/counsellors"),
+  getUsers: () => req("/users"), // superadmin only
+  updateUserRole: (id, role) => req(`/users/${id}/role`, { method: "PUT", body: { role } }),
 
   // personas
   getPersonas: () => req("/personas"),
@@ -70,7 +93,6 @@ export const api = {
   // returns { reportId, status:"generating" } (idempotent while generating).
   regenerateReport: (sessionId) => req(`/sessions/${sessionId}/end`, { method: "POST" }),
   getSession: (id) => req(`/sessions/${id}`),
-  getSessionCue: (id) => req(`/sessions/${id}/cue`, { method: "POST" }),
 
   // realtime voice engine (OpenAI Realtime speech-to-speech)
   // openai-token: { voice? } → { value (ephemeral ek_…), model, voice, expiresAt }
@@ -119,4 +141,12 @@ export const api = {
 
   // session prompt inspection (admin-only at UI layer)
   getSessionPrompts: (id) => req(`/sessions/${id}/prompt`),
+
+  // assignment templates (WS7)
+  getAssignmentTemplates: () => req("/assignment-templates"),
+  createAssignmentTemplate: (data) => req("/assignment-templates", { method: "POST", body: data }),
+  updateAssignmentTemplate: (id, data) => req(`/assignment-templates/${id}`, { method: "PUT", body: data }),
+  deleteAssignmentTemplate: (id) => req(`/assignment-templates/${id}`, { method: "DELETE" }),
+  assignTemplate: (id, counsellorIds) =>
+    req(`/assignment-templates/${id}/assign`, { method: "POST", body: { counsellorIds } }),
 };

@@ -59,6 +59,7 @@ export default function AssignmentCreate() {
 
   const [rubricTemplates, setRubricTemplates] = useState([]);
   const [rubricTemplateId, setRubricTemplateId] = useState("");
+  const [partialLoad, setPartialLoad] = useState(false);
 
   const [courseId, setCourseId] = useState("");
   const [counsellorId, setCounsellorId] = useState("");
@@ -83,13 +84,17 @@ export default function AssignmentCreate() {
     try {
       setLoading(true);
       setLoadError("");
+      setPartialLoad(false);
+      let rubricsFailed = false;
+      let profilesFailed = false;
       const [cs, ps, crs, rts, profs] = await Promise.all([
         api.getCounsellors(),
         api.getPersonas(),
         api.getCourses(true),
-        api.getRubricTemplates().catch(() => []),
-        api.getLeadProfiles().catch(() => []),
+        api.getRubricTemplates().catch(() => { rubricsFailed = true; return []; }),
+        api.getLeadProfiles().catch(() => { profilesFailed = true; return []; }),
       ]);
+      if (rubricsFailed || profilesFailed) setPartialLoad(true);
       setCounsellors(cs || []);
       setPersonas(ps || []);
       setCourses(crs || []);
@@ -252,6 +257,21 @@ export default function AssignmentCreate() {
           Pair a counsellor with a student persona and a scenario to practise against.
         </p>
       </div>
+
+      {/* Partial-load warning: rubric or profile data failed to fetch */}
+      {partialLoad && (
+        <div className="flex items-start gap-3 rounded-xl border border-warn/40 bg-warn-soft/40 px-4 py-3 text-sm text-warn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round"
+            className="mt-0.5 h-4 w-4 shrink-0">
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <span className="text-ink/80">
+            Some options could not be loaded — rubric/profile dropdowns may be incomplete.
+          </span>
+        </div>
+      )}
 
       {loadError ? (
         <Card className="p-6">

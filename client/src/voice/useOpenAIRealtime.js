@@ -198,7 +198,7 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
     // Response latency: time between AI stopping and counsellor starting to speak.
     if (u.responseLatencyMs != null) out.responseLatencyMs = u.responseLatencyMs;
 
-    // Derived verdict/tone fields the CoachPanel + FootStrip chips read directly.
+    // Derived verdict/tone fields forwarded to /observe for voice_delivery grading.
     if (out.wpm != null) {
       out.paceVerdict = out.wpm < 100 ? "slow" : out.wpm > 170 ? "fast" : "good";
     }

@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./index.css";
 
 import { AuthProvider, ProtectedRoute, useAuth, homePathFor } from "./lib/auth.jsx";
+import { ToastProvider } from "./ui/Toast.jsx";
 import AdminLayout from "./layouts/AdminLayout.jsx";
 import CounsellorLayout from "./layouts/CounsellorLayout.jsx";
 import SuperAdminLayout from "./layouts/SuperAdminLayout.jsx";
@@ -18,6 +19,7 @@ import AssignmentCreate from "./pages/admin/AssignmentCreate.jsx";
 import AdminReports from "./pages/admin/AdminReports.jsx";
 import Rubrics from "./pages/admin/Rubrics.jsx";
 import Prompts from "./pages/admin/Prompts.jsx";
+import Templates from "./pages/admin/Templates.jsx";
 
 import Dashboard from "./pages/counsellor/Dashboard.jsx";
 import MyMocks from "./pages/counsellor/MyMocks.jsx";
@@ -65,6 +67,8 @@ function App() {
           <Route path="/admin/courses" element={<Courses />} />
           <Route path="/admin/assignments" element={<Assignments />} />
           <Route path="/admin/assignments/new" element={<AssignmentCreate />} />
+          <Route path="/admin/templates" element={<Templates />} />
+          <Route path="/admin/practice" element={<Practice />} />
           <Route path="/admin/rubrics" element={<Rubrics />} />
           <Route path="/admin/reports" element={<AdminReports />} />
           <Route path="/admin/reports/:id" element={<ReportDetail backTo="/admin/reports" />} />
@@ -86,12 +90,12 @@ function App() {
           <Route path="/app/reports/:id" element={<ReportDetail backTo="/app/reports" />} />
         </Route>
 
-        {/* Session routes run full-bleed (their own chrome), still counsellor-guarded */}
+        {/* Session routes run full-bleed (their own chrome) — both admin and counsellor */}
         {/* /app/session/new → green room → start → redirect to :sessionId */}
         <Route
           path="/app/session/new"
           element={
-            <ProtectedRoute role="counsellor">
+            <ProtectedRoute role={["counsellor", "admin"]}>
               <Session />
             </ProtectedRoute>
           }
@@ -99,7 +103,7 @@ function App() {
         <Route
           path="/app/session/:sessionId"
           element={
-            <ProtectedRoute role="counsellor">
+            <ProtectedRoute role={["counsellor", "admin"]}>
               <Session />
             </ProtectedRoute>
           }
@@ -114,7 +118,9 @@ function App() {
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <AuthProvider>
-      <App />
+      <ToastProvider>
+        <App />
+      </ToastProvider>
     </AuthProvider>
   </StrictMode>
 );

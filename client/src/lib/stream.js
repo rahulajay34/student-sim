@@ -1,6 +1,16 @@
-// Ownership header reads the same helper api.js uses — one storage schema, one
-// place to change it.
-import { getUserId } from "./api";
+// Authorization header uses the Supabase session token, matching api.js.
+import { supabase } from "./supabase";
+
+// Retrieve the current Supabase access token for the Authorization header.
+// Returns null when there is no active session.
+async function getAccessToken() {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token || null;
+  } catch {
+    return null;
+  }
+}
 
 // SSE consumer for the streaming student-reply path.
 //
@@ -205,8 +215,8 @@ export function createSentenceChunker({ minChunkLen = MIN_CHUNK_LEN } = {}) {
 export async function postMessageStream(sessionId, body, { onToken, onDone, onError, signal } = {}) {
   let res;
   const streamHeaders = { "Content-Type": "application/json", Accept: "text/event-stream" };
-  const uid = getUserId();
-  if (uid) streamHeaders["X-User-Id"] = uid;
+  const token = await getAccessToken();
+  if (token) streamHeaders["Authorization"] = `Bearer ${token}`;
   try {
     res = await fetch(`/api/sessions/${sessionId}/message`, {
       method: "POST",
