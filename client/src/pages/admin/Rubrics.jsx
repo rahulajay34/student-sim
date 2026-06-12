@@ -293,7 +293,7 @@ export default function Rubrics() {
       )}
 
       {/* Search — shown once there are many templates */}
-      {!loading && templates.length > 8 && (
+      {!loading && (templates.length > 8 || query) && (
         <SearchInput
           value={query}
           onChange={setQuery}

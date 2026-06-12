@@ -255,7 +255,7 @@ export default function Courses() {
       )}
 
       {/* Search — shown once the catalog grows */}
-      {!loading && courses.length > 8 && (
+      {!loading && (courses.length > 8 || query) && (
         <SearchInput
           value={query}
           onChange={setQuery}

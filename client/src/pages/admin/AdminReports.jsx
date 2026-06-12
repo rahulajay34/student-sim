@@ -207,7 +207,7 @@ export default function AdminReports() {
           </div>
         ) : filtered.length === 0 ? (
           <>
-            {reports.length > 8 && (
+            {(reports.length > 8 || query) && (
               <div className="px-4 pt-3">
                 <SearchInput
                   value={query}
@@ -239,7 +239,7 @@ export default function AdminReports() {
             rows={filtered}
             onRowClick={(r) => navigate(`/admin/reports/${r.id}`)}
             toolbar={
-              reports.length > 8 ? (
+              reports.length > 8 || query ? (
                 <SearchInput
                   value={query}
                   onChange={setQuery}

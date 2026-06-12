@@ -395,7 +395,7 @@ export default function Personas() {
       )}
 
       {/* Search — shown once the library grows */}
-      {!loading && personas.length > 8 && (
+      {!loading && (personas.length > 8 || query) && (
         <SearchInput
           value={query}
           onChange={setQuery}

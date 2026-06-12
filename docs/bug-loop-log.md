@@ -235,3 +235,18 @@ Noted (design limitation, not fixed): chatStream's timeout covers only first-chu
 Refuted/OK: chat() timeout covers the full call, timers never leak; HTTP error bodies never JSON.parsed; null content throws descriptively; extractJson outermost-match + retry behavior; scoreMessage/llmCue degrade gracefully; all sampling/thinking plumbing correct per call site; split-across-chunks </think> handled; personality key names match exactly (humour/quirks); modal merges existing personality (no silent reset of tuned seeds); slider coercion both layers; PersonalitySummary safe without personality; zero-counsellor guard; behaviourPrompt "" PUT persists.
 
 Verification: server tests 147/147 (5 new) · lint 0 errors · build success.
+
+### Iteration 14 — 2026-06-12 ~08:53–09:15 IST
+Focus: live voice validation post-calibration (orchestrator, real OpenAI WebRTC session) · UI-kit leftovers sweep (1 hunter).
+
+LIVE VOICE VALIDATION (the calibrated voice had never been tested live): real session as counsellor "Priya Sharma" — student replied "Oh, hi Priya MA'AM. Yeah, actually I'm a bit free right now, so we can talk, haan." and "Uh, yeah, so actually right now I'm in my second year, doing B.Com, you know, and... abhi thoda confused about this timing, ma'am." — gender-correct address (iter-9 fix live), light fillers, single Hindi particles, 17/24-word turns, score moving, steering flowing, zero client console errors, only expected scoring-timeout fallback in server log. Test session + report cleaned up.
+
+Found 4 real bugs (hunter), all fixed:
+1. Stale search filter: deleting items below the 9-row threshold unmounted the SearchInput while its query kept filtering — data "vanished" with no visible search box → box stays mounted while a query is active (5 admin list pages).
+2. Shift+N triggered the create shortcut → shiftKey guarded (ui/useCreateShortcut.js:10).
+3. IME composition keydowns could fire the shortcut → isComposing guarded.
+4. Select derived DOM ids from label text (duplicate ids for same-labelled selects) → useId like Input (ui/Select.jsx:4).
+
+Refuted/OK: ScoreMeter null/0/100/NaN; CountUp non-numeric/negative/value-change-snap; NavLink nested-route highlighting; Avatar empty/diacritics; Textarea/Slider label linkage; SearchInput controlled clear; layout widths; Badge/Card/EmptyState edge props; StatCard JSX values.
+
+Verification: server tests 147/147 · lint 0 errors · build success · live voice session validated end-to-end.

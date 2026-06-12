@@ -224,7 +224,7 @@ export default function Assignments() {
             columns={columns}
             rows={filtered}
             toolbar={
-              rows.length > 8 ? (
+              rows.length > 8 || query ? (
                 <SearchInput
                   value={query}
                   onChange={setQuery}

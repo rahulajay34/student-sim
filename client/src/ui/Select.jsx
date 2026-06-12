@@ -1,7 +1,12 @@
 // Styled <select> with an optional label, mirroring the Input field look.
 // Options: [{ value, label }]. Optional placeholder renders as a disabled first option.
+import { useId } from "react";
+
 export default function Select({ label, options = [], placeholder, className = "", id, error, ...props }) {
-  const selectId = id || (label ? `select-${label.replace(/\s+/g, "-").toLowerCase()}` : undefined);
+  // useId, not label-derived: two same-labelled Selects on one page produced
+  // duplicate DOM ids.
+  const autoId = useId();
+  const selectId = id || (label ? autoId : undefined);
 
   return (
     <label className="block">

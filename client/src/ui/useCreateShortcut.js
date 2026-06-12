@@ -7,7 +7,9 @@ export function useCreateShortcut(onTrigger, { key = "n", enabled = true } = {})
   useEffect(() => {
     if (!enabled || typeof onTrigger !== "function") return;
     const handler = (e) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      // shiftKey: Shift+N is not the shortcut. isComposing: IME composition
+      // keydowns must never trigger navigation.
+      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey || e.isComposing) return;
       if (e.key.toLowerCase() !== key.toLowerCase()) return;
       const el = document.activeElement;
       const tag = el?.tagName;
