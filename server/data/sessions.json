@@ -1570,9 +1570,9 @@
         "ts": "2026-06-10T15:54:17.149Z"
       }
     ],
-    "status": "active",
+    "status": "ended",
     "startedAt": "2026-06-10T15:53:43.258Z",
-    "endedAt": null
+    "endedAt": "2026-06-12T03:45:01.723Z"
   },
   {
     "id": "ses-4545ee97",
@@ -3177,9 +3177,9 @@
         "ts": "2026-06-10T17:44:18.581Z"
       }
     ],
-    "status": "active",
+    "status": "ended",
     "startedAt": "2026-06-10T17:43:13.759Z",
-    "endedAt": null
+    "endedAt": "2026-06-12T03:45:01.725Z"
   },
   {
     "id": "ses-20d3b4ec",
@@ -3650,9 +3650,9 @@
         "ts": "2026-06-10T18:17:46.285Z"
       }
     ],
-    "status": "active",
+    "status": "ended",
     "startedAt": "2026-06-10T18:14:23.905Z",
-    "endedAt": null
+    "endedAt": "2026-06-12T03:45:01.725Z"
   },
   {
     "id": "ses-48600881",
@@ -4131,9 +4131,9 @@
         "ts": "2026-06-10T18:27:07.055Z"
       }
     ],
-    "status": "active",
+    "status": "ended",
     "startedAt": "2026-06-10T18:26:01.117Z",
-    "endedAt": null
+    "endedAt": "2026-06-12T03:45:01.725Z"
   },
   {
     "id": "ses-853812bc",
@@ -5124,9 +5124,9 @@
         "ts": "2026-06-10T20:10:19.544Z"
       }
     ],
-    "status": "active",
+    "status": "ended",
     "startedAt": "2026-06-10T20:10:06.318Z",
-    "endedAt": null,
+    "endedAt": "2026-06-12T03:45:01.725Z",
     "lastTurnVerbosity": "short"
   },
   {
@@ -5584,9 +5584,9 @@
         "ts": "2026-06-10T20:22:12.944Z"
       }
     ],
-    "status": "active",
+    "status": "ended",
     "startedAt": "2026-06-10T20:19:28.050Z",
-    "endedAt": null,
+    "endedAt": "2026-06-12T03:45:01.725Z",
     "lastTurnVerbosity": "short"
   },
   {
@@ -6426,9 +6426,9 @@
         "ts": "2026-06-10T20:46:57.940Z"
       }
     ],
-    "status": "active",
+    "status": "ended",
     "startedAt": "2026-06-10T20:46:47.307Z",
-    "endedAt": null,
+    "endedAt": "2026-06-12T03:45:01.725Z",
     "lastTurnVerbosity": "short"
   },
   {
@@ -8117,9 +8117,9 @@
         "ts": "2026-06-10T21:35:27.501Z"
       }
     ],
-    "status": "active",
+    "status": "ended",
     "startedAt": "2026-06-10T21:35:13.841Z",
-    "endedAt": null,
+    "endedAt": "2026-06-12T03:45:01.725Z",
     "lastTurnVerbosity": "short"
   },
   {
@@ -11714,9 +11714,9 @@
       }
     ],
     "transcript": [],
-    "status": "active",
+    "status": "ended",
     "startedAt": "2026-06-11T13:07:10.992Z",
-    "endedAt": null
+    "endedAt": "2026-06-12T03:45:01.725Z"
   },
   {
     "id": "ses-31f39da8",
@@ -11960,9 +11960,9 @@
       }
     ],
     "transcript": [],
-    "status": "active",
+    "status": "ended",
     "startedAt": "2026-06-11T13:07:31.969Z",
-    "endedAt": null
+    "endedAt": "2026-06-12T03:45:01.725Z"
   },
   {
     "id": "ses-e1b61bab",
@@ -12205,9 +12205,9 @@
       }
     ],
     "transcript": [],
-    "status": "active",
+    "status": "ended",
     "startedAt": "2026-06-11T13:07:46.655Z",
-    "endedAt": null
+    "endedAt": "2026-06-12T03:45:01.725Z"
   },
   {
     "id": "ses-9b2d3e49",
@@ -12451,9 +12451,9 @@
       }
     ],
     "transcript": [],
-    "status": "active",
+    "status": "ended",
     "startedAt": "2026-06-11T13:07:46.707Z",
-    "endedAt": null
+    "endedAt": "2026-06-12T03:45:01.725Z"
   },
   {
     "id": "ses-2cdd7a04",
@@ -12721,9 +12721,9 @@
         "ts": "2026-06-11T13:08:16.347Z"
       }
     ],
-    "status": "active",
+    "status": "ended",
     "startedAt": "2026-06-11T13:08:09.585Z",
-    "endedAt": null,
+    "endedAt": "2026-06-12T03:45:01.725Z",
     "lastTurnVerbosity": "short"
   },
   {
@@ -12968,9 +12968,9 @@
       }
     ],
     "transcript": [],
-    "status": "active",
+    "status": "ended",
     "startedAt": "2026-06-11T13:09:04.444Z",
-    "endedAt": null
+    "endedAt": "2026-06-12T03:45:01.725Z"
   },
   {
     "id": "ses-f0a7a2c6",
@@ -15688,9 +15688,9 @@
       }
     ],
     "transcript": [],
-    "status": "active",
+    "status": "ended",
     "startedAt": "2026-06-11T22:31:43.977Z",
-    "endedAt": null
+    "endedAt": "2026-06-12T03:45:01.725Z"
   },
   {
     "id": "ses-c5c34655",

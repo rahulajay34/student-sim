@@ -229,7 +229,9 @@ export function buildAdminAnalytics({ reports, assignments, users }) {
 
     const mocks = ownReports.length;
     const allPcts = ownReports.map((r) => r.overall.percent);
-    const avgPercent = mocks === 0 ? 0 : Math.round(safe(allPcts.reduce((s, v) => s + v, 0), mocks));
+    // null (not 0) with no scored reports — matches the top-level avgScore fix;
+    // the AdminDashboard row guard renders "—" for null.
+    const avgPercent = mocks === 0 ? null : Math.round(safe(allPcts.reduce((s, v) => s + v, 0), mocks));
 
     // lastFiveDelta: delta of trailing window vs preceding equal-size window
     // (window = min(5, floor(n/2))); null when fewer than 2 reports

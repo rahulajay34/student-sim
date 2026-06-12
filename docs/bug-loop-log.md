@@ -250,3 +250,18 @@ Found 4 real bugs (hunter), all fixed:
 Refuted/OK: ScoreMeter null/0/100/NaN; CountUp non-numeric/negative/value-change-snap; NavLink nested-route highlighting; Avatar empty/diacritics; Textarea/Slider label linkage; SearchInput controlled clear; layout widths; Badge/Card/EmptyState edge props; StatCard JSX values.
 
 Verification: server tests 147/147 · lint 0 errors · build success · live voice session validated end-to-end.
+
+### Iteration 15 — 2026-06-12 ~09:06–09:25 IST
+Focus: fresh-eyes review of the day's aggregate diff (16 commits) · data-store invariant audit (2 hunters + orchestrator cleanup).
+
+Diff review — 4 real inconsistencies fixed, 1 refuted:
+1. counsellorsList avgPercent still returned 0 (not null) for unscored counsellors — the iter-10 top-level fix missed the per-row twin → null (server/analytics.js:232).
+2. _getUserId in stream.js duplicated api.js getUserId verbatim → exported from api.js, imported in stream.js (one schema, one place).
+3. Stale comment claimed register reference renders phases 2-4 (gate is 2-5 since iter 9) → corrected (prompt.js:367).
+4. convincementParamsFor marked LEGACY explicitly (retained for tests/back-compat; runtime uses disposition.js) — was inviting future edits against dead thresholds.
+REFUTED: reviewer's claim that AssignmentCreate no longer prefills situation from the selected profile — handleProfileChange sets it (line 173); behavior matches Practice.jsx.
+Consistency confirmed: X-User-Id on every /api fetch (and correctly NOT on the OpenAI SDP call); all 409-guard/cleanup orderings; three objection-category lists agree; renderAddress semantics identical at all 4 sites; old-session fail-softs for counsellorAddress/voiceEngine; hasReport gating symmetric.
+
+Data audit + cleanup: 15 unlinked stranded "active" sessions (abandoned tests + green-room ghosts, 5-36h old) marked ended via atomic write; ses-4fe39c73 left active (linked to in_progress asn-7e2725c3, needs the owner's call); 3 legacy fallback reports left as-is (regenerable, but rewriting history is the owner's call — rep-c6b991f3 is the one a counsellor can see); 1 historical orphan (rep-1f1a7b03 → deleted session) left documented; 0 duplicate ids, 0 generating-stub orphans, 0 unknown users, 0 residual emotion tags.
+
+Verification: server tests 147/147 · lint 0 errors · build success.

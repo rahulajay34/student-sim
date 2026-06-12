@@ -2,8 +2,9 @@
 // and throws Error(data.error) on a non-2xx response.
 
 // Read the current user id from localStorage fail-soft (returns null on any error
-// or absence). Used to populate the X-User-Id ownership header.
-function getUserId() {
+// or absence). Used to populate the X-User-Id ownership header (also imported by
+// stream.js for the SSE path).
+export function getUserId() {
   try {
     const raw = localStorage.getItem("mct_user");
     if (!raw) return null;

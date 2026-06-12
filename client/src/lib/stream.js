@@ -1,3 +1,7 @@
+// Ownership header reads the same helper api.js uses — one storage schema, one
+// place to change it.
+import { getUserId } from "./api";
+
 // SSE consumer for the streaming student-reply path.
 //
 // `POST /api/sessions/:id/message` with `Accept: text/event-stream` streams the
@@ -197,22 +201,11 @@ export function createSentenceChunker({ minChunkLen = MIN_CHUNK_LEN } = {}) {
   };
 }
 
-// Read the current user id from localStorage for the ownership header (mirrors api.js).
-function _getUserId() {
-  try {
-    const raw = localStorage.getItem("mct_user");
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed?.id || null;
-  } catch {
-    return null;
-  }
-}
 
 export async function postMessageStream(sessionId, body, { onToken, onDone, onError, signal } = {}) {
   let res;
   const streamHeaders = { "Content-Type": "application/json", Accept: "text/event-stream" };
-  const uid = _getUserId();
+  const uid = getUserId();
   if (uid) streamHeaders["X-User-Id"] = uid;
   try {
     res = await fetch(`/api/sessions/${sessionId}/message`, {

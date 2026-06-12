@@ -361,9 +361,8 @@ function buildVerbositySection(cfg, currentPhase, flavour) {
 // REGISTER REFERENCE — a small rotated sample of real student lines for this
 // persona+phase (voiceBankFor). The mined lines are Hinglish, and the platform
 // is moving to an ENGLISH-majority register, so this injection is DELIBERATELY
-// kept tiny: at most ~3 stage lines, and ONLY in the middle phases (2-4) where a
-// touch of register exemplar still helps. Skipped entirely in Opening (phase 1,
-// just a self-intro) and Close (phase 5). The Hinglish backchannel block is
+// kept tiny: at most ~3 stage lines, rendered in phases 2-5 (skipped only in the
+// phase-1 opening, which is just a self-intro). The Hinglish backchannel block is
 // dropped — it pushed the register the wrong way and added little. Renders ""
 // when no artifacts exist (fail-soft).
 // PHASES 2-4 mix the mined voice-bank lines with the owner-calibrated style
@@ -578,8 +577,9 @@ export function composeForInspection(session) {
   );
 }
 
-// Resolve the convincement config (thresholds + effortTurns) for a difficulty,
-// fail-soft to the medium defaults. Difficulty comes from the scenario snapshot.
+// LEGACY — retained only for back-compat and its unit tests. The live student
+// willingness is computed by disposition.js (computeConvincementHint delegates
+// there); nothing in the runtime prompt path reads these threshold params anymore.
 export function convincementParamsFor(difficulty, hesitancy = 3) {
   const cfg = getPromptConfig();
   const conv = cfg.convincement || {};
