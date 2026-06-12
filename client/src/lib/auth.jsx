@@ -40,7 +40,10 @@ export function useAuth() {
   return ctx;
 }
 
-export const homePathFor = (user) => (user?.role === "admin" ? "/admin" : "/app");
+// Unknown/corrupt roles go to /login — defaulting them to /app made ProtectedRoute
+// bounce them back to homePathFor in an infinite redirect loop.
+export const homePathFor = (user) =>
+  user?.role === "admin" ? "/admin" : user?.role === "counsellor" ? "/app" : "/login";
 
 // Guards a route by auth + role. Redirects to /login or the user's own home.
 export function ProtectedRoute({ role, children }) {

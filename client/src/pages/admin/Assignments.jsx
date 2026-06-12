@@ -51,7 +51,9 @@ export default function Assignments() {
   }, [load]);
 
   const goCreate = useCallback(() => navigate("/admin/assignments/new"), [navigate]);
-  useCreateShortcut(goCreate, { enabled: !loading });
+  // Also disabled while the delete dialog is open: focus sits on a button there,
+  // so the typing-guard alone wouldn't stop N from navigating away mid-confirm.
+  useCreateShortcut(goCreate, { enabled: !loading && !confirmRow });
 
   async function confirmDelete() {
     const row = confirmRow;

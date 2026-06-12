@@ -7,7 +7,7 @@ Each entry: focus area, findings (incl. refuted), fixes (file:line), verificatio
 - [x] Prompts.jsx admin config editor vs current prompt-config/scoring-config shapes (iter 1)
 - [x] analytics.js with mixed old/new report shapes (status:"generating" stubs) (iter 1)
 - [x] Admin CRUD pages (Personas/Courses/Rubrics/Assignments edit flows) (iter 2)
-- [ ] Auth/routing guards + deep links
+- [x] Auth/routing guards + deep links (iter 6)
 - [x] Session resume edge cases (old sessions, ended sessions, foreign sessions) (iter 2)
 - [x] Objections/disposition logic edge cases (iter 3)
 - [x] Report fallback + regenerate paths (iter 3)
@@ -15,8 +15,8 @@ Each entry: focus area, findings (incl. refuted), fixes (file:line), verificatio
 - [x] GreenRoom flows (mic denied, assignment vs practice) (iter 4)
 - [x] store.js concurrency + data integrity (iter 5)
 - [x] stream.js SSE parsing edge cases (iter 5)
-- [ ] lib/format.js helpers
-- [ ] CallSidebar/CallStage UI state
+- [x] lib/format.js helpers (iter 6)
+- [x] CallSidebar/CallStage UI state (iter 6)
 - [ ] Keyboard/a11y
 - [ ] smoke-api gaps
 
@@ -104,3 +104,21 @@ Found 7 real bugs, all fixed:
 Refuted/OK (probed): cross-session concurrent /observe writes safe (store.update re-reads synchronously; single-threaded event loop); background report job's check+update atomic in one tick; withSessionLock covers reads; half-frame SSE buffering correct; JSON-escaped newlines make frame injection impossible; heartbeat comment frames skipped by the client parser; applyDone single-call; anti-loop substitution swap clean; sendingRef never deadlocks; abbreviation/ellipsis/danda/currency chunking correct; MAX_CHUNK force-flush correct; server error mid-stream sends an explicit error event.
 
 Verification: server tests 142/142 pass · client lint 0 errors · build success · probes: newId 12-hex, chunker fragment gone + flush intact.
+
+### Iteration 6 — 2026-06-12 ~06:58–07:15 IST
+Focus: auth/routing guards + deep links · format.js helpers + CallStage/CallSidebar UI state (2 read-only sonnet hunters).
+
+Found 7 real bugs, 6 fixed + 1 already-tracked:
+1. Pressing N with the Assignments delete dialog open navigated away mid-confirm (focus on a button defeats the typing guard) → shortcut disabled while confirmRow set (Assignments.jsx:54).
+2. /login rendered the form for already-authenticated users → immediate Navigate to homePathFor (Login.jsx).
+3. homePathFor sent unknown/corrupt roles to /app where the role guard bounced them back — infinite redirect loop → explicit counsellor branch, unknown roles → /login (auth.jsx:43).
+4. relativeDate("garbage") rendered "NaNd ago" in four list pages → NaN guard returns "" (format.js:103).
+5. initials(null) threw TypeError (default param doesn't catch null; Avatar name={c.name} could crash Counsellors) → type guard returns "?" (format.js:121).
+6. initials("🎉 Party") rendered a broken half-surrogate "�P" (found by own probe) → code-point-aware [...p][0] (format.js).
+7. Score pulse fired spuriously on session resume (0 → hydrated score change on mount) → null-sentinel prevRef registers the first value silently (CallStage.jsx:722).
+Already tracked: cross-counsellor report/session reads (ownership) — in open items since iter 2.
+Refuted: "logout leaves voice running" — the hook's unmount cleanup (hardened in iter 4) tears down pc/mic on the redirect unmount.
+
+Refuted/OK: corrupt mct_user fails soft to logged-out; role guards clean on cross-role deep links; bad report ids → EmptyState; login error handling; Personas/Courses/Rubrics N-guards include their modals; scoreColor/bandColor/difficultyColor on null/unknown; useCountUp on NaN/Infinity; StreamingBubble sink cleared on all exit paths; hidden Coach tab stays current (props flow while display:none); transcript auto-scroll respects user scroll-up; sendingRef double-submit guard; timer derives from origin (no background-throttle drift); Space PTT ignored while composer focused; MicPicker listener hygiene; orb rAF idle in text mode; analyser re-acquired after changeVoice; cue turn-counter guard covers both text and observe paths.
+
+Verification: server tests 142/142 pass · client lint 0 errors · build success · probes: relativeDate ""/initials "?"/emoji initials correct.

@@ -101,6 +101,7 @@ export function formatDate(iso) {
 export function relativeDate(iso) {
   if (!iso) return "";
   const diff = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(diff)) return ""; // malformed ISO would render "NaNd ago"
   const m = Math.round(diff / 60000);
   if (m < 1) return "just now";
   if (m < 60) return `${m}m ago`;
@@ -118,6 +119,9 @@ export const STATUS_LABEL = {
 
 export const statusColor = (s) => (s === "completed" ? "success" : s === "in_progress" ? "warn" : "slate");
 
-export function initials(name = "") {
-  return name.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "?";
+export function initials(name) {
+  // Default params don't catch null — initials(null) threw on .split.
+  if (typeof name !== "string" || !name) return "?";
+  // [...p][0] is code-point-aware — p[0] split surrogate pairs (emoji → "�").
+  return name.split(" ").filter(Boolean).slice(0, 2).map((p) => [...p][0]?.toUpperCase()).join("") || "?";
 }

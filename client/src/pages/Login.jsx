@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth, homePathFor } from "../lib/auth.jsx";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
@@ -44,12 +44,15 @@ function Soundwave() {
 }
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Already signed in — straight to the workspace instead of showing the form.
+  if (user) return <Navigate to={homePathFor(user)} replace />;
 
   async function handleSubmit(e) {
     e.preventDefault();

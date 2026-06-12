@@ -719,8 +719,14 @@ function CallStage({
 
   // ── Score-change pulse: briefly scale + tint the live sat number on change ──
   const [satPulse, setSatPulse] = useState(false);
-  const prevSatRef = useRef(satisfaction);
+  // null sentinel: the first real value (e.g. 0 → 45 when a resumed session
+  // hydrates) registers silently instead of firing the pulse on page load.
+  const prevSatRef = useRef(null);
   useEffect(() => {
+    if (prevSatRef.current === null) {
+      prevSatRef.current = satisfaction;
+      return;
+    }
     if (prevSatRef.current !== satisfaction) {
       prevSatRef.current = satisfaction;
       setSatPulse(true);
