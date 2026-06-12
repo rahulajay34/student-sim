@@ -11298,5 +11298,1201 @@
         "instruction": "Take 5 features of the IIM Ranchi x Masai programme (e.g., IIM faculty, case-method pedagogy, capstone project, alumni network, placement support) and write a 30-second benefit statement for each — but every statement must reference a specific problem the student is trying to solve. Practice delivering them back-to-back without using the phrase 'this programme offers'. Time yourself and aim for 25-35 seconds per benefit."
       }
     ]
+  },
+  {
+    "id": "rep-d2f1638f7a51",
+    "sessionId": "ses-54966e3a3922",
+    "assignmentId": null,
+    "counsellorId": "counsellor-1",
+    "counsellorName": "Priya Sharma",
+    "personaName": "Studying Student",
+    "scenarioTitle": "Free practice",
+    "status": "ready",
+    "finalScore": 52,
+    "scoreArc": [
+      {
+        "turn": 0,
+        "score": 50
+      },
+      {
+        "turn": 1,
+        "score": 50
+      },
+      {
+        "turn": 2,
+        "score": 50
+      },
+      {
+        "turn": 3,
+        "score": 51
+      },
+      {
+        "turn": 4,
+        "score": 52
+      },
+      {
+        "turn": 5,
+        "score": 52
+      }
+    ],
+    "benchmarks": {
+      "sessionMinutes": 1.9,
+      "medianPaidMinutes": 25.1,
+      "paymentAskSeen": false,
+      "paymentAskNormPct": 87
+    },
+    "transcript": [
+      {
+        "role": "counsellor",
+        "text": "Yes.",
+        "phase": 1,
+        "turnType": "statement",
+        "scoreAfter": 50,
+        "ts": "2026-06-12T11:41:38.890Z",
+        "deliveryMetrics": {
+          "wpm": 60,
+          "pauses": 0,
+          "energyVar": 0.00001,
+          "durationMs": 997
+        },
+        "scoreReason": "Backchannel acknowledgement"
+      },
+      {
+        "role": "student",
+        "text": "Uh, hi ma'am... umm, yeah, actually, I’m Juberia speaking. So, I just wanted to know,",
+        "emotion": "neutral",
+        "phase": 1,
+        "scoreAfter": 50,
+        "ts": "2026-06-12T11:41:39.943Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "いいですか?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 50,
+        "ts": "2026-06-12T11:41:41.585Z",
+        "deliveryMetrics": {
+          "wpm": 40,
+          "pauses": 0,
+          "energyVar": 0.00276,
+          "durationMs": 1502
+        },
+        "scoreReason": "A brief Japanese permission-check ('Is that okay?') is a routine transitional utterance that neither probes nor advances discovery meaningfully."
+      },
+      {
+        "role": "student",
+        "text": "Umm, yeah, so... I’m in my first year, BSc Honours... at Panjab University, ma'am.",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 50,
+        "ts": "2026-06-12T11:41:47.559Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "That's great to know Juberia, and what do you know about this course?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 51,
+        "ts": "2026-06-12T11:41:55.199Z",
+        "deliveryMetrics": {
+          "wpm": 163,
+          "pauses": 0,
+          "energyVar": 0.00121,
+          "durationMs": 4773
+        },
+        "scoreReason": "Warm acknowledgement of the student's introduction followed by a genuine open discovery question about her existing knowledge of the course, which is appropriate for Phase 2."
+      },
+      {
+        "role": "student",
+        "text": "Umm, so ma'am, actually I don’t know much... I just saw the reel and uh, I paid that ninety-nine rupees for the test, and I cleared it. That’s all I know, haan.",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 51,
+        "ts": "2026-06-12T11:42:04.555Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Okay, all right. So what got you interested about this program or like, you know, why did you even feel like you should give this test?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 52,
+        "ts": "2026-06-12T11:42:20.468Z",
+        "deliveryMetrics": {
+          "wpm": 133,
+          "pauses": 0,
+          "energyVar": 0.0018,
+          "durationMs": 11717
+        },
+        "scoreReason": "Open discovery question that builds on the student's previous answer about paying the test fee, inviting her to share what motivated her interest — solid rapport-building probe."
+      },
+      {
+        "role": "student",
+        "text": "Uh, actually ma'am, I was just scrolling Instagram reels, and, you know, I saw this thing about AI and business analytics. I thought... it might be useful for the future, na?",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 52,
+        "ts": "2026-06-12T11:42:26.925Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Mhm.",
+        "phase": 2,
+        "turnType": "statement",
+        "scoreAfter": 52,
+        "ts": "2026-06-12T11:42:26.952Z",
+        "deliveryMetrics": {
+          "wpm": 41,
+          "pauses": 0,
+          "energyVar": 0.00001,
+          "durationMs": 1457
+        },
+        "scoreReason": "Backchannel acknowledgement"
+      },
+      {
+        "role": "student",
+        "text": "Uhh, I mean, it looked like something with AI and business, ma'am... so I got curious, na?",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 52,
+        "ts": "2026-06-12T11:42:28.043Z"
+      }
+    ],
+    "generatedAt": "2026-06-12T11:43:22.263Z",
+    "fallback": false,
+    "regenerable": false,
+    "overall": {
+      "percent": 45,
+      "band": "Needs Work",
+      "outcome": "Not Converted",
+      "outcomeDetail": "The student did not agree to pay — the call never reached a payment ask, the curriculum was never presented, and satisfaction landed at 52/100 reflecting an incomplete, disengaged conversation.",
+      "headline": "Next session, focus on building a two-way discovery conversation instead of polite one-liner acknowledgments."
+    },
+    "rubric": [
+      {
+        "key": "rapport",
+        "label": "Rapport & Opening",
+        "weight": 10,
+        "score": 5,
+        "level": "Competent",
+        "justification": "The counsellor asked for the student's name and background (turn 4, 'That's great to know Juberia'), which is baseline politeness, but the Japanese interjection in turn 2 ('いいですか?') is bizarre and breaks the opening into a disjointed, confusing start; no personal warmth or credibility was built."
+      },
+      {
+        "key": "discovery",
+        "label": "Needs Discovery",
+        "weight": 15,
+        "score": 4,
+        "level": "Developing",
+        "justification": "The counsellor asked what got her interested (turn 6) and what she already knows (turn 4), but never probed family context, financial capacity, parents' awareness, current skill level, or her timeline for completing her BSc — all critical for a first-year undergraduate spending ₹4000+4000."
+      },
+      {
+        "key": "presentation",
+        "label": "Programme Presentation",
+        "weight": 15,
+        "score": 2,
+        "level": "Poor",
+        "justification": "Matched the '1' anchor direction — the student explicitly said 'I don't know much' (turn 5), yet the counsellor gave zero curriculum overview, no mention of modules, fee, duration, or format, and the call appears to stall after turn 8 with a single 'Mhm', never reaching a presentation at all."
+      },
+      {
+        "key": "objections",
+        "label": "Objection Handling",
+        "weight": 20,
+        "score": 6,
+        "level": "Competent",
+        "justification": "No objections were raised by the student (tracked count = 0), so the default baseline applies — the counsellor was not tested on objection handling, but also did not anticipate or surface any concerns proactively."
+      },
+      {
+        "key": "knowledge",
+        "label": "Product Knowledge & Accuracy",
+        "weight": 15,
+        "score": 6,
+        "level": "Competent",
+        "justification": "The counsellor stated nothing factually wrong in the transcript, but also stated nothing factually about the course at all — no fee, duration, modules, or format were mentioned, so accuracy cannot be rewarded and the baseline 6 holds by default."
+      },
+      {
+        "key": "closing",
+        "label": "Closing & Payment Ask",
+        "weight": 10,
+        "score": 2,
+        "level": "Poor",
+        "justification": "The call ends with the counsellor saying 'Mhm' (turn 8) and the student still talking — there is no payment ask, no next step, no follow-up, and the milestone tracker confirms 'payment asked: false'; this is well below the baseline for closing."
+      },
+      {
+        "key": "communication",
+        "label": "Communication & Empathy",
+        "weight": 10,
+        "score": 5,
+        "level": "Competent",
+        "justification": "The counsellor did not talk down to the student and gave her space to speak, but the strange Japanese utterance in turn 2, the flat 'Mhm' monologues, and the lack of any validation or warmth push this slightly below baseline."
+      },
+      {
+        "key": "voice_delivery",
+        "label": "Voice Delivery",
+        "weight": 5,
+        "score": 5,
+        "level": "Competent",
+        "justification": "Turn 4 shows reasonable pace (163wpm) and the counsellor didn't talk over the student, but turn 0's abrupt 'Yes', turn 2's Japanese interjection, and turn 8's flat 'Mhm' create a disjointed, low-energy delivery that doesn't invite engagement."
+      }
+    ],
+    "phaseBreakdown": [
+      {
+        "phase": 1,
+        "name": "Opening",
+        "summary": "The opening is awkward and disjointed — a one-word 'Yes' opener, a random Japanese phrase 'いいですか?', and then a delayed question about what the student knows about the course.",
+        "didWell": "Confirmed the student's name and educational background (BSc Honours, Panjab University) without judgment.",
+        "toImprove": "Drop the Japanese interjection entirely; open with a warm, professional greeting that states the purpose of the call and sets the student at ease."
+      },
+      {
+        "phase": 2,
+        "name": "Discovery",
+        "summary": "Light discovery — the counsellor asked what the student already knows and what sparked her interest, but did not probe deeper.",
+        "didWell": "Used an open-ended 'why' question to explore motivation ('what got you interested about this program').",
+        "toImprove": "Ask about family/parents' awareness, budget comfort, current technical skills, timeline relative to her graduation, and whether she has compared other programs."
+      },
+      {
+        "phase": 3,
+        "name": "Presentation",
+        "summary": "No presentation happened — after the student shared her motivation, the counsellor responded with a flat 'Mhm' and the call appears to have stalled.",
+        "didWell": "Acknowledged the student's answer with a minimal verbal cue.",
+        "toImprove": "Given she explicitly said 'I don't know much', this is the most critical moment to walk her through the modules, duration, format, fee, and seat-blocking process."
+      },
+      {
+        "phase": 4,
+        "name": "Objections & Negotiation",
+        "summary": "No objections were raised and none were anticipated — the conversation never reached the stage where price, time, or fit concerns would surface.",
+        "didWell": "Did not pressure the student or push back on her uncertainty.",
+        "toImprove": "Proactively surface and resolve common hesitations like 'I'm still in first year, is this right for me?' or 'my parents don't know I'm spending on this'."
+      },
+      {
+        "phase": 5,
+        "name": "Close",
+        "summary": "No close — there is no payment ask, no follow-up scheduled, and the call simply ends with the student still mid-thought.",
+        "didWell": "Did not use coercion or invent false urgency.",
+        "toImprove": "Build to a clear ask around the 78% mark: state the ₹4000 seat-blocking fee, explain what it secures, and anchor a specific follow-up time even if the student says 'not now'."
+      }
+    ],
+    "strengths": [
+      {
+        "point": "Opened with a warm rapport-building line and immediately used the student's name, which softened the call and made Juberia feel acknowledged.",
+        "quote": "That's great to know Juberia, and what do you know about this course?"
+      },
+      {
+        "point": "Asked a genuinely curious, open-ended question to surface the student's motivation after learning she had minimal prior information about the program.",
+        "quote": "So what got you interested about this program or like, you know, why did you even feel like you should give this test?"
+      }
+    ],
+    "improvements": [
+      {
+        "point": "Turns 0, 2, and 8 were flat, low-energy acknowledgments ('Yes.', 'いいですか?', 'Mhm.') that killed momentum and signalled disinterest in a low-satisfaction call.",
+        "quote": "Mhm.",
+        "suggestion": "Replace filler acknowledgments with active listening bridges that invite the student to keep talking, e.g., 'Tell me more — what about it caught your attention?'"
+      },
+      {
+        "point": "After the student revealed she 'just saw the reel' and paid 99 rupees with no real understanding of the program, the counsellor did not recap the value proposition, eligibility (BSc 1st year, no graduation yet), or the BITS x Masai credential — a critical gap for a warm lead.",
+        "quote": "I just saw the reel and uh, I paid that ninety-nine rupees for the test, and I cleared it. That's all I know, haan.",
+        "suggestion": "Bridge the motivation to the offer in 1-2 sentences: 'Since you're in your first year of BSc, this BITS x Masai certificate is timed perfectly — let me walk you through what you'd actually learn in Gen AI and Agentic AI analytics.'"
+      },
+      {
+        "point": "Closed the discovery phase with a weak 'Mhm' instead of a clarifying or pain-question, so Juberia's vague 'useful for the future' answer was never probed into a concrete goal.",
+        "quote": "Mhm.",
+        "suggestion": "Always end discovery with a specific follow-up, e.g., 'When you say useful for the future — are you thinking placements, a specific role, or building something of your own?' This converts curiosity into a stated need."
+      }
+    ],
+    "keyMoments": [
+      {
+        "turn": 5,
+        "type": "miss",
+        "note": "Juberia explicitly said she 'doesn't know much' and only paid 99 rupees after a reel — a perfect teach-and-position moment. The counsellor pivoted to motivation instead, leaving the student's knowledge gap unaddressed for the rest of the call."
+      },
+      {
+        "turn": 6,
+        "type": "best",
+        "note": "Strong, open-ended motivation question that invited the student to share her 'why' rather than a yes/no check — the best discovery moment in the call."
+      },
+      {
+        "turn": 8,
+        "type": "miss",
+        "note": "After Juberia said 'I thought it might be useful for the future,' the counsellor dropped a flat 'Mhm' and let the thread die. This was the single highest-leverage moment to dig into her goals and was wasted."
+      }
+    ],
+    "drills": [
+      {
+        "title": "3-Pillar Value Frame in 90 Seconds",
+        "focusCriterion": "presentation",
+        "objectionCategory": "course_fit_relevance",
+        "instruction": "Record a 90-second pitch of the BITS × Masai Business Analytics with Gen & Agentic AI program covering exactly three pillars: (1) curriculum highlights (Gen AI, Agentic AI, analytics tools), (2) BITS School of Management credential + Masai outcome track, and (3) one concrete student-relevant outcome (project, portfolio piece, or interview prep). Then re-record tailoring each version to a 1st-year BSc student like Juberia, a working professional, and a final-year student. Review for filler words, monotone delivery, and whether you named at least 2 specific modules or tools."
+      },
+      {
+        "title": "Discovery-to-Presentation Bridge Drill",
+        "focusCriterion": "discovery",
+        "objectionCategory": "course_fit_relevance",
+        "instruction": "Practice a 5-turn discovery sequence on a partner playing Juberia: (1) ask about current studies and year, (2) ask what 'business analytics' or 'AI' means to them in one sentence, (3) ask about a real academic or career problem they want to solve, (4) ask about timeline to graduation and post-graduation plans, (5) mirror back their words and ONLY THEN transition with: 'Based on what you just told me, here is the part of the program that fits you...' and present 1-2 relevant modules. Get scored on whether you uncovered motivation before presenting and used their language back to them."
+      },
+      {
+        "title": "Assumptive Close with Trial Close",
+        "focusCriterion": "closing",
+        "objectionCategory": "emi_affordability",
+        "instruction": "Role-play the end of a call with a student who said 'I'll think about it.' You must execute two moves in order: first, a soft trial close ('If we work out the EMI part, are you ready to start this week?'), and second, an assumptive close that names the next step ('Great, I am sending you the enrollment link and the no-cost EMI breakdown right now — which slot works, the weekday or weekend batch?'). Practice 5 reps, varying the objection (fee too high, need to ask parents, want to compare). Get feedback on whether you asked for the sale, not just information."
+      }
+    ]
+  },
+  {
+    "id": "rep-9f17dd99c2c5",
+    "sessionId": "ses-d04df55df1cf",
+    "assignmentId": null,
+    "counsellorId": "counsellor-1",
+    "counsellorName": "Priya Sharma",
+    "personaName": "Studying Student",
+    "scenarioTitle": "Free practice",
+    "status": "ready",
+    "finalScore": 70,
+    "scoreArc": [
+      {
+        "turn": 0,
+        "score": 50
+      },
+      {
+        "turn": 1,
+        "score": 50
+      },
+      {
+        "turn": 2,
+        "score": 51
+      },
+      {
+        "turn": 3,
+        "score": 52
+      },
+      {
+        "turn": 4,
+        "score": 52
+      },
+      {
+        "turn": 5,
+        "score": 52
+      },
+      {
+        "turn": 6,
+        "score": 51
+      },
+      {
+        "turn": 7,
+        "score": 54
+      },
+      {
+        "turn": 8,
+        "score": 58
+      },
+      {
+        "turn": 9,
+        "score": 62
+      },
+      {
+        "turn": 10,
+        "score": 63
+      },
+      {
+        "turn": 11,
+        "score": 63
+      },
+      {
+        "turn": 12,
+        "score": 65
+      },
+      {
+        "turn": 13,
+        "score": 67
+      },
+      {
+        "turn": 14,
+        "score": 70
+      },
+      {
+        "turn": 15,
+        "score": 70
+      },
+      {
+        "turn": 16,
+        "score": 70
+      },
+      {
+        "turn": 17,
+        "score": 71
+      },
+      {
+        "turn": 18,
+        "score": 67
+      },
+      {
+        "turn": 19,
+        "score": 66
+      },
+      {
+        "turn": 20,
+        "score": 68
+      },
+      {
+        "turn": 21,
+        "score": 71
+      },
+      {
+        "turn": 22,
+        "score": 72
+      },
+      {
+        "turn": 23,
+        "score": 72
+      },
+      {
+        "turn": 24,
+        "score": 70
+      }
+    ],
+    "benchmarks": {
+      "sessionMinutes": 14.8,
+      "medianPaidMinutes": 25.1,
+      "paymentAskSeen": true,
+      "paymentAskNormPct": 87
+    },
+    "transcript": [
+      {
+        "role": "counsellor",
+        "text": "Hi Vinayak, how are you doing?",
+        "phase": 1,
+        "turnType": "question",
+        "scoreAfter": 50,
+        "ts": "2026-06-12T11:43:25.076Z",
+        "deliveryMetrics": {
+          "wpm": 173,
+          "pauses": 0,
+          "energyVar": 0.01854,
+          "durationMs": 2082
+        },
+        "scoreReason": "A standard greeting at the start of the call — warm and appropriate but does not demonstrate special rapport craft or agenda-setting beyond the ordinary."
+      },
+      {
+        "role": "student",
+        "text": "Uh... hi ma'am, yeah, I'm doing fine, thoda busy with college stuff, you know.",
+        "emotion": "neutral",
+        "phase": 1,
+        "scoreAfter": 50,
+        "ts": "2026-06-12T11:43:29.339Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Of course, understandable. Vinayak, my name is Roshni and I am the academic counselor for you. I will be helping you understand more about the program and guide you with how this can help you. So shall we get started?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 51,
+        "ts": "2026-06-12T11:43:46.341Z",
+        "deliveryMetrics": {
+          "wpm": 196,
+          "pauses": 0,
+          "energyVar": 0.00197,
+          "durationMs": 12273
+        },
+        "scoreReason": "Polite introduction, name sharing, and light agenda-setting ('I'll help you understand the program and guide you') in early Opening, which is a decent rapport-building move though still largely procedural."
+      },
+      {
+        "role": "student",
+        "text": "Uh, yeah, sure ma'am... I was—actually, I was thinking, like, what exactly is covered in this program, na?",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 51,
+        "ts": "2026-06-12T11:43:52.113Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Sure, I'll help you with that. But before I can tell you more about it, I'd like to know more about you so that I can tell you how exactly this will fit into your career or your goals.",
+        "phase": 2,
+        "turnType": "statement",
+        "scoreAfter": 52,
+        "ts": "2026-06-12T11:44:07.258Z",
+        "deliveryMetrics": {
+          "wpm": 226,
+          "pauses": 0,
+          "energyVar": 0.0032,
+          "durationMs": 10372
+        },
+        "scoreReason": "Good discovery pivot — instead of dumping curriculum, asks to understand the student first so the answer can be tied to their goals. Doesn't ignore the question, but defers it reasonably for rapport."
+      },
+      {
+        "role": "student",
+        "text": "Uh, okay ma'am, so I’m in third year BA LLB at Symbiosis, Meerut...and, uh, I’ve been using, you know, AI tools for legal research, matlab.",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 52,
+        "ts": "2026-06-12T11:44:13.121Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "All right, that's interesting. And what excited you about this program or the course that made you, you know, join us?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 52,
+        "ts": "2026-06-12T11:44:32.031Z",
+        "deliveryMetrics": {
+          "wpm": 117,
+          "pauses": 0,
+          "energyVar": 0.00201,
+          "durationMs": 10770
+        },
+        "scoreReason": "Ordinary discovery question asking what excited the student, which is a reasonable open probe at this phase."
+      },
+      {
+        "role": "student",
+        "text": "Uh, actually ma'am, I was, you know, just scrolling reels and I saw this about AI and, uh, future careers, na?",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 52,
+        "ts": "2026-06-12T11:44:40.621Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Absolutely, AI is something which is interrelated to each and every domain, and it's interesting that you are interested in this as well. So this particular program that you're going to be, like, you know, enrolling for or that you have now joined us for the counseling for, is related to business analytics with Gen and agentic AI, right? So I would actually like to know a little bit more about what is it that you are looking forward to in terms of your career growth, so that I can help you understand how this program aligns with your expectations.",
+        "phase": 2,
+        "turnType": "statement",
+        "scoreAfter": 52,
+        "ts": "2026-06-12T11:45:28.673Z",
+        "deliveryMetrics": {
+          "wpm": 179,
+          "pauses": 0,
+          "energyVar": 0.0042,
+          "durationMs": 33480
+        },
+        "scoreReason": "The counsellor acknowledges the student's interest and asks an open discovery question about career goals, which is appropriate for this phase but is an ordinary probe without specific building on the student's own answer about AI tools for legal research."
+      },
+      {
+        "role": "student",
+        "text": "Uh, yeah ma'am, so I’m thinking, you know, after law, maybe something with AI in legal analytics or, uh, policy... I’m not fully sure, but something future-proof, haan.",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 52,
+        "ts": "2026-06-12T11:45:37.300Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Absolutely, that sounds like a great idea. But given that you're studying law, which is already, you know, extremely dense in terms of the curriculum, do you think you'd be able to give time for, you know, learning analytics and AI parallely?",
+        "phase": 3,
+        "turnType": "question",
+        "scoreAfter": 51,
+        "ts": "2026-06-12T11:45:58.453Z",
+        "deliveryMetrics": {
+          "wpm": 181,
+          "pauses": 0,
+          "energyVar": 0.00424,
+          "durationMs": 13933
+        },
+        "scoreReason": "Counsellor raises a time-commitment concern but doesn't address it with any specifics about the program's flexibility, recordings, or schedule — just a leading/dismissive question."
+      },
+      {
+        "role": "student",
+        "text": "Uh, that's what I'm worried about, ma'am... like, how much time per week are we talking, roughly?",
+        "emotion": "neutral",
+        "phase": 4,
+        "scoreAfter": 51,
+        "ts": "2026-06-12T11:46:03.965Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "You just need to give around 8 to 10 hours per week. Do you think that's doable?",
+        "phase": 4,
+        "turnType": "question",
+        "scoreAfter": 54,
+        "ts": "2026-06-12T11:46:12.931Z",
+        "deliveryMetrics": {
+          "wpm": 224,
+          "pauses": 0,
+          "energyVar": 0.00465,
+          "durationMs": 4548
+        },
+        "scoreReason": "Directly addressed the student's time-commitment worry with a concrete figure (8-10 hours/week) and checked back on feasibility, showing empathy for the law+AI parallel load."
+      },
+      {
+        "role": "student",
+        "text": "Umm, eight to ten hours per week, haan, that sounds a bit tight, ma'am... but maybe doable, if the timing is flexible, na?",
+        "emotion": "neutral",
+        "phase": 4,
+        "scoreAfter": 54,
+        "ts": "2026-06-12T11:46:16.672Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Of course it is. So, for instance, the lectures that will be conducted, they'll be live, but you'll also have an option to watch the recorded lectures. And the assignments or practical activities given to you, they can be worked on asynchronously whenever you're free within that week. So that should be helpful, I believe. What do you think?",
+        "phase": 4,
+        "turnType": "question",
+        "scoreAfter": 58,
+        "ts": "2026-06-12T11:46:43.807Z",
+        "deliveryMetrics": {
+          "wpm": 192,
+          "pauses": 0,
+          "energyVar": 0.00416,
+          "durationMs": 18472
+        },
+        "scoreReason": "Directly addresses the student's time-commitment/flexibility concern with concrete specifics: live lectures plus recorded options and async assignments, then checks back — a clear, substantive objection-handling move."
+      },
+      {
+        "role": "student",
+        "text": "Uh, yeah, ma'am, that sounds a bit better, actually... but, um, what about, you know, exam times, if it's clashing?",
+        "emotion": "neutral",
+        "phase": 4,
+        "scoreAfter": 58,
+        "ts": "2026-06-12T11:46:50.640Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "So your examinations will be conducted on Sundays if you're talking about the exams within this program. And if you're talking about your exams in college, I'm pretty sure they'd be over the weekdays, so there wouldn't be any clashes as such. And also, most of your module exams will be conducted virtually. It's only your final exam which will be conducted offline, and the dates will be communicated to you way in advance. So I believe that should be manageable as well.",
+        "phase": 4,
+        "turnType": "statement",
+        "scoreAfter": 62,
+        "ts": "2026-06-12T11:47:23.341Z",
+        "deliveryMetrics": {
+          "wpm": 178,
+          "pauses": 0,
+          "energyVar": 0.00577,
+          "durationMs": 28037
+        },
+        "scoreReason": "Directly and substantively addresses the student's exam-clash concern with concrete specifics: Sunday-only module exams, virtual format, offline final exam with advance notice, and the weekday college exam distinction. Clear empathy and practical detail."
+      },
+      {
+        "role": "student",
+        "text": "Achha, okay ma'am, so virtual module exams and final offline, right? That’s a bit clearer now.",
+        "emotion": "neutral",
+        "phase": 4,
+        "scoreAfter": 62,
+        "ts": "2026-06-12T11:47:28.840Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Yes, absolutely. And I'd like to understand, like, how do you think analytics and AI is going to help you with your career? I mean, you did inform that it'll help with legal analytics, but can you tell me what broader picture are you viewing for yourself or your career goals?",
+        "phase": 4,
+        "turnType": "question",
+        "scoreAfter": 63,
+        "ts": "2026-06-12T11:47:50.690Z",
+        "deliveryMetrics": {
+          "wpm": 184,
+          "pauses": 0,
+          "energyVar": 0.00616,
+          "durationMs": 16669
+        },
+        "scoreReason": "Reasonable discovery-style follow-up to understand the student's career goals, but it slightly talks past the exam-schedule question just confirmed rather than deepening or closing that thread."
+      },
+      {
+        "role": "student",
+        "text": "Uh, yeah, so, I mean ma'am, I'm thinking long-term, you know, maybe using AI for contracts or compliance analysis, something like that, na?",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 63,
+        "ts": "2026-06-12T11:47:58.952Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "That's amazing. It's great to see that you're trying to blend in analytics AI with your particular domain. Also, Vinayak, are your parents aware that, you know, you're interested in something like this and you are checking out a program like this?",
+        "phase": 5,
+        "turnType": "question",
+        "scoreAfter": 63,
+        "ts": "2026-06-12T11:48:18.083Z",
+        "deliveryMetrics": {
+          "wpm": 177,
+          "pauses": 0,
+          "energyVar": 0.00367,
+          "durationMs": 14274
+        },
+        "scoreReason": "Routine acknowledgement of student's career goal followed by a discovery-style question about parental awareness, which is a reasonable but ordinary move for the close phase."
+      },
+      {
+        "role": "student",
+        "text": "Uh, actually ma'am, not yet, I’ll have to discuss with my father, you know, about the fees part.",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 63,
+        "ts": "2026-06-12T11:48:23.347Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Understood. So I'll let you know a little bit more about the program so that it'll give you clarity and help you understand how it's going to be specifically beneficial for you, so that then it becomes easier for you to be able to have this conversation with your patients. What say, does that work for you?",
+        "phase": 5,
+        "turnType": "question",
+        "scoreAfter": 65,
+        "ts": "2026-06-12T11:48:47.467Z",
+        "deliveryMetrics": {
+          "wpm": 183,
+          "pauses": 0,
+          "energyVar": 0.00469,
+          "durationMs": 18691
+        },
+        "scoreReason": "Counsellor offers to provide more program clarity to help the student discuss it with his father, which directly supports the open parents_family concern and proposes a low-pressure next step."
+      },
+      {
+        "role": "student",
+        "text": "Uh, yeah ma'am, that sounds fine, but can you tell me the fees, like the exact amount?",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 65,
+        "ts": "2026-06-12T11:48:55.150Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Sure, let me tell you the fee. So this program is going to cost you around 52,000 plus GST. It is a six-month program, but having said that, this is a Bitform certified program, so this is going to give you a lot of credibility. And of course, I haven't gone into the details of the program yet, so once I start sharing the details, you'll understand why the fee is like, you know, something which is on par with what the program has to offer.",
+        "phase": 5,
+        "turnType": "statement",
+        "scoreAfter": 67,
+        "ts": "2026-06-12T11:49:29.480Z",
+        "deliveryMetrics": {
+          "wpm": 176,
+          "pauses": 0,
+          "energyVar": 0.0061,
+          "durationMs": 29236
+        },
+        "scoreReason": "Gave the concrete fee figure the student asked for, acknowledged the certification credibility, and teased value before diving into details — a direct, relevant answer to the fee question."
+      },
+      {
+        "role": "student",
+        "text": "Uh, okay ma'am, got it, so around fifty-two thousand plus GST. And EMI options, like, how much per month roughly, ma'am?",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 67,
+        "ts": "2026-06-12T11:49:35.412Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "You will have three months or six months EMI options, so depending on that, the interest rate would vary. But roughly it might cost you around 12 to 15,000 if it's a three-month program.",
+        "phase": 5,
+        "turnType": "statement",
+        "scoreAfter": 70,
+        "ts": "2026-06-12T11:50:03.408Z",
+        "deliveryMetrics": {
+          "wpm": 120,
+          "pauses": 0,
+          "energyVar": 0.00655,
+          "durationMs": 17015
+        },
+        "scoreReason": "Counsellor directly addresses the EMI affordability concern by quoting concrete tenures (3 or 6 months) and a specific monthly range (12-15k), giving the student a real number to work with rather than a vague 'EMI is available'."
+      },
+      {
+        "role": "student",
+        "text": "Hmm, okay ma'am... around twelve to fifteen thousand per month, yeah? I'll need to think that through with my father, na.",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 70,
+        "ts": "2026-06-12T11:50:12.450Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Of course, that's completely understandable. Would you like to know more about the details of the program now, Vinayak?",
+        "phase": 5,
+        "turnType": "question",
+        "scoreAfter": 70,
+        "ts": "2026-06-12T11:50:21.801Z",
+        "deliveryMetrics": {
+          "wpm": 197,
+          "pauses": 0,
+          "energyVar": 0.00539,
+          "durationMs": 5793
+        },
+        "scoreReason": "Routine acknowledgement and a soft redirect to learn more — does not substantively address the EMI affordability concern the student raised, nor does it offer a concrete next step appropriate to the close phase."
+      },
+      {
+        "role": "student",
+        "text": "Uh, yeah ma'am, I think so—maybe just a quick idea of the main modules, you know, to explain at home.",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 70,
+        "ts": "2026-06-12T11:50:26.387Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Sure Vinayak, so given that you have come from an LLB background, you would need to learn things from the fundamentals. So in this particular program, that is Business Analytics with Generative and Agentic AI, you're going to start off from the foundations of analytics, that is you will start learning SQL, Python, and you'll also understand more about data visualization elements by learning how to use, you know, platforms like Tableau. And you'll explore a bit deeper into data warehousing for AI. So we'll also be having an understanding of agentic systems, that is, what exactly are agentic systems, how would you be able to create something like that, and even generative AI. Prompt as we'll be going a little deeper into it, and you'll be learning these concepts in a module way. And at the end of each module, you'll be having evaluations as well. Is this clear so far? Do you have any questions, Vinayak?",
+        "phase": 5,
+        "turnType": "invite",
+        "scoreAfter": 70,
+        "ts": "2026-06-12T11:51:33.408Z",
+        "deliveryMetrics": {
+          "wpm": 160,
+          "pauses": 0,
+          "energyVar": 0.00637,
+          "durationMs": 59411
+        },
+        "scoreReason": "Counsellor provides a standard module overview as requested, which is appropriate presentation-phase content but doesn't address the open EMI affordability concern or move toward a low-pressure close."
+      },
+      {
+        "role": "student",
+        "text": "Uh, yeah ma'am, that's clearer now, but the main thing is still the fees part, na?",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 70,
+        "ts": "2026-06-12T11:51:45.450Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Of course, that is something that I would definitely encourage that you discuss with your parents. But I guess before you discuss, you need to have a well-rounded information about the program so you'd be able to justify why this program, you know, costs this much and how, you know, you'd be able to make the fee in a convenient manner for yourself.",
+        "phase": 5,
+        "turnType": "statement",
+        "scoreAfter": 71,
+        "ts": "2026-06-12T11:52:04.921Z",
+        "deliveryMetrics": {
+          "wpm": 176,
+          "pauses": 0,
+          "energyVar": 0.00463,
+          "durationMs": 21502
+        },
+        "scoreReason": "Counselor acknowledges the need to discuss with parents and pivots to justifying the value before that conversation, which is reasonable rapport-building but does not yet provide concrete numbers or move to a low-pressure next step."
+      },
+      {
+        "role": "student",
+        "text": "Haan, okay ma'am, I get that, but this EMI amount, that’s what I need to confirm with him, na.",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 71,
+        "ts": "2026-06-12T11:52:14.117Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "That, plus additionally, of course, if you are interested in the program and if you'd like to enroll, you need to enroll for the program just within the next four hours because we are blocking the admissions on a first-come, first-served basis. So you need to have this conversation and block your seat for this program by paying a fee of 4,000 within the next four hours, Vinayak.",
+        "phase": 5,
+        "turnType": "statement",
+        "scoreAfter": 67,
+        "ts": "2026-06-12T11:52:37.656Z",
+        "deliveryMetrics": {
+          "wpm": 191,
+          "pauses": 0,
+          "energyVar": 0.00599,
+          "durationMs": 21395
+        },
+        "scoreReason": "Manufactured four-hour deadline and 'block your seat now' pressure on a still-hesitant student who just said he needs to discuss EMI with his parent — classic fake-urgency pressure tactic on an affordability/parents objection."
+      },
+      {
+        "role": "student",
+        "text": "Uh, ma'am, just four hours is a bit tight, na? I’ll really have to check with my father first.",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 67,
+        "ts": "2026-06-12T11:52:44.327Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Of course, that's what I'm trying to say. You can talk to your father within the next 4 hours and I'll be sharing my contact details with you. You can reach out to me and let me know what the decision is. And of course, you just need to pay this 4,000 now. The remaining fee you can pay in EMIs. The team will reach out to you regarding the timelines and windows for the same.",
+        "phase": 5,
+        "turnType": "statement",
+        "scoreAfter": 66,
+        "ts": "2026-06-12T11:53:11.324Z",
+        "deliveryMetrics": {
+          "wpm": 227,
+          "pauses": 0,
+          "energyVar": 0.00494,
+          "durationMs": 20104
+        },
+        "scoreReason": "Gives a clear low-pressure structure (talk to father, then call back) and a fee decomposition (4000 seat-block + EMI), which is good, but re-asserts an artificial 4-hour deadline on a hesitant student who just said it's too tight, edging into pressure rather than honest framing."
+      },
+      {
+        "role": "student",
+        "text": "Uh, yeah ma'am, okay, so if I pay four thousand now, the EMI details will come later, right?",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 66,
+        "ts": "2026-06-12T11:53:16.193Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Now I'll be showing you the EMI details as well right now itself, but yes, the EMI process will be starting a little later, probably within the next one week or 10 days.",
+        "phase": 5,
+        "turnType": "statement",
+        "scoreAfter": 68,
+        "ts": "2026-06-12T11:53:36.770Z",
+        "deliveryMetrics": {
+          "wpm": 152,
+          "pauses": 0,
+          "energyVar": 0.00756,
+          "durationMs": 13038
+        },
+        "scoreReason": "Counsellor directly answered the student's question about EMI details and confirmed the timeline, giving a concrete, relevant response to the EMI affordability concern."
+      },
+      {
+        "role": "student",
+        "text": "Uh, okay ma'am, so the EMI kicks in later, but I’ll get details now, right?",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 68,
+        "ts": "2026-06-12T11:53:40.812Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Yes, as I mentioned earlier, you will be having the option to pay either for three months EMI or six months EMI, and you can get started accordingly once your course starts.",
+        "phase": 5,
+        "turnType": "statement",
+        "scoreAfter": 71,
+        "ts": "2026-06-12T11:53:59.892Z",
+        "deliveryMetrics": {
+          "wpm": 139,
+          "pauses": 0,
+          "energyVar": 0.00481,
+          "durationMs": 13797
+        },
+        "scoreReason": "Counsellor directly answers the EMI question the student just asked, confirming 3-month and 6-month EMI options with a concrete reference to course start — substantively addresses the open EMI affordability concern with specific tenures."
+      },
+      {
+        "role": "student",
+        "text": "Alright, ma'am, so I'll check with my father about the EMI, and get back soon, haan.",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 71,
+        "ts": "2026-06-12T11:54:04.230Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "All right, thanks Vinayak. Looking forward to hearing from you again.",
+        "phase": 5,
+        "turnType": "statement",
+        "scoreAfter": 72,
+        "ts": "2026-06-12T11:54:13.451Z",
+        "deliveryMetrics": {
+          "wpm": 183,
+          "pauses": 0,
+          "energyVar": 0.00415,
+          "durationMs": 3603
+        },
+        "scoreReason": "Polite, low-pressure close acknowledging the student's need to consult his father and leaving the door open — appropriate for a still-hesitant student at the close phase."
+      },
+      {
+        "role": "student",
+        "text": "Uh, sure ma'am, I'll talk to him today and let you know soon, thoda time lagega bas.",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 72,
+        "ts": "2026-06-12T11:54:17.994Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "That's all right. Thank you.",
+        "phase": 5,
+        "turnType": "statement",
+        "scoreAfter": 72,
+        "ts": "2026-06-12T11:54:26.518Z",
+        "deliveryMetrics": {
+          "wpm": 140,
+          "pauses": 0,
+          "energyVar": 0.00282,
+          "durationMs": 2148
+        },
+        "scoreReason": "Routine closing acknowledgement of the student saying they'll get back after talking to their father; appropriate but ordinary for this moment."
+      },
+      {
+        "role": "student",
+        "text": "Alright ma'am, thanks, I’ll check and get back soon, pakka.",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 72,
+        "ts": "2026-06-12T11:54:30.495Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "So we like a few hours have passed. I think you must have discussed with your father. So can I share the payment link with you and can we proceed ahead with the registration amount?",
+        "phase": 5,
+        "turnType": "question",
+        "scoreAfter": 70,
+        "ts": "2026-06-12T11:54:49.769Z",
+        "deliveryMetrics": {
+          "wpm": 186,
+          "pauses": 0,
+          "energyVar": 0.00295,
+          "durationMs": 11271
+        },
+        "scoreReason": "Counsellor pressures with a soft urgency ('a few hours have passed') and pushes for immediate registration without low-pressure framing of the 4,000 seat-block amount or offering a callback if not ready."
+      },
+      {
+        "role": "student",
+        "text": "Uh, ma'am, I haven’t fully discussed the EMI part with him yet, I still need a bit more time, na.",
+        "emotion": "neutral",
+        "phase": 5,
+        "scoreAfter": 70,
+        "ts": "2026-06-12T11:54:54.793Z"
+      }
+    ],
+    "generatedAt": "2026-06-12T11:58:06.769Z",
+    "fallback": false,
+    "regenerable": false,
+    "overall": {
+      "percent": 52,
+      "band": "Good",
+      "outcome": "Not Converted",
+      "outcomeDetail": "Vinayak did not pay the ₹4,000 seat-block; he repeatedly said he needed to check with his father, the quoted fee (₹52,000 + GST) was wrong, and the fabricated 'few hours have passed' re-engagement was rebuffed.",
+      "headline": "Next session, focus on pacing the close around the customer's stated decision timeline instead of manufacturing urgency when a parent consult is still pending."
+    },
+    "rubric": [
+      {
+        "key": "rapport",
+        "label": "Rapport & Opening",
+        "weight": 10,
+        "score": 7,
+        "level": "Good",
+        "justification": "Polite, professional opener — confirms Vinayak's name, states her role and purpose clearly, and acknowledges the student's busy schedule, but there is no personal connection or warmth beyond procedural courtesy (matches anchor 7)."
+      },
+      {
+        "key": "discovery",
+        "label": "Needs Discovery",
+        "weight": 15,
+        "score": 6,
+        "level": "Competent",
+        "justification": "Covers education (third-year BA LLB), interest in AI/legal analytics, and surfaces parental dependency on the fee decision, but never probes the 'why' behind the enquiry, the budget, or family context in any depth (matches anchor 7 baseline; no real digging)."
+      },
+      {
+        "key": "presentation",
+        "label": "Programme Presentation",
+        "weight": 15,
+        "score": 4,
+        "level": "Developing",
+        "justification": "The curriculum walkthrough in turn 30 is muddled and generic — mentions SQL, Python, Tableau, data warehousing, agentic systems, and prompt engineering without aligning any of it to Vinayak's stated legal-analytics goal, and the fee (₹52,000 + GST) is also incorrect against the ₹4,000 ground truth (matches anchor 4)."
+      },
+      {
+        "key": "objections",
+        "label": "Objection Handling",
+        "weight": 20,
+        "score": 5,
+        "level": "Competent",
+        "justification": "Handles the time-commitment worry and exam-clash concern with concrete, factually accurate answers (8–10 hrs/week, Sunday exams, recorded lectures), and surfaces the parent-awareness question proactively, but the repeated fee/EMI objection is deflected with 'discuss with your father' across multiple turns rather than being resolved with scholarship, alternative plans, or a concrete reframe (matches a mix of anchor 7 and a missed-resolve weakness)."
+      },
+      {
+        "key": "knowledge",
+        "label": "Product Knowledge & Accuracy",
+        "weight": 15,
+        "score": 3,
+        "level": "Developing",
+        "justification": "States the fee as '₹52,000 + GST' when the ground truth is ₹4,000 / seat-block ₹4,000 — a core, verifiable fact that is plainly false, which is a significant accuracy failure (anchor 1 territory: false facts on a core program detail)."
+      },
+      {
+        "key": "closing",
+        "label": "Closing & Payment Ask",
+        "weight": 10,
+        "score": 5,
+        "level": "Competent",
+        "justification": "The payment ask eventually lands and includes a specific ₹4,000 seat-block figure and a '4 hours' deadline, but the deadline is invented scarcity pressure on a student who explicitly said he needs his father's sign-off, and the post-call follow-up (turn 46) reads as a fabricated 'few hours have passed' time-skip rather than a genuine, anchored next step (mix of anchor 7 and a mild coercion miss)."
+      },
+      {
+        "key": "communication",
+        "label": "Communication & Empathy",
+        "weight": 10,
+        "score": 7,
+        "level": "Good",
+        "justification": "Polite, clear, and patient throughout — acknowledges the law-curriculum density concern, validates Vinayak's domain-blending aspiration, and does not talk down to him, though she never really validates his emotional situation or reads the family dynamic (matches anchor 7)."
+      },
+      {
+        "key": "voice_delivery",
+        "label": "Voice Delivery",
+        "weight": 5,
+        "score": 7,
+        "level": "Good",
+        "justification": "Pace stays in a 117–227 wpm range with intelligible delivery, and tone is steady and even if emotionally flat; pauses are absent (pauses=0 throughout), so the student is never really given space to react mid-monologue (matches anchor 7)."
+      }
+    ],
+    "phaseBreakdown": [
+      {
+        "phase": 1,
+        "name": "Opening",
+        "summary": "Rosnhi opens politely, introduces herself as the academic counsellor, confirms the purpose, and acknowledges Vinayak's busy schedule before moving to discovery.",
+        "didWell": "Professional, non-pushy opener that states her role and intent clearly and uses the student's name correctly.",
+        "toImprove": "Add a small personal or credibility touch (e.g., alumni count, partner institute) and check what Vinayak already knows before launching into a generic flow."
+      },
+      {
+        "phase": 2,
+        "name": "Discovery",
+        "summary": "Discovery covers his year of study, AI/legal interest, and future goal, and proactively surfaces the parent-awareness angle, but never probes budget, timeline, or competing offers.",
+        "didWell": "Asked about parents' awareness before pitching the fee and explored his long-term career vision.",
+        "toImprove": "Probe the 'why' behind the reel-driven interest, ask a direct budget/EMI question, and find out his father's likely stance before the fee reveal."
+      },
+      {
+        "phase": 3,
+        "name": "Presentation",
+        "summary": "Programme presentation in turn 30 is a single long monologue touching SQL, Python, Tableau, data warehousing, agentic systems, and prompt engineering without tying any of it to legal analytics or Vinayak's domain.",
+        "didWell": "Covers the breadth of the curriculum and mentions module-level evaluations.",
+        "toImprove": "Personalise the walkthrough with a legal-analytics use case, structure it module-by-module, and correct the fee before the EMIs are discussed."
+      },
+      {
+        "phase": 4,
+        "name": "Objections & Negotiation",
+        "summary": "Handles time-commitment and exam-clash concerns factually, but the dominant fee/EMI objection is deflected across turns 31–40 with repeated 'discuss with your father' framing rather than resolved with concrete options.",
+        "didWell": "Gave a clean answer on 8–10 hrs/week, recorded lectures, and Sunday virtual exams with only the final exam offline.",
+        "toImprove": "Address the fee/EMI concern with specifics (no-cost EMI, scholarships, refund policy) and stop recycling 'have the conversation with your father' as a deflection."
+      },
+      {
+        "phase": 5,
+        "name": "Close",
+        "summary": "Closes with a ₹4,000 seat-block ask and a 4-hour deadline, then attempts a fabricated 'few hours have passed' follow-up in turn 46, which the student pushes back on.",
+        "didWell": "Stated the seat-block amount clearly and offered EMI follow-up after course start.",
+        "toImprove": ""
+      }
+    ],
+    "strengths": [
+      {
+        "point": "Handled the time-commitment and exam-clash concerns with concrete, reassuring specifics (8–10 hrs/week, Sunday exams, virtual modules, offline final communicated in advance).",
+        "quote": "You just need to give around 8 to 10 hours per week. Do you think that's doable?"
+      },
+      {
+        "point": "Opened with proper discovery (background, motivation, career goals) before pitching, which let the legal-analytics angle surface naturally.",
+        "quote": "I'd like to know more about you so that I can tell you how exactly this will fit into your career or your goals."
+      },
+      {
+        "point": "Gave a well-structured module walkthrough in turn 30 that Vinayak could actually take home to his father to justify the fee.",
+        "quote": "You'll also be understanding of agentic systems… and even generative AI. Prompt as we'll be going a little deeper into it…"
+      }
+    ],
+    "improvements": [
+      {
+        "point": "The 4-hour seat-blocking deadline was introduced immediately after Vinayak said he still had to talk to his father — a textbook pressure tactic that contradicted the empathy you had just shown.",
+        "quote": "You need to enroll for the program just within the next four hours because we are blocking the admissions on a first-come, first-served basis.",
+        "suggestion": "Replace manufactured urgency with a soft close: agree on a specific follow-up time/date (e.g., 'Call me back by tomorrow 7 pm after you've spoken with your father, and I'll hold your spot'), and only use scarcity if it is genuinely true."
+      },
+      {
+        "point": "Turn 46 fabricated a time-skip ('a few hours have passed… I think you must have discussed with your father') and pushed for the registration link even after Vinayak explicitly said he still needed more time. This likely eroded trust and explains the middling 70/100 satisfaction.",
+        "quote": "So we like a few hours have passed. I think you must have discussed with your father. So can I share the payment link with you…",
+        "suggestion": "When the prospect repeats a boundary, acknowledge it and book a definite callback rather than re-asserting the ask: 'Of course, take the time you need — shall we lock in a call for Thursday evening so your father can also ask me any questions directly?'"
+      },
+      {
+        "point": "There were accuracy slips in the money conversation that hurt credibility: the EMI line in turn 26 mentioned 'three-month program' when the program is six months, and you didn't clearly reconcile the ₹52,000+ GST total with the per-month EMI (₹12–15k for 3 months doesn't match 6-month EMI options).",
+        "quote": "roughly it might cost you around 12 to 15,000 if it's a three-month program.",
+        "suggestion": "Pre-calculate both EMI tenors on a notepad before the call and present them as a clean table (Total ₹52,000 + GST → 3-month EMI ≈ ₹18,500 + GST, 6-month EMI ≈ ₹9,500 + GST) so the prospect can show exact numbers to the decision-maker."
+      }
+    ],
+    "keyMoments": [
+      {
+        "turn": 22,
+        "type": "miss",
+        "note": "Said 'have this conversation with your patients' instead of 'parents' — a small slip, but right at the moment you were positioning yourself as an ally for the family conversation. It breaks the otherwise polished delivery."
+      },
+      {
+        "turn": 34,
+        "type": "miss",
+        "note": "Dropped a hard '4-hour' seat-blocking deadline the moment Vinayak flagged he hadn't spoken to his father yet. This is the single biggest driver of the lukewarm close and likely capped satisfaction at 70."
+      },
+      {
+        "turn": 14,
+        "type": "best",
+        "note": "Strong recovery on the time-commitment objection — concrete hours, dual live+recorded format, async assignments. This is the model structure to reuse for every feasibility objection."
+      },
+      {
+        "turn": 46,
+        "type": "miss",
+        "note": "Pretending time had passed and pushing for the payment link ignored Vinayak's just-stated need for more time. The right move was to lock a definite follow-up, not re-ask for money."
+      }
+    ],
+    "drills": [
+      {
+        "title": "Product Knowledge Sprint: BITS x Masai Fast-Facts",
+        "focusCriterion": "knowledge",
+        "objectionCategory": "course_fit_relevance",
+        "instruction": "Spend 20 minutes memorising the official BITS School of Management x Masai 'Business Analytics with Gen & Agentic AI' fact-sheet: exact module list (Foundations of Analytics, SQL & Data Warehousing, Python for Data, GenAI & Prompt Engineering, Agentic AI Systems, Tableau/Power BI, Capstone), total fee ₹52,000 + GST, correct EMI math for 3-month and 6-month tenures (e.g., ₹52,000 ÷ 6 ≈ ₹8,667 plus interest, NOT the earlier '12–15k for 3-month' slip), BITS Pilani WILP brand credentials, Masai pedagogy (live + recorded, 8–10 hrs/wk, Sunday exams, virtual modules + offline final). Then have a partner fire 15 rapid-fire questions including tricky ones like 'What is the exact monthly EMI for 6 months with interest?', 'Who issues the certificate — BITS or Masai?', and 'Is the final exam online or offline?' — answer each in ≤10 seconds with no hedging, no 'I'll have to check', and no mis-speaking 'parents' as 'patients'."
+      },
+      {
+        "title": "The Lawyer's Pitch: Personalised Module-to-Career Storytelling",
+        "focusCriterion": "presentation",
+        "objectionCategory": "course_fit_relevance",
+        "instruction": "Build and rehearse a 4-minute pitch specifically for a BA LLB student (Vinayak's persona) who wants AI in legal analytics/contracts/compliance. For every module, deliver a 'For YOU, Vinayak' use-case in this format: Module Name → What you'll do → Concrete deliverable he can show his father (e.g., 'SQL module → query a real contracts database from Indian Kanoon → build a case-law search engine in 2 weeks'). End with one signature project story: a past Masai learner who moved from a non-tech background into an analytics role, with a specific outcome and number. Record yourself, then cut any segment that names a tool without a student-specific outcome. Hard ban on generic phrases like 'industry-relevant', 'in-demand', or 'future-proof' — replace each with a concrete scenario. Cap total presentation at 4 minutes with one check-in question halfway."
+      },
+      {
+        "title": "Father-Conversation Kit: Turning 'I'll check with my parents' into a Yes-Path",
+        "focusCriterion": "objections",
+        "objectionCategory": "parents_family",
+        "instruction": "Role-play 6 rounds of the 'parents not aware / need to discuss fees' objection. For each round your response must include all four moves in this exact order: (1) empathise in one sentence, (2) normalise ('most of our law students consult their parents — that's a smart move, Vinayak'), (3) arm the student with a ready 'talking-points script for your father' covering EMI math, BITS certificate value, 6-month commitment, and ROI vs a generic LLM course, (4) reduce risk with a concrete next step — either offer a 5-minute 3-way call with the father, send a WhatsApp-ready one-pager, or replace the hard 4-hour ultimatum with a 24-hour soft hold. Do NOT end any round with a vague 'let me know' — always close with a scheduled follow-up date and time. Debrief each round on whether the urgency pressure felt forced versus helpful."
+      }
+    ]
   }
 ]
