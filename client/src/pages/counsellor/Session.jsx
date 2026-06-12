@@ -542,11 +542,13 @@ export default function Session() {
   useEffect(() => {
     if (isNewRoute) return;
     if (autoVoiceHandled.current) return;
-    const autoVoice = location.state?.autoVoice;
     if (loading) return;
     autoVoiceHandled.current = true;
     setTimerStart((t) => t || Date.now());
-    if (autoVoice && isVoice) {
+    // Voice sessions always (re)connect — router state survives only the initial
+    // join navigation, so gating on autoVoice left refresh/resume/bookmark loads
+    // with the live call UI mounted but a dead connection. isVoice alone decides.
+    if (isVoice) {
       voice.enable(openaiVoiceRef.current)
         .then(() => voice.setMuted?.(true))
         .catch(() => { /* enable failed — counsellor can retry via the mic button */ });

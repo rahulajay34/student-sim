@@ -203,7 +203,7 @@ export default function AssignmentCreate() {
         scenario: {
           title: title.trim(),
           difficulty,
-          situation: selectedProfile?.description || situation.trim(),
+          situation: situation.trim(),
           contextNotes: contextNotes.trim(),
           pushiness,
           hesitancy,

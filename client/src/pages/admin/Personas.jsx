@@ -31,7 +31,7 @@ const DEFAULT_PERSONALITY = {
   talkativeness: 2,
   humour: 2,
   skepticism: 3,
-  formality: 2,
+  formality: 3,
   quirks: [],
   notes: "",
 };

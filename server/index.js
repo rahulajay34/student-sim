@@ -146,6 +146,14 @@ app.put("/api/personas/:id", (req, res) => {
 });
 
 app.delete("/api/personas/:id", (req, res) => {
+  const active = store.getAll("assignments").filter(
+    (a) => a.personaId === req.params.id && a.status !== "completed",
+  );
+  if (active.length > 0) {
+    return res.status(409).json({
+      error: `Cannot delete: ${active.length} active assignment(s) reference this persona. Complete or delete those assignments first.`,
+    });
+  }
   store.remove("personas", req.params.id);
   res.json({ ok: true });
 });
@@ -273,6 +281,14 @@ app.delete("/api/rubric-templates/:id", (req, res) => {
   const existing = store.getById("rubric-templates", req.params.id);
   if (!existing) return res.status(404).json({ error: "Rubric template not found" });
   if (existing.isDefault) return res.status(400).json({ error: "Cannot delete the default template" });
+  const active = store.getAll("assignments").filter(
+    (a) => a.rubricTemplateId === req.params.id && a.status !== "completed",
+  );
+  if (active.length > 0) {
+    return res.status(409).json({
+      error: `Cannot delete: ${active.length} active assignment(s) use this rubric template. Complete or delete those assignments first.`,
+    });
+  }
   store.remove("rubric-templates", req.params.id);
   res.json({ ok: true });
 });
@@ -379,6 +395,14 @@ app.get("/api/assignments/:id", (req, res) => {
 });
 
 app.delete("/api/assignments/:id", (req, res) => {
+  const activeSession = store.getAll("sessions").find(
+    (s) => s.assignmentId === req.params.id && s.status !== "ended",
+  );
+  if (activeSession) {
+    return res.status(409).json({
+      error: "Cannot delete: this assignment has an active session in progress. End the session first.",
+    });
+  }
   store.remove("assignments", req.params.id);
   res.json({ ok: true });
 });

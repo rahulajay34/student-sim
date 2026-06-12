@@ -145,7 +145,9 @@ export default function Practice() {
         scenario: {
           title: title.trim() || "Free practice",
           difficulty,
-          situation: selectedProfile?.description || situation.trim(),
+          // situation state is pre-filled from the profile on selection, so the
+          // textarea (with any manual edits) is the single source of truth here.
+          situation: situation.trim(),
           contextNotes: contextNotes.trim(),
           pushiness,
           hesitancy,
