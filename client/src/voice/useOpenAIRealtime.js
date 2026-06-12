@@ -73,7 +73,10 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
   const micAnalyserRef = useRef(null);  // local mic AnalyserNode (energy variance)
   const micCtxRef = useRef(null);
   const micSrcRef = useRef(null);       // MediaStreamSource feeding the mic analyser (disconnect on re-point)
-  const utterRef = useRef(null); // { startMs, durMs, segments, speaking, segStartMs, rms: [] }
+  const utterRef = useRef(null); // { startMs, durMs, segments, speaking, segStartMs, rms: [], responseLatencyMs? }
+  // Timestamp (performance.now()) when the AI's audio last stopped — used to
+  // measure how long the counsellor waited before starting their reply.
+  const aiStoppedAtRef = useRef(null);
   // A finished utterance whose transcription hasn't arrived yet. OpenAI can fire
   // speech_started(N+1) BEFORE transcription.completed(N); without this snapshot
   // the late transcript would read (and then reset) N+1's accumulator, corrupting
@@ -192,6 +195,9 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
       out.energyVar = Number(variance.toFixed(5));
     }
 
+    // Response latency: time between AI stopping and counsellor starting to speak.
+    if (u.responseLatencyMs != null) out.responseLatencyMs = u.responseLatencyMs;
+
     // Derived verdict/tone fields the CoachPanel + FootStrip chips read directly.
     if (out.wpm != null) {
       out.paceVerdict = out.wpm < 100 ? "slow" : out.wpm > 170 ? "fast" : "good";
@@ -249,7 +255,16 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
           resetUtterance();
         }
         const u = utterRef.current;
-        if (u.segments === 0 && u.durMs === 0) u.startMs = now;
+        if (u.segments === 0 && u.durMs === 0) {
+          u.startMs = now;
+          // Measure how long after the AI stopped speaking the counsellor started.
+          // Only record for the first segment of this utterance (segments === 0).
+          if (aiStoppedAtRef.current != null) {
+            const latencyMs = now - aiStoppedAtRef.current;
+            if (latencyMs >= 0) u.responseLatencyMs = Math.round(latencyMs);
+            aiStoppedAtRef.current = null; // consumed
+          }
+        }
         u.speaking = true;
         u.segStartMs = now;
         u.segments += 1;
@@ -291,6 +306,10 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
         if (enabledRef.current) setStatusBoth("speaking");
         break;
       case "output_audio_buffer.stopped":
+        // Record when AI audio ends — used to measure counsellor response latency.
+        aiStoppedAtRef.current = performance.now();
+        if (enabledRef.current && statusRef.current === "speaking") setStatusBoth("idle");
+        break;
       case "response.done":
         if (enabledRef.current && statusRef.current === "speaking") setStatusBoth("idle");
         break;

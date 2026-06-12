@@ -371,11 +371,13 @@ export function stubReportSections(session) {
   const sessionMinutes = session.startedAt
     ? Math.round((Date.now() - new Date(session.startedAt).getTime()) / 60000 * 10) / 10
     : null;
+  const delayedTurns = (session.scoreHistory || []).filter((h) => h.responseDelayed).length;
   return {
     finalScore: typeof session.satisfactionScore === "number" ? session.satisfactionScore : null,
     scoreArc: (session.scoreHistory || []).map((h) => ({ turn: h.turn, score: h.score })),
     benchmarks: buildBenchmarks(session, sessionMinutes),
     transcript: session.transcript,
+    ...(delayedTurns > 0 ? { delayedTurns } : {}),
   };
 }
 

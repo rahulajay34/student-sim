@@ -751,6 +751,20 @@ export default function Session() {
     }
   }
 
+  // Phrases that indicate the counsellor is requesting time to think — these
+  // are genuine real-time reactions and should NOT be penalized for latency.
+  const STALL_PHRASES = [
+    "give me", "one second", "one moment", "just a second", "just a minute",
+    "hold on", "let me think", "wait", "give me some time", "can i get",
+    "need a moment", "thinking", "umm", "uh", "hmm",
+  ];
+  function isStallPhrase(text) {
+    const t = text.toLowerCase();
+    return STALL_PHRASES.some((p) => t.includes(p));
+  }
+
+  const RESPONSE_LATENCY_LIMIT_MS = 15_000;
+
   function handleRealtimeTranscript({ role, text, deliveryMetrics }) {
     // Defensively strip any leaked [emotion:X] tag so it never reaches the bubble,
     // /observe, or the report (the realtime prompt already forbids it).
@@ -763,8 +777,22 @@ export default function Session() {
     if (role === "student") setEmotion("neutral");
     if (role === "counsellor" && deliveryMetrics) setLastDeliveryMetrics(deliveryMetrics);
     const sid = activeSessionId || sessionId;
+
+    // Detect a suspiciously slow response: counsellor took >15s to start speaking
+    // after the AI stopped. Exempt stall/filler phrases ("give me some time" etc.)
+    // since those are genuine real-time reactions, not looked-up answers.
+    const responseDelayed =
+      role === "counsellor" &&
+      typeof deliveryMetrics?.responseLatencyMs === "number" &&
+      deliveryMetrics.responseLatencyMs > RESPONSE_LATENCY_LIMIT_MS &&
+      !isStallPhrase(clean);
+
     const body = role === "counsellor"
-      ? { counsellorText: clean, ...(deliveryMetrics ? { deliveryMetrics } : {}) }
+      ? {
+          counsellorText: clean,
+          ...(deliveryMetrics ? { deliveryMetrics } : {}),
+          ...(responseDelayed ? { responseDelayed: true } : {}),
+        }
       : { studentText: clean };
     observeChainRef.current = observeChainRef.current
       .catch(() => {})

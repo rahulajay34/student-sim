@@ -1043,6 +1043,9 @@ app.post("/api/sessions/:id/observe", lockedHandler(async (req, res) => {
   const sText = stripEmotionArtifacts(typeof req.body?.studentText === "string" ? req.body.studentText.slice(0, 4000) : "");
   // deliveryMetrics arrives only with a counsellor turn.
   const deliveryMetrics = cText ? sanitizeRealtimeDeliveryMetrics(req.body?.deliveryMetrics) : null;
+  // responseDelayed: counsellor took >15s to start speaking after the AI stopped.
+  // Flag sent by the client; the turn is still recorded but scoring is skipped.
+  const responseDelayed = !!req.body?.responseDelayed && !!cText;
   if (!cText && !sText) return res.status(400).json({ error: "counsellorText or studentText is required" });
 
   if (!Array.isArray(session.objectionState)) session.objectionState = initObjectionState();
@@ -1069,15 +1072,23 @@ app.post("/api/sessions/:id/observe", lockedHandler(async (req, res) => {
       const recentTurns = session.transcript.slice(-(windowSize + 1), -1).map(({ role, text }) => ({ role, text }));
       const openObjForScore = openObjections(session.objectionState).map(({ category }) => ({ key: category }));
 
-      const scored = await scoreObserveTurn(cText, {
-        recentTurns, phase: session.currentPhase, turnType,
-        courseName: session.courseSnapshot?.name, openObjections: openObjForScore,
-      });
+      let scored;
+      if (responseDelayed) {
+        // Counsellor took >15s to start — skip scoring so looked-up answers don't
+        // inflate the satisfaction score. Record the turn but apply 0 adjustment.
+        scored = { adjustment: 0, reason: "Response delayed (>15 s after AI) — turn not scored", addressedObjection: null };
+        counsellorEntry.responseDelayed = true;
+      } else {
+        scored = await scoreObserveTurn(cText, {
+          recentTurns, phase: session.currentPhase, turnType,
+          courseName: session.courseSnapshot?.name, openObjections: openObjForScore,
+        });
+      }
       reason = scored.reason;
       session.satisfactionScore = Math.max(0, Math.min(100, preScore + scored.adjustment));
       counsellorEntry.scoreAfter = session.satisfactionScore;
       counsellorEntry.scoreReason = reason;
-      session.scoreHistory.push({ turn: session.scoreHistory.length, score: session.satisfactionScore, adjustment: scored.adjustment, reason });
+      session.scoreHistory.push({ turn: session.scoreHistory.length, score: session.satisfactionScore, adjustment: scored.adjustment, reason, ...(responseDelayed ? { responseDelayed: true } : {}) });
       if (scored.addressedObjection) {
         resolveObjection(session.objectionState, scored.addressedObjection, session.transcript.indexOf(counsellorEntry));
       }

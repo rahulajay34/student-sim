@@ -336,6 +336,7 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
     personaName,
     scenarioTitle,
     generatedAt,
+    delayedTurns,
   } = report;
 
   const converted = overall.outcome === "Converted";
@@ -375,6 +376,23 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
           <Button variant="secondary" size="sm" onClick={handleRegenerate} disabled={regenerating}>
             {regenerating ? "Retrying…" : "Retry"}
           </Button>
+        </div>
+      )}
+
+      {/* DELAYED-RESPONSE warning — shown when turns were not scored due to >15s latency */}
+      {!!report.delayedTurns && (
+        <div className="flex items-start gap-3 rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round"
+            className="mt-0.5 h-4 w-4 shrink-0 text-danger">
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <span className="text-ink/80">
+            <strong className="text-danger">{report.delayedTurns} turn{report.delayedTurns > 1 ? "s were" : " was"} not scored</strong>
+            {" "}— the counsellor took more than 15 seconds to start speaking after the student finished.
+            Delayed answers are excluded from the satisfaction score to prevent use of external references during the call.
+          </span>
         </div>
       )}
 

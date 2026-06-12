@@ -1,7 +1,52 @@
 // Searchable combobox that mirrors the Select prop surface.
-// Options: [{ value, label, group? }]. Typing filters by label (case-insensitive).
+// Options: [{ value, label, group? }]. Typing filters by label OR institute name,
+// including abbreviations and alternate names (see INSTITUTE_ALIASES below).
 // Groups: if any option has a `group` field, options are visually grouped.
 import { useId, useRef, useState, useEffect, useCallback } from "react";
+
+// Alternate search terms for each institute (canonical name → aliases).
+// All values are lowercase; canonical keys must match the group field lowercased.
+const INSTITUTE_ALIASES = {
+  "iit roorkee":                ["iitr", "roorkee"],
+  "iit roorkee eict":           ["iitr", "roorkee", "eict", "iit roorkee"],
+  "iit mandi":                  ["iitm", "mandi"],
+  "iit guwahati":               ["iitg", "guwahati"],
+  "iit patna":                  ["iitp", "patna", "vishlesan", "ihub"],
+  "fitt iit delhi":             ["fitt", "iitd", "delhi", "iit delhi"],
+  "tihan iit hyderabad":        ["tihan", "hyderabad", "iith", "iit hyderabad"],
+  "bits school of management":  ["bitsom", "bits", "birla", "bsom",
+                                  "birla institute", "bits pilani"],
+  "iim ranchi":                 ["iimr", "ranchi"],
+  "iim mumbai":                 ["iimm", "mumbai"],
+  "iim rohtak":                 ["rohtak"],
+  "iim trichy":                 ["trichy", "tiruchirappalli"],
+  "iim sirmaur":                ["sirmaur", "sirmour", "sirmour hills"],
+  "imt ghaziabad":              ["imt", "ghaziabad"],
+  "nmims":                      ["narsee monjee", "svkm"],
+  "nmims cdoe":                 ["narsee monjee", "nmims", "svkm", "cdoe"],
+  "pwc academy":                ["pwc", "pricewaterhousecoopers",
+                                  "price waterhouse coopers"],
+  "masai school":               ["masai"],
+  "rotman school of management":["rotman", "rotman school"],
+  "xlri":                       ["xavier labour", "jamshedpur"],
+};
+
+// Returns a single space-joined string of all search terms for an option,
+// combining label, group name, and any registered aliases.
+function buildSearchText(opt) {
+  const parts = [opt.label.toLowerCase()];
+  if (opt.group) {
+    const g = opt.group.toLowerCase();
+    parts.push(g);
+    const aliases = INSTITUTE_ALIASES[g];
+    if (aliases) parts.push(...aliases);
+  }
+  return parts.join(" ");
+}
+
+function matchesQuery(opt, q) {
+  return buildSearchText(opt).includes(q);
+}
 
 export default function SearchableSelect({
   label,
@@ -35,10 +80,9 @@ export default function SearchableSelect({
     setHighlighted(-1);
   };
 
-  const filtered = query.trim()
-    ? options.filter((o) =>
-        o.label.toLowerCase().includes(query.trim().toLowerCase())
-      )
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? options.filter((o) => matchesQuery(o, q))
     : options;
 
   // Build grouped structure: { [group]: Option[] }
