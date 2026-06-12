@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef, useState } from "react";
 import Orb from "./Orb";
 import { scoreColor } from "../../../lib/format";
-import { OPENAI_VOICES, loadStoredMicDevice } from "../../../voice/engines";
+import { loadStoredMicDevice } from "../../../voice/engines";
 
 // ── In-call voice picker (audition voices live; a change reconnects briefly) ───
 function VoicePicker({ voices, voice, onChange }) {
@@ -732,7 +732,6 @@ function CallStage({
 }) {
   const timer = useTimer(timerStart);
   const [micHintShown] = useState(true); // always show once; no need to hide
-  const em = EMOTION_META[emotion] || EMOTION_META.neutral;
   const isVoice = sessionMode !== "text";
 
   // ── Score-change pulse: briefly scale + tint the live sat number on change ──
@@ -753,30 +752,6 @@ function CallStage({
     }
   }, [satisfaction]);
 
-  // ── Live cue chip: enable toggle (persisted) + per-cue dismissal ───────────
-  const [cuesEnabled, setCuesEnabled] = useState(() => {
-    try {
-      return localStorage.getItem("mct_cues") !== "off";
-    } catch {
-      return true;
-    }
-  });
-  function toggleCues() {
-    setCuesEnabled((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem("mct_cues", next ? "on" : "off");
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-  }
-
-  // Reset dismissal whenever a new cue arrives (keyed by headline + first point).
-  const cueKey = cue ? `${cue.headline || ""}|${(cue.points && cue.points[0]) || ""}` : "";
-  const [dismissedKey, setDismissedKey] = useState(null);
-  const chipVisible = cuesEnabled && !!cueKey && dismissedKey !== cueKey;
   const satColorKey = scoreColor(satisfaction ?? 0);
   const satHex = SCORE_COLOR_HEX[satColorKey] || "#8b90a8";
 
@@ -796,24 +771,6 @@ function CallStage({
     >
       {/* ── Top-left pills ─────────────────────────────────────────────── */}
       <div style={{ position: "absolute", top: 20, left: 20, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", maxWidth: "calc(100% - 40px)" }}>
-        {/* Phase: current → next (S5) */}
-        <Pill>
-          <span style={{ color: "#818cf8", fontWeight: 600 }}>
-            {PHASE_LABELS[phase] || `Phase ${phase}`}
-          </span>
-          {PHASE_LABELS[phase + 1] && (
-            <span style={{ color: "#5b6178" }}>
-              → Next: {PHASE_LABELS[phase + 1]}
-            </span>
-          )}
-        </Pill>
-
-        {/* Emotion */}
-        <Pill style={{ color: em.color }}>
-          <span>{em.emoji}</span>
-          <span>{em.label}</span>
-        </Pill>
-
         {/* Timer */}
         <Pill>
           <span style={{ fontVariantNumeric: "tabular-nums" }}>{timer}</span>
@@ -854,39 +811,6 @@ function CallStage({
           </button>
         )}
 
-        {/* Cue chips toggle */}
-        <button
-          type="button"
-          onClick={toggleCues}
-          title={cuesEnabled ? "Hide live coaching cues" : "Show live coaching cues"}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            borderRadius: 9999,
-            padding: "4px 12px",
-            fontSize: "0.75rem",
-            color: cuesEnabled ? "#c7d2fe" : "#8b90a8",
-            background: "rgba(22,26,38,0.80)",
-            backdropFilter: "blur(8px)",
-            border: `1px solid ${cuesEnabled ? "rgba(99,102,241,0.40)" : "#262a36"}`,
-            cursor: "pointer",
-            whiteSpace: "nowrap",
-            transition: "border-color 150ms ease, color 150ms ease",
-          }}
-        >
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              flexShrink: 0,
-              background: cuesEnabled ? "#818cf8" : "#4b5167",
-            }}
-          />
-          {cuesEnabled ? "Cues on" : "Cues off"}
-        </button>
-
         {/* Mode indicator (Voice / Text) */}
         <Pill
           style={{
@@ -902,11 +826,6 @@ function CallStage({
           />
           {isVoice ? "Voice" : "Text"}
         </Pill>
-
-        {/* Live OpenAI voice picker (voice mode only) */}
-        {isVoice && (
-          <VoicePicker voices={OPENAI_VOICES} voice={openaiVoice} onChange={onChangeOpenaiVoice} />
-        )}
 
         {/* Mic input-device picker (voice mode, while connected) */}
         {isVoice && voice.enabled && (
@@ -1016,15 +935,6 @@ function CallStage({
           ) : null}
         </div>
       </div>
-
-      {/* ── Live cue hint chip (above the controls bar) ─────────────────── */}
-      {chipVisible && (
-        <StageHintChip
-          cue={cue}
-          onOpenCoach={() => onOpenCoach?.()}
-          onDismiss={() => setDismissedKey(cueKey)}
-        />
-      )}
 
       {/* ── Bottom controls bar ─────────────────────────────────────────── */}
       <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>

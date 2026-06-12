@@ -262,7 +262,7 @@ export default function Session() {
   const [endedReportId, setEndedReportId] = useState(null);
 
   // ── UI state ───────────────────────────────────────────────────────────────
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState("transcript");
   const [showSat, setShowSat] = useState(true);
   const [pttHeld, setPttHeld] = useState(false);

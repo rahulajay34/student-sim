@@ -6,6 +6,7 @@ import "./index.css";
 import { AuthProvider, ProtectedRoute, useAuth, homePathFor } from "./lib/auth.jsx";
 import AdminLayout from "./layouts/AdminLayout.jsx";
 import CounsellorLayout from "./layouts/CounsellorLayout.jsx";
+import SuperAdminLayout from "./layouts/SuperAdminLayout.jsx";
 
 import Login from "./pages/Login.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
@@ -25,6 +26,7 @@ import Session from "./pages/counsellor/Session.jsx";
 import Reports from "./pages/counsellor/Reports.jsx";
 
 import ReportDetail from "./pages/shared/ReportDetail.jsx";
+import UserManagement from "./pages/superadmin/UserManagement.jsx";
 
 function RootRedirect() {
   const { user } = useAuth();
@@ -37,6 +39,17 @@ function App() {
       <Routes>
         <Route path="/" element={<RootRedirect />} />
         <Route path="/login" element={<Login />} />
+
+        {/* Super Admin */}
+        <Route
+          element={
+            <ProtectedRoute role="superadmin">
+              <SuperAdminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/superadmin" element={<UserManagement />} />
+        </Route>
 
         {/* Admin */}
         <Route

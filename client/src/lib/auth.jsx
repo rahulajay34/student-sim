@@ -1,5 +1,3 @@
-// Dummy auth: login hits the API, the returned user is cached in localStorage.
-// No tokens/security — this is a training MVP.
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { api } from "./api";
@@ -25,12 +23,21 @@ export function AuthProvider({ children }) {
     return u;
   }, []);
 
+  const loginWithGoogle = useCallback(async (idToken) => {
+    const u = await api.loginWithGoogle(idToken);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
+    setUser(u);
+    return u;
+  }, []);
+
   const logout = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
+    // Sign out of Google session so the account picker shows on next login.
+    window.google?.accounts?.id?.disableAutoSelect?.();
     setUser(null);
   }, []);
 
-  const value = useMemo(() => ({ user, login, logout }), [user, login, logout]);
+  const value = useMemo(() => ({ user, login, loginWithGoogle, logout }), [user, login, loginWithGoogle, logout]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
@@ -40,16 +47,23 @@ export function useAuth() {
   return ctx;
 }
 
-// Unknown/corrupt roles go to /login — defaulting them to /app made ProtectedRoute
-// bounce them back to homePathFor in an infinite redirect loop.
-export const homePathFor = (user) =>
-  user?.role === "admin" ? "/admin" : user?.role === "counsellor" ? "/app" : "/login";
+export const homePathFor = (user) => {
+  if (user?.role === "superadmin") return "/superadmin";
+  if (user?.role === "admin") return "/admin";
+  if (user?.role === "counsellor") return "/app";
+  return "/login";
+};
 
-// Guards a route by auth + role. Redirects to /login or the user's own home.
+// superadmin can pass through admin-guarded routes in addition to their own.
 export function ProtectedRoute({ role, children }) {
   const { user } = useAuth();
   const location = useLocation();
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
-  if (role && user.role !== role) return <Navigate to={homePathFor(user)} replace />;
+  if (role) {
+    const canAccess =
+      user.role === role ||
+      (role === "admin" && user.role === "superadmin");
+    if (!canAccess) return <Navigate to={homePathFor(user)} replace />;
+  }
   return children;
 }

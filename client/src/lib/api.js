@@ -35,8 +35,13 @@ const qs = (counsellorId) => (counsellorId ? `?counsellorId=${encodeURIComponent
 export const api = {
   // auth
   login: (email, password) => req("/login", { method: "POST", body: { email, password } }).then((d) => d.user),
+  loginWithGoogle: (idToken) => req("/auth/google", { method: "POST", body: { idToken } }).then((d) => d.user),
 
-  // users
+  // users (superadmin)
+  getUsers: () => req("/users"),
+  updateUserRole: (id, role) => req(`/users/${id}/role`, { method: "PUT", body: { role } }),
+
+  // counsellors
   getCounsellors: () => req("/counsellors"),
 
   // personas

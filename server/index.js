@@ -140,6 +140,88 @@ app.post("/api/login", (req, res) => {
   res.json({ user: publicUser(user) });
 });
 
+// Derive a stable avatar colour from an email string.
+function colorFromEmail(email) {
+  const COLORS = ["#4F46E5", "#0EA5E9", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#14B8A6"];
+  let hash = 0;
+  for (const c of String(email)) hash = ((hash << 5) - hash + c.charCodeAt(0)) | 0;
+  return COLORS[Math.abs(hash) % COLORS.length];
+}
+
+// POST /api/auth/google — verify a Google ID token, then find-or-create the user.
+app.post("/api/auth/google", async (req, res) => {
+  const { idToken } = req.body || {};
+  if (!idToken) return res.status(400).json({ error: "idToken is required" });
+  try {
+    const gRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
+    if (!gRes.ok) return res.status(401).json({ error: "Invalid Google token" });
+    const payload = await gRes.json();
+
+    // Verify audience if GOOGLE_CLIENT_ID is configured.
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (clientId && payload.aud !== clientId) {
+      return res.status(401).json({ error: "Token audience mismatch" });
+    }
+
+    const { email, name, sub: googleId } = payload;
+    if (!email) return res.status(401).json({ error: "No email in token" });
+
+    const superadminEmails = (process.env.SUPERADMIN_EMAIL || "")
+      .split(",").map((e) => e.trim()).filter(Boolean);
+
+    let user = store.findUserByEmail(email);
+    if (!user) {
+      const role = superadminEmails.includes(email) ? "superadmin" : "counsellor";
+      user = store.insert("users", {
+        id: store.newId("user"),
+        name: name || email.split("@")[0],
+        email,
+        role,
+        avatarColor: colorFromEmail(email),
+        googleId,
+      });
+    } else {
+      // Keep name in sync with Google; promote to superadmin if listed.
+      const patch = { name: name || user.name, googleId };
+      if (superadminEmails.includes(email) && user.role !== "superadmin") {
+        patch.role = "superadmin";
+      }
+      user = store.update("users", user.id, patch);
+    }
+
+    res.json({ user: publicUser(user) });
+  } catch (err) {
+    console.error("[auth/google]", err);
+    res.status(500).json({ error: "Authentication failed" });
+  }
+});
+
+// GET /api/users — superadmin only: list all users for role management.
+app.get("/api/users", (req, res) => {
+  const requester = requesterFor(req);
+  if (!requester || requester.role !== "superadmin") {
+    return res.status(403).json({ error: "Superadmin access required" });
+  }
+  res.json(store.getAll("users").map(publicUser));
+});
+
+// PUT /api/users/:id/role — superadmin only: change a user's role.
+app.put("/api/users/:id/role", (req, res) => {
+  const requester = requesterFor(req);
+  if (!requester || requester.role !== "superadmin") {
+    return res.status(403).json({ error: "Superadmin access required" });
+  }
+  const { role } = req.body || {};
+  const VALID = ["counsellor", "admin", "superadmin"];
+  if (!VALID.includes(role)) {
+    return res.status(400).json({ error: `role must be one of: ${VALID.join(", ")}` });
+  }
+  const existing = store.getById("users", req.params.id);
+  if (!existing) return res.status(404).json({ error: "User not found" });
+  const updated = store.update("users", req.params.id, { role });
+  res.json(publicUser(updated));
+});
+
 // --- Counsellors -----------------------------------------------------------
 app.get("/api/counsellors", (_req, res) => res.json(store.getCounsellors().map(publicUser)));
 
