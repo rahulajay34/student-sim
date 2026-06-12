@@ -129,12 +129,16 @@ function coerceConfig(raw) {
   const d = DEFAULT_SCORING_CONFIG;
   if (!raw || typeof raw !== "object") return { ...d };
   // phaseExpectations may arrive with string keys ("1".."5") from JSON; keep as-is.
+  // Spread raw first so keys this allowlist doesn't know about survive an admin
+  // save round-trip (PUT /api/config/scoring writes the coerced object back).
   return {
+    ...raw,
     neverPenalizeAbsence: typeof raw.neverPenalizeAbsence === "boolean" ? raw.neverPenalizeAbsence : d.neverPenalizeAbsence,
     backchannelWords: Array.isArray(raw.backchannelWords) && raw.backchannelWords.length ? raw.backchannelWords : d.backchannelWords,
     severityBands: Array.isArray(raw.severityBands) && raw.severityBands.length ? raw.severityBands : d.severityBands,
     phaseExpectations: raw.phaseExpectations && typeof raw.phaseExpectations === "object" ? raw.phaseExpectations : d.phaseExpectations,
     counterMoves: raw.counterMoves && typeof raw.counterMoves === "object" ? {
+      ...raw.counterMoves,
       reward: Array.isArray(raw.counterMoves.reward) ? raw.counterMoves.reward : d.counterMoves.reward,
       penalize: Array.isArray(raw.counterMoves.penalize) ? raw.counterMoves.penalize : d.counterMoves.penalize,
     } : d.counterMoves,

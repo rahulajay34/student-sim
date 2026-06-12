@@ -16,7 +16,7 @@ import { scoreMessage, isBackchannel, loadScoringConfig, saveScoringConfig, scor
 import { generateReport, needsRegeneration, reportPromptForInspection, stubReportSections, buildFallbackReport } from "./report.js";
 import { buildAdminAnalytics, buildCounsellorAnalytics } from "./analytics.js";
 import { classifyCounsellorTurn } from "./classify.js";
-import { getPromptConfig } from "./promptConfig.js";
+import { getPromptConfig, invalidatePromptConfigCache } from "./promptConfig.js";
 import { composeForInspection } from "./prompt.js";
 import { pickStudentVoice, inferGenderFromName } from "./voices.js";
 import { rollSessionFlavour, DEFAULT_PERSONALITY } from "./personality.js";
@@ -1160,6 +1160,9 @@ app.put("/api/config/prompts", (req, res) => {
     return res.status(500).json({ error: "failed to persist prompt config" });
   }
   // Return the effective (merged) config so the client sees defaults filled in.
+  // Invalidate first: coarse filesystem mtime resolution can otherwise make
+  // getPromptConfig return the pre-write cached object.
+  invalidatePromptConfigCache();
   res.json(getPromptConfig());
 });
 

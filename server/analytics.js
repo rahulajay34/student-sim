@@ -72,7 +72,9 @@ export function buildAdminAnalytics({ reports, assignments, users }) {
 
   // ---- KPIs ----------------------------------------------------------------
 
-  const mocksCompleted = reports.length;
+  // Only scored reports count as completed mocks — status:"generating" stubs are
+  // sessions whose report is still being written and would inflate the KPI.
+  const mocksCompleted = reports.filter((r) => Number.isFinite(r.overall?.percent)).length;
   const totalAssigned = assignments.length;
   const completedAssignments = assignments.filter((a) => a.status === "completed").length;
   const completionRatePct = totalAssigned === 0 ? 0 : Math.round(safe(completedAssignments, totalAssigned) * 100);
@@ -118,7 +120,7 @@ export function buildAdminAnalytics({ reports, assignments, users }) {
 
   // Per counsellor: accumulate scores per rubric key
   const heatmapRows = counsellors.map((c) => {
-    const ownReports = reports.filter((r) => r.counsellorId === c.id);
+    const ownReports = reports.filter((r) => r.counsellorId === c.id && Number.isFinite(r.overall?.percent));
     // key -> [score, ...]
     const keyScores = {};
     for (const r of ownReports) {
@@ -352,7 +354,9 @@ export function buildCounsellorAnalytics(counsellorId, { reports, assignments, u
   const completedMocks = ownAssignments.filter((a) => a.status === "completed").length;
 
   const ownPercents = ownReports.map((r) => r.overall.percent).filter((v) => typeof v === "number" && Number.isFinite(v));
-  const avgPercent = ownPercents.length === 0 ? 0 : Math.round(safe(ownPercents.reduce((s, v) => s + v, 0), ownPercents.length));
+  // null (not 0) when no scored report exists yet — the dashboard renders "—" for
+  // null but would show a real-looking "0%" if we defaulted to zero here.
+  const avgPercent = ownPercents.length === 0 ? null : Math.round(safe(ownPercents.reduce((s, v) => s + v, 0), ownPercents.length));
 
   // ---- Recommended drill ---------------------------------------------------
 

@@ -271,7 +271,7 @@ function PromptTab({ initialConfig, onSave }) {
       <Card className="p-5">
         <CardHeader
           title="Register note"
-          subtitle='Injected as "HOW YOU TALK" — Hinglish cadence, filler words, reply length norms.'
+          subtitle='Injected as "HOW YOU TALK" — language policy (Indian English, light Hindi particles only), filler words, reply length norms. Keep consistent with behaviourRules and naturalSpeech.'
         />
         <Textarea
           label="registerNote"

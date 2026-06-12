@@ -148,6 +148,13 @@ function mergeConfig(base, override) {
 let _cache = null; // { mtimeMs: number, config: object }
 let warned = false;
 
+// The PUT /api/config/prompts handler calls this right after writing the file so
+// the response reflects the new content even when the filesystem's mtime
+// resolution is too coarse to register the change (e.g. 1s on ext4/HFS+).
+export function invalidatePromptConfigCache() {
+  _cache = null;
+}
+
 export function getPromptConfig() {
   try {
     let mtimeMs;
