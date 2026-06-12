@@ -1,0 +1,100 @@
+{
+  "criteria": [
+    {
+      "key": "rapport",
+      "label": "Rapport & Opening",
+      "weight": 10,
+      "anchors": {
+        "1": "Breaks trust in the first minute — calls the student by the wrong name repeatedly or opens visibly unaware of who they are, with a disjointed, confused start.",
+        "2": "Launches straight into the standard scripted pitch without checking what the student already knows, so the opening sounds like a broadcast, not a conversation.",
+        "3": "Polite, professional opening — confirms the student's name and background and states the purpose of the session, but moves to business without any personal connection.",
+        "4": "Opens with warmth and credibility — drops social proof like '6,000+ counselled students', shares a relatable personal backstory, and acknowledges the student's specific profile before pitching.",
+        "5": "Hands the student the wheel from the first line — 'any queries from your end which you want to ask and clarify, or should I walk you through?' — and builds genuine connection around their hobbies, hometown, and story before any selling."
+      }
+    },
+    {
+      "key": "discovery",
+      "label": "Needs Discovery",
+      "weight": 15,
+      "anchors": {
+        "1": "Never establishes what the student actually needs — keeps talking over and around their confusion, or pitches the basics to someone who has already said 'I am aware of deep learning and TensorFlow'.",
+        "2": "Asks one or two token background questions then pitches anyway, leaving constraints like parental dependency, class-timing conflicts, or competing offers completely unexplored.",
+        "3": "Covers the standard qualification checklist — education, work status, goal — accurately, but never digs into the why behind the enquiry or the family context around it.",
+        "4": "Probes goals, family context, and financial capacity early — checking whether parents know the fee and what the budget really is before recommending anything.",
+        "5": "Runs deep discovery before a single pitch line — probes current versus expected package to ground the value in a concrete '4.5 to 8-10 LPA' jump and surfaces the family story actually driving the decision."
+      }
+    },
+    {
+      "key": "presentation",
+      "label": "Programme Presentation",
+      "weight": 15,
+      "anchors": {
+        "1": "Jumps straight to fees and the payment ask with no curriculum overview at all, even when the student explicitly says she has no information about the programme.",
+        "2": "Recites a muddled, generic walkthrough — the fee surfaces 'once in passing' inside a complex monologue, and live classes never come up until the student asks about the batch.",
+        "3": "Delivers an accurate, structured overview — '7 modules, 25-day average per module, 2 classes/week' — covering projects and placements, but it is the same pitch for every student.",
+        "4": "Gives a structured screen-share walkthrough of modules, capstone projects, faculty credentials, and the placement process, tying at least some pieces to the student's stated goal.",
+        "5": "Turns the student's own world into the demo — 'January you had a revenue of 40 lakh... so as a business analyst what you will be doing' — with examples like the Zomato/Blinkit AI agent that map directly onto their goal."
+      }
+    },
+    {
+      "key": "objections",
+      "label": "Objection Handling",
+      "weight": 20,
+      "anchors": {
+        "1": "Dismisses or steamrolls concerns — answers parental hesitation with 'don't think about it', or flatters with 'you are the sole decision maker' to cut the family out of the decision.",
+        "2": "Folds or deflects at the first pushback — abandons a fee objection without mentioning EMI, scholarship, or any alternative path, or reframes around the real blocker without ever resolving it.",
+        "3": "Answers objections factually when they are raised — explains EMI options or placement criteria correctly — but only reacts, never anticipates what is coming.",
+        "4": "Defuses objections with evidence — walks the placement process step-by-step against the job-guarantee worry, shows mentor profiles from real companies, or pivots to a lower-priced programme when the fee bites.",
+        "5": "Pre-empts objections before they are spoken — checks parent fee-awareness early and disarms fraud worries with 'I'm not going to share you any payment links, because a lot of scams were happening' — turning trust gaps into proof moments."
+      }
+    },
+    {
+      "key": "knowledge",
+      "label": "Product Knowledge & Accuracy",
+      "weight": 15,
+      "anchors": {
+        "1": "States things that are simply false — brands the programme as from the wrong institute, references a scholarship test that does not exist, or quotes a course duration that contradicts the real one.",
+        "2": "Fumbles core facts — fee figures come out muddled ('52,000... 47,360...') without one clean number, and the module count changes mid-call from six to eight.",
+        "3": "Gets the standard facts right — fee, duration, schedule, eligibility — but answers stay generic and unverified the moment the student probes deeper.",
+        "4": "Discloses the full fee early and cleanly, explains attendance, recording, and EMI policies accurately, and is transparent about exact placement criteria like '65% attendance + 70% marks'.",
+        "5": "Treats accuracy as a trust weapon — pauses mid-call to verify a fee discrepancy with the team rather than bluffing, and answers the guarantee question with 'I never say any sort of guarantee' while citing real numbers."
+      }
+    },
+    {
+      "key": "closing",
+      "label": "Closing & Payment Ask",
+      "weight": 10,
+      "anchors": {
+        "1": "Closes by coercion — invents scarcity like '186 enrolled, only 70 seats left' for a parent hearing the fee for the first time, or threatens 'I'm going to close your application' when the student asks for time to think.",
+        "2": "The ask arrives late, vague, and undeveloped — phrased as awkwardly as 'pay some amount of money to secure your seat', with next steps left at 'the rest of the process will be guided from the website'.",
+        "3": "Makes a plain, timely payment ask and agrees a follow-up, but leaves the next step open-ended instead of anchoring it to a specific time or action.",
+        "4": "Engineers a concrete next step — a seat-securing link with an expiry, a 'by today' confirmation, or a tight one-hour lunchtime callback — keeping momentum without bullying.",
+        "5": "Closes with urgency minus pressure — sets a clear '8-8:30 PM' deadline with a 10-day window for the balance, gets the parents on the phone in-session, and walks the student step-by-step through payment friction like the PAN entry."
+      }
+    },
+    {
+      "key": "communication",
+      "label": "Communication & Empathy",
+      "weight": 10,
+      "anchors": {
+        "1": "Talks down to the student — 'why didn't you do BCom, BTech?' in a judgmental tone, or scoffs that a working professional 'still wants to consider parents' before deciding.",
+        "2": "Hears but does not listen — ignores a stated technical background, brushes past a lost parent with a one-line apology, and talks over a class-timing conflict the student keeps raising.",
+        "3": "Polite, clear, and patient throughout, but emotionally flat — no validation of the student's situation beyond procedural courtesy.",
+        "4": "Actively validates the student — 'you already implemented AI in your business' — and works patiently through a confused background narrative without rushing them.",
+        "5": "Reads the human moment — drops all urgency the instant a family bereavement is mentioned, and is honest enough to say 'I don't think you should do this course only because you're bored'."
+      }
+    },
+    {
+      "key": "voice_delivery",
+      "label": "Voice Delivery",
+      "weight": 5,
+      "anchors": {
+        "1": "Disjointed and hard to follow — fragmented, disfluent sentences, talking over the student's confusion instead of pausing, leaving them unable to absorb the explanation at all.",
+        "2": "Rushed or robotic — races through the onboarding close, fills gaps with 'okay okay okay', and drones at one fixed pace even over content the student already knows.",
+        "3": "Clear and steady — intelligible pace and even tone, though the energy stays flat and pauses are functional rather than inviting a reaction.",
+        "4": "Well-paced and warm — a thorough walkthrough delivered deliberately, with pauses that give the student space to react and questions that hand back the floor.",
+        "5": "Conversational and natural end-to-end — a non-pushy tone that matches the student's energy and lets them set the pace, the kind of delivery flagged as 'one of the more natural counsellor performances' in the corpus."
+      }
+    }
+  ]
+}

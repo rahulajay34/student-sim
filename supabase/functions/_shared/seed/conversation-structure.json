@@ -1,0 +1,83 @@
+{
+  "phases": [
+    {
+      "name": "Opening",
+      "typicalSharePct": 10,
+      "markers": [
+        "audibility check ('can you hear me?' / 'am I audible?') — opens the majority of calls, often repeated through network trouble",
+        "camera-on / video-on request before anything else",
+        "counsellor self-introduction with title and social proof ('senior academic counsellor', '6,000+ students counselled')",
+        "greeting student by name and confirming email ID / application for the Business Analytics & AI programme",
+        "congratulating the student on being shortlisted",
+        "agenda-setting: listing topics to be covered (program, curriculum, fee structure, faculty, timing)",
+        "audio/network troubleshooting, reconnects, 'offers to call back'"
+      ]
+    },
+    {
+      "name": "Discovery",
+      "typicalSharePct": 25,
+      "markers": [
+        "request for self-introduction and background ('asks for student self-introduction', graduation, current work)",
+        "reason-for-interest probing ('asks reason for interest', 'why you are applying')",
+        "checking parental awareness early ('whether parents know about the course' and fees)",
+        "current activity / job / salary questions ('I get here around 90 to 1 lakh... after rent and living cost')",
+        "career-goal framing from the student ('I would like to bridge a gap between AI and my work')",
+        "surfacing prior research ('any queries from your end which you want to ask and clarify')"
+      ]
+    },
+    {
+      "name": "Presentation",
+      "typicalSharePct": 30,
+      "markers": [
+        "structured module/curriculum walkthrough, screen share or PPT ('once you confirm the seat... you will be able to download this PPT')",
+        "faculty and brand credibility ('The faculties are by the Bits only... admission process which is done by the Maasai school')",
+        "placement statistics and packages ('the average package is like 11 to 13', 'college dropout... was able to get 8 LPA')",
+        "worked analogies explaining the analyst role ('January you had a revenue of 40 lakh... as a business analyst you will be analyzing the business')",
+        "certification-value framing ('if you don't have any certification... strong profile')",
+        "selectivity proof ('41,000 students applied... only 3,800 students got shortlisted, and we only have 200 seats')"
+      ]
+    },
+    {
+      "name": "Objections & Negotiation",
+      "typicalSharePct": 15,
+      "markers": [
+        "affordability pushback ('the fee is too, like, too much for me to afford')",
+        "parent-consult deferral ('I want to have a little discussion with my parents')",
+        "time-to-think requests ('I need to have at least 24 hours of time to think about it')",
+        "scholarship asks ('would there be any scope of any like a scholarship')",
+        "placement scepticism ('placement assistance but not 100% placement')",
+        "EMI affordability talk ('you can pay it in EMI also I'm comfortable with that')",
+        "scarcity/deadline counters from the counsellor ('we are left with the 70 seats', 'Today is the last day of the counseling')",
+        "live parent calls pushed mid-session ('Mute yourself, okay? And call your parents, tell about the fee structure')"
+      ]
+    },
+    {
+      "name": "Close",
+      "typicalSharePct": 20,
+      "markers": [
+        "the 4,000 seat-blocking / booking amount ('pay some amount of money... which is about 4,000')",
+        "refundability check ('Is that 4,000 refundable?')",
+        "dashboard/UPI payment walkthrough in-session ('activate directly on your dashboard'; 'I'm not going to share you any payment links because a lot of scams were happening')",
+        "same-day deadline urgency ('Today is the last day of the registration')",
+        "EMI/finance team handoff ('That is EMI team who will be calling you')",
+        "WhatsApp confirmations, brochure and welcome message sent",
+        "LMS onboarding and congratulations after payment",
+        "follow-up call or callback scheduling when no commitment is made"
+      ]
+    }
+  ],
+  "openingPatterns": [
+    "Audibility check first ('can you hear me?' / repeated 'Hello'), then camera-on request — the dominant opener across the corpus",
+    "Camera/mic check, then counsellor introduces himself as 'Senior Academic Counsellor' for the BITS/IIM Business Analytics with Gen AI programme and asks for an introduction and motivation",
+    "Counsellor self-introduction with social proof ('6,000+ students counselled') before collecting student background and goals",
+    "Formal greeting plus agenda-setting: counsellor lists all topics to be covered — program, curriculum, fee structure, faculty, timing",
+    "Greet student by name, confirm email ID and that they applied for Business Analytics & AI, congratulate on shortlisting, then ask why they applied and whether parents know about the course",
+    "Extended audio/camera troubleshooting consuming the first stretch of the call (network issues, reconnects, offers to call back) before any programme discussion"
+  ],
+  "paymentAskNorms": {
+    "typicalAtPct": 78,
+    "presentInPaidPct": 87,
+    "presentOverallPct": 65,
+    "notes": "The ask lands about three-quarters into the call (median 78% of call length; interquartile 72-84%), framed as a 4,000 (occasionally 2,000) booking amount to 'secure/block your seat' with the balance moved to EMI handled by a separate finance team. Converting calls almost always contain an explicit ask (87% vs 65% overall) and push it to completion in the same session: the counsellor walks the student through their own dashboard/UPI ('I'm not going to share you any payment links because a lot of scams were happening'), manufactures same-call urgency ('Today is the last day of the registration', 'we are left with the 70 seats'), and often has the student mute and call a parent mid-session for approval before paying live on the call."
+  }
+}

@@ -1,0 +1,156 @@
+{
+  "neverPenalizeAbsence": true,
+  "backchannelWords": [
+    "ok",
+    "okay",
+    "kk",
+    "k",
+    "hmm",
+    "hm",
+    "mhm",
+    "mm",
+    "uh",
+    "uhuh",
+    "haan",
+    "han",
+    "ha",
+    "haa",
+    "haanji",
+    "ji",
+    "jee",
+    "hai",
+    "hain",
+    "acha",
+    "accha",
+    "achha",
+    "theek",
+    "thik",
+    "right",
+    "yes",
+    "yeah",
+    "yep",
+    "yup",
+    "sure",
+    "fine",
+    "alright",
+    "great",
+    "good",
+    "correct",
+    "perfect",
+    "exactly",
+    "got it",
+    "cool",
+    "samajh",
+    "samjha",
+    "samjhi",
+    "bilkul",
+    "sahi",
+    "okk",
+    "okkk",
+    "हाँ",
+    "हां",
+    "हम्म",
+    "जी",
+    "जी हाँ",
+    "ठीक",
+    "ठीक है",
+    "अच्छा",
+    "अच्छा ओके",
+    "ओके",
+    "सही",
+    "सही है",
+    "समझ",
+    "समझ गया",
+    "हूँ",
+    "हम",
+    "sir",
+    "madam",
+    "ma'am",
+    "sirji",
+    "सर",
+    "मैडम",
+    "हान",
+    "बिल्कुल"
+  ],
+  "severityBands": [
+    {
+      "range": "0",
+      "label": "Ordinary / expected",
+      "guidance": "The modal adjustment. An ordinary turn that does what a competent counsellor would do at this moment — plain explaining, a short factual answer, a normal discovery question, a routine acknowledgement — scores 0. Most turns score 0."
+    },
+    {
+      "range": "+1..+2 (early phases)",
+      "label": "Good rapport / discovery / presentation craft",
+      "guidance": "In Opening, Discovery and Presentation (phases 1-3) genuine craft earns a small positive — it must NOT sit frozen at 0. +1..+2 for: a warm rapport-building open, light agenda-setting ('I'll tell you about the programme then answer your questions'), a genuine open discovery question that gets the student talking, active listening that builds on the student's own last answer, or a presentation point tied specifically to what THIS student said. Small but real — rapport and discovery quality should move the meter up through the early phases."
+    },
+    {
+      "range": "+2",
+      "label": "Concrete relevant answer",
+      "guidance": "The counsellor gives a concrete, correct, relevant answer to what the student JUST asked — a specific fee figure, the real refund window, the actual schedule, a straight yes/no with the reason. Answering the question they asked, with a real answer, is worth +2 — it is NOT an ordinary 0."
+    },
+    {
+      "range": "+3..+4",
+      "label": "Addresses a concern/objection",
+      "guidance": "The counsellor directly and substantively addresses a concern or objection the student has raised this call, using specifics — numbers, proof, policy detail, and/or genuine empathy (e.g. explains the real refund terms and what triggers a refund, breaks down the fee, gives concrete placement stats with eligibility mechanics). This is the workhorse positive band when the student is pushing back and the counsellor actually engages the substance."
+    },
+    {
+      "range": "+5..+7",
+      "label": "Outstanding move",
+      "guidance": "An outstanding objection-handling move: decomposes the fee into seat-block-now + EMI, offers to bring a parent onto the call, screen-shares live proof, or lands a concrete agreed next step right after handling the objection. The kind of move that visibly turns a resistant student around."
+    },
+    {
+      "range": "-1..-2 (early phases)",
+      "label": "Weak rapport / discovery / presentation craft",
+      "guidance": "In phases 1-3, small negatives for craft faults that are not yet outright bad: ignoring or talking past the answer the student just gave, monologuing a brochure dump with no link to the student, skipping discovery to hard-pitch, or asking a closed/leading question where an open one was called for. -1..-2 — enough to register that the early-phase craft was off, without treating it as a serious fault."
+    },
+    {
+      "range": "-1..-3",
+      "label": "Clearly weak",
+      "guidance": "Vague where specifics were called for, ignores what the student just said, a rambling info-dump, talks over a question the student actually asked."
+    },
+    {
+      "range": "-4..-6",
+      "label": "Notably bad",
+      "guidance": "Pressure tactics on a hesitant student (manufactured deadline, 'decide right now', 'seats running out' used as a club rather than a fact), dismissing or belittling a stated concern, fake urgency on a trust objection."
+    },
+    {
+      "range": "+8..+10 / -7..-10",
+      "label": "Rare extremes",
+      "guidance": "Reserve for genuine extremes only. Positive: a textbook close of a genuinely difficult, resistant call (+8..+10). Negative: lying about the programme, aggressive bullying, or browbeating a clearly uncomfortable student (-7..-10)."
+    }
+  ],
+  "phaseExpectations": {
+    "1": "Opening. An ordinary greeting is 0, but genuine craft earns a small positive (+1..+2): a warm rapport-building open, a clear audibility/camera check, congratulating the student on being shortlisted, and light agenda-setting ('I'll walk you through the programme and then take your questions'). Hard-pitching the course or jumping to fees this early is weak (-1..-2).",
+    "2": "Discovery. This is where the student ANSWERS the counsellor's questions. An ordinary probe is 0, but genuine craft earns a small positive (+1..+2): a real open question that gets the student talking, and active listening that builds on the student's own last answer. Letting the student talk is good. Lecturing, brochure-dumping, or ignoring the answer the student just gave instead of probing is weak (-1..-2).",
+    "3": "Presentation. The counsellor is explaining the programme (curriculum, faculty, placements, certification, selectivity) while the student mostly LISTENS and gives short acknowledgements. Plain, clear explaining is fine (0); a point tied specifically to what THIS student said in discovery earns a small positive (+1..+2). Weak (-1..-2): 100+ word brochure dumps with no link to the student, lecturing without ever checking in.",
+    "4": "Objections & Negotiation. This is where the student's questions and pushback concentrate (fees, parents, time, scholarships, placement scepticism, EMI). Good now: address the student's SPECIFIC objection with concrete information and empathy, then check back — decompose the fee, quote EMI tenures, offer a parent call, give the real recordings/attendance answer. Dismissing, brushing off, or pressuring a hesitant student is a serious fault.",
+    "5": "Close. Good now: a clear, LOW-pressure next step — the 4,000 seat-blocking amount framed honestly, a dashboard/UPI walkthrough, a follow-up or callback if the student isn't ready. Pressure tactics on a still-hesitant student (last day, decide right now, seats running out as a club) are a serious fault."
+  },
+  "counterMoves": {
+    "reward": [
+      "Decomposing the fee: a small seat-block amount now, the balance moved to EMI / a finance team — instead of quoting the full figure as a wall.",
+      "Quoting a concrete EMI tenure and monthly figure rather than a vague 'EMI is available'.",
+      "Inviting a parent onto the call to discuss fees and approval, instead of arguing alone with the student.",
+      "Answering the recordings-count-for-attendance / can-I-catch-up worry with the real policy (sessions are recorded, attendance is flexible).",
+      "Offering live screen-share / dashboard proof of curriculum, placement data, or the payment flow."
+    ],
+    "penalize": [
+      "Fake urgency or invented deadlines ('today is the last day') used to pressure rather than inform.",
+      "Scarcity pressure ('only 70 seats left') aimed at a trust or affordability objection.",
+      "Ignoring or talking past the specific objection the student just raised."
+    ]
+  },
+  "recentTurnsWindow": 6,
+  "guidelines": [
+    "0 is the modal value for genuinely ordinary turns, but the positive bands are REAL and must be used when earned: +2 = a concrete, correct, relevant answer to what the student just asked; +3..+4 = directly and substantively addressing a concern/objection the student raised (specifics, numbers, proof, empathy); +5..+7 = an outstanding move (decompose the fee, offer a parent call, concrete next step after handling an objection). Good counselling and persistence MUST move the meter up — never default an objection-handling turn to 0.",
+    "Early phases (1-3) must NOT freeze the meter at 0. Rapport, discovery and presentation craft earn a small positive (+1..+2): rapport-building opens, agenda-setting, genuine open discovery questions, active listening that builds on the student's last answer, and presentation points tied to what THIS student said. Early-phase craft faults — ignoring the student's answer, monologuing a brochure dump, skipping discovery to hard-pitch — earn a small negative (-1..-2). This is still bounded by 'never penalize ABSENCE': a turn is not faulted merely for omitting a next step or a benefit mention.",
+    "addressedObjection: the scorer also returns addressedObjection — an objection CATEGORY KEY (from server/data/seed/objections.json: fee, emi_affordability, parents_family, time_commitment, competing_priorities, trust_legitimacy, job_guarantee_placement, course_fit_relevance, language_english, tech_access) or 'other', else null. It is set when the counsellor gave a substantive, specific response to a concern the student has already raised this call (visible in the last-6-turns context); a brush-off, fake urgency, or bare policy restatement does NOT count. Backchannels always return null.",
+    "addressedObjection key-matching: the scoring prompt is fed the session's currently-OPEN objection keys and the scorer is told to return one of THOSE exact keys when the turn answers an open concern — so the session resolves the same concern it is tracking (without this, the scorer's free-pick key often mismatched the regex-assigned key and resolveObjection() no-opped, stranding the concern open forever and starving the 'ANSWERED — do not repeat' student-prompt nudge). resolveObjection() also falls back to a sibling/related open concern when no exact key matches. This list is injected at runtime, not edited here; tune the wording via the scoring-prompt scaffolding.",
+    "0 is the target for ordinary turns. This scorer drives a live satisfaction meter, so routine turns land on 0 — but genuinely good objection-handling moves the needle up, and genuinely bad moves down.",
+    "Never penalize ABSENCE. A turn is not at fault merely for lacking a next step, a benefit mention, or an acknowledgement phrase. Judge what the counsellor DID against what a good counsellor would do at THIS moment of THIS phase — not against a checklist.",
+    "Phase context matters: Discovery is where the student answers questions; Presentation is a listening phase where short student acks are normal and plain counsellor explaining is fine; Objections is where pushback concentrates and empathy + specifics matter most.",
+    "Backchannel words (ok, hmm, haan, ji, theek hai, achha...) are conversational glue. A 1-4 word turn made entirely of these is skipped before the LLM and scores 0.",
+    "Edit phaseExpectations to retune what 'good' looks like per phase. Edit severityBands to widen or tighten how far a single turn can move the meter. Keep '0' as the modal band.",
+    "counterMoves.reward / counterMoves.penalize are grounded in real converting vs. losing calls — these are the moves worth nudging the score on. Add or remove with care."
+  ]
+}

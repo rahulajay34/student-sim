@@ -1,0 +1,80 @@
+# Supabase CLI configuration for the Mock Counselling Trainer.
+# Docs: https://supabase.com/docs/guides/cli/config
+# `project_id` is a local label only; the linked remote project ref is set via
+# `supabase link --project-ref <ref>` and stored in supabase/.temp (gitignored).
+project_id = "student-sim"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+# Match the deployed Postgres major version (Supabase ships 15).
+major_version = 15
+
+[db.pooler]
+enabled = true
+port = 54329
+# Edge Functions connect through the transaction-mode pooler; advisory locks are
+# unsafe across pooled connections, hence the lease-column + claim/commit RPC design.
+pool_mode = "transaction"
+default_pool_size = 20
+max_client_conn = 100
+
+[studio]
+enabled = true
+port = 54323
+
+# Catches outbound mail locally (signup confirmations, magic links, etc.).
+[inbucket]
+enabled = true
+port = 54324
+
+[auth]
+enabled = true
+# Where redirect links (confirmations, OAuth) point in local dev. The Vite SPA
+# runs on 5173; production site_url/redirects are set in the hosted project.
+site_url = "http://localhost:5173"
+additional_redirect_urls = [
+  "http://localhost:5173",
+  "http://localhost:5173/login",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:5173/login",
+]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+# Self-signup is allowed but constrained to @masaischool.com by the
+# enforce_signup_domain() BEFORE INSERT trigger on auth.users (see 0003_auth.sql).
+enable_signup = true
+minimum_password_length = 8
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+# Local dev convenience: don't require clicking the emailed confirmation link.
+# The hosted project should enable confirmations.
+enable_confirmations = false
+secure_password_change = false
+
+# Google OAuth is configured in the hosted project (client id already in .env;
+# client secret supplied at deploy time). Left disabled locally so `supabase start`
+# does not require the secret. To test Google locally, set the env vars below and
+# flip `enabled = true`.
+[auth.external.google]
+enabled = false
+client_id = "env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_GOOGLE_SECRET)"
+redirect_uri = ""
+skip_nonce_check = false
+
+[edge_runtime]
+enabled = true
+# Functions are added in a later workstream (api / session / report-worker).
+# Per-function entrypoints are auto-discovered under supabase/functions/<name>/index.ts.
+inspector_port = 8083

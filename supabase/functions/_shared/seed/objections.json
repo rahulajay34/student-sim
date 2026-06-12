@@ -1,0 +1,311 @@
+{
+  "categories": [
+    {
+      "key": "fee",
+      "label": "Fee / Affordability",
+      "frequencyPct": 17.7,
+      "conversionGapNote": "In converting calls 15 of 16 fee objections were defused — they were mostly clarification asks (GST inclusion, EMI vs one-time, the 4,000-now misunderstanding, brochure-vs-website price mismatch) answered with a concrete breakdown. In non-converting calls roughly two-thirds went unresolved: raw affordability statements were met with urgency pressure or an immediate pivot to a cheaper alternative course instead of being worked.",
+      "phrasings": [
+        "I am interested, but the fee is too much for me to afford. We cannot afford the fee.",
+        "I'll have to pay 4,000 right now? I need some time for that.",
+        "That means 52,000 is including GST or excluding?",
+        "The brochure says 62,000 plus GST... in the website it's written 70,000. There are three different pricings, I don't understand.",
+        "Is there any facility that it can be paid in EMI?",
+        "Would there be any scope of a scholarship or something in the fee?",
+        "Please give me one day because this fee is very high.",
+        "For the middle class, spending 50,000 here is a bit difficult.",
+        "I thought the fees is around 46,000.",
+        "Can we do this payment thing afterwards?"
+      ],
+      "counterMovesThatWorked": [
+        "Decompose the fee on the spot: total + GST, only 4,000 seat-block due today, remainder in a ~10-day window or EMI — instantly correcting the 'I must pay the full amount now' misreading.",
+        "Quote concrete EMI tenures with per-month figures (e.g. 9 months at ~7,000-7,300/month) and explain why the longer tenure keeps the monthly amount low.",
+        "When the quoted fee conflicts with the brochure/website, pause, verify with the team, and return with a specific explanation (fee rose due to added AI content; older materials outdated) rather than bluffing.",
+        "Close discount/scholarship asks definitively: scholarship results already announced, fee is fixed by the institute and counsellors cannot negotiate it — ends the haggling loop.",
+        "Pair a short same-day deadline for the 4,000 with a generous buffer for the balance (e.g. till a named date next week), so urgency applies only to the small amount.",
+        "Reframe cost against alternatives and outcomes: compare to 2-3 lakh executive programmes at other IIMs or to a 3-year graduation fee, anchoring the price as mid-market."
+      ],
+      "movesThatFailed": [
+        "Telling the student outright 'this program is not for you because of the fee structure' — escalated.",
+        "Rejecting the profile because the student asked to pay later ('you will pay later, it won't be plausible, I'm rejecting your profile') — escalated.",
+        "Deflecting fee-surprise questions with 'the details were on the website before signup', blaming the student's due diligence — escalated.",
+        "Confirming the booking fee is non-refundable while offering no alternative or deferral — escalated.",
+        "Pivoting straight to a cheaper alternative course without ever addressing the stated fee objection — the most common unresolved pattern.",
+        "Stacking seat-scarcity pressure on a student who stated a genuine affordability limit — left unresolved."
+      ]
+    },
+    {
+      "key": "emi_affordability",
+      "label": "EMI / Monthly Affordability",
+      "frequencyPct": 4.5,
+      "conversionGapNote": "All six EMI objections in converting calls were defused with concrete tenure menus, interest figures, or an interest-free two-instalment split. Non-converting calls featured monthly budgets of 2,000-3,000 that no offered plan could meet, and vague deferrals of EMI details to a future finance-team call — mostly left unresolved.",
+      "phrasings": [
+        "For the fees, is it one-time payment or can we convert it to no-cost EMI?",
+        "What would be the amount per month?",
+        "EMI, with interest or without interest?",
+        "I can pay monthly like two to three thousand. That is my budget.",
+        "My dad is asking — can we give the EMI of eight months?",
+        "If I pay by EMI, will I have to pay the same 52,000 plus GST or is it more than that?"
+      ],
+      "counterMovesThatWorked": [
+        "Lay out the full tenure menu (3/6/9/12 months) with per-month amounts and the interest rate at each tier, then let the student choose.",
+        "Offer a no-interest two-instalment split across two months when the student balks at NBFC interest — this directly satisfied a paying student.",
+        "Hand off to the finance team with a concrete commitment ('they will call you Friday to set up the EMI') instead of an open-ended deferral.",
+        "Be upfront that EMI carries interest, give the rough all-in total, and present the lump-sum-within-a-window option as the cheaper alternative."
+      ],
+      "movesThatFailed": [
+        "Asking 'do you want me to close your application?' when the student said even the EMI was unaffordable — escalated.",
+        "Arguing 7,300/month is 'manageable on your salary' with an upskilling lecture after the student stated a 2,000-3,000 budget — unresolved.",
+        "Deferring all EMI specifics to a later finance-team call with no numbers in-session — unresolved.",
+        "Trying to stretch the student to 7,000-8,000/month rather than acknowledging the affordability gap — unresolved."
+      ]
+    },
+    {
+      "key": "parents_family",
+      "label": "Parents / Family Approval",
+      "frequencyPct": 17.0,
+      "conversionGapNote": "The most lopsided category: 60 of 76 events went unresolved overall, yet 7 of 9 in converting calls were defused — almost always by getting the parent on the phone or into the live session right then. Letting the student leave to 'discuss and message by evening' with a WhatsApp deadline virtually never converted.",
+      "phrasings": [
+        "I have to talk to my father first about this.",
+        "Right now mom is not home, so I cannot pay it at this moment.",
+        "Just allow me some time, let me talk with my parents and then I will get back to you.",
+        "My mom had agreed but she wanted to run it through my dad as well.",
+        "I have to discuss with my husband and he's not home — I need one day to think about it.",
+        "I'm just in the first year... they don't give me that leverage to take decisions on my own.",
+        "The amount is not a problem — the thing is I need to discuss with my parents.",
+        "I think I'm convinced, but I need to discuss it internally with my mother."
+      ],
+      "counterMovesThatWorked": [
+        "Bring the parent into the conversation now: invite the father into the live session and explain the programme and fee structure to him directly.",
+        "Have the student mute mic/camera and phone the parent during the session while the counsellor waits — the recurring pattern in converting calls when the parent actually picked up.",
+        "Pause the presentation for the parent call instead of ploughing on and asking for buy-in afterwards.",
+        "Shrink the parental ask: only 4,000 is needed today and EMI starts next month, so the family decision on the big amount can come later.",
+        "Give the student a short script for explaining the course to parents, with a fixed 30-minute callback to collect the decision.",
+        "Use a clear select/reject decision frame plus the low-commitment seat-block as the immediate step while family alignment continues."
+      ],
+      "movesThatFailed": [
+        "Accepting 'I'll discuss and message you by 7 PM' and ending with a WhatsApp deadline — the dominant unresolved exit across dozens of calls.",
+        "Threatening that the application auto-rejects or the seat drops the moment the student leaves the call — escalated repeatedly.",
+        "Challenging the objection itself ('you're a working professional, you should decide independently') — escalated.",
+        "Suggesting the student pay via the father's UPI/QR from his phone without the parent actually being consulted — escalated.",
+        "Filling enrollment form details (parent names, marks) before any payment agreement to manufacture sunk cost — unresolved.",
+        "Stacking seat-scarcity numbers (seats gone, hundreds of students incoming) when no parent was reachable — unresolved."
+      ]
+    },
+    {
+      "key": "time_commitment",
+      "label": "Time Commitment / Schedule",
+      "frequencyPct": 11.4,
+      "conversionGapNote": "The most defusable objection: every paid-call instance (12 of 12) was defused, nearly always with the recordings-count-for-attendance answer plus the light two-evenings-a-week schedule. Unresolved cases were either genuine timetable clashes with no fallback offered, or counsellors pivoting to urgency instead of answering the scheduling question.",
+      "phrasings": [
+        "If I'm not able to attend the live lectures but I'm completing them with the recorded ones — does that work?",
+        "My office timing is 2 to 11, that is a night shift.",
+        "Wednesday is a weekday and we'll be having client calls in the evening.",
+        "My university exams are starting from the 10th — can you make it for July?",
+        "How many times in a week do I have to give?",
+        "Can't it be possible on weekends, or extend the Saturday timings so I can compensate both classes?",
+        "I'm working full-time as well — I'll have to juggle my job, that's going to be a little bit difficult."
+      ],
+      "counterMovesThatWorked": [
+        "The recordings answer: recorded lectures count for attendance if watched within 30 days, so missed live classes carry no penalty — resolved the bulk of schedule conflicts.",
+        "State the exact, light schedule (two live sessions a week in the evening, ~1.5 hours each) so it visibly fits around office hours.",
+        "Do the exam-overlap math: only 2-3 classes fall inside the exam window and recordings plus a catch-up week cover them.",
+        "Normalise with peers: other working professionals with 6-day weeks are completing the same programme on recordings.",
+        "Layer in doubt-resolution channels (AI tutor on the LMS, one-on-one mentor slots, weekend doubt sessions) so missing a live class is not a learning loss.",
+        "Proactively confirm the weekly time budget (8-10 hours) before pitching and get a verbal commitment first."
+      ],
+      "movesThatFailed": [
+        "Pivoting to urgency/FOMO instead of directly addressing how the student would manage the time — escalated.",
+        "Quoting a class schedule that directly clashes with the student's stated routine and offering no fallback — unresolved.",
+        "Pressing for same-day enrollment over an acknowledged shift clash, with only a seat-closing deadline as the answer — unresolved.",
+        "Answering a request to start next month with a price-increase fear tactic and 'admissions must be done now regardless' — unresolved."
+      ]
+    },
+    {
+      "key": "competing_priorities",
+      "label": "Competing Priorities / Need Time to Decide",
+      "frequencyPct": 8.5,
+      "conversionGapNote": "The worst-converting category: only 4 of 38 events sat in paid calls and 23 went unresolved — 'I need time to compare/think' almost always ended with an unmet WhatsApp deadline. The few defusals either corrected a factual misunderstanding (e.g. the batch actually started months later) or reframed the course as compatible with the competing commitment; artificial deadlines were explicitly called out by one student as a tactic.",
+      "phrasings": [
+        "I also inquired at a few places, so now I need to compare and then take a decision.",
+        "Can you give me two more days, then I can finalize?",
+        "I am having a PCS exam 45 days later, so I think I won't be able to manage both.",
+        "I was just exploring — I won't be able to take it up right now.",
+        "If there was a batch after September it would be good for me, because of my summer internship.",
+        "I am about to be promoted to people manager. I am focused on that. I'm not desperate for a 20-lakh offer.",
+        "Why is it always that on the day of counselling the course gets started?"
+      ],
+      "counterMovesThatWorked": [
+        "Resolve real conflicts with facts, not pressure: revealing the batch actually starts months later dissolved a timing objection built on a misunderstanding.",
+        "Reframe sequencing: the course completes before the student's MBA application window, so it complements rather than competes.",
+        "Deprioritise the lower-stakes commitment explicitly — telling a student college CGPA doesn't matter for jobs and this programme deserves priority worked in a paid call.",
+        "Offer a small bounded thinking window inside the session (10-15 minutes) with honest first-come-first-serve context, rather than an open-ended exit.",
+        "Reschedule the call to when the student is genuinely free (e.g. after office hours) instead of forcing a decision mid-shift or mid-travel."
+      ],
+      "movesThatFailed": [
+        "Invoking a fake operational deadline ('we must submit the final report to campus by 6 PM') — the student called it out as a tactic and it escalated.",
+        "'This is the final connection, once the link expires I cannot help you' total-scarcity framing — unresolved.",
+        "Telling a student asking about a later batch that he was overthinking it — escalated.",
+        "Abruptly rejecting the student when she asked to pay later — escalated.",
+        "Accepting 'I'll compare options and get back to you' with only a WhatsApp number and an evening deadline — the default unresolved ending."
+      ]
+    },
+    {
+      "key": "trust_legitimacy",
+      "label": "Trust / Legitimacy",
+      "frequencyPct": 11.6,
+      "conversionGapNote": "Converting calls defused 8 of 9 trust doubts, typically via live verification — opening the institute's official website or review search results on screen, screen-sharing the official payment dashboard — plus a crisp explanation of the Masai-vs-institute role split. Non-converting calls split between unresolved and escalated, usually when scarcity pressure was layered onto a credibility doubt instead of providing proof.",
+      "phrasings": [
+        "I haven't heard about Masai school before this — is it associated with the BITS campus or is it an autonomous body?",
+        "What will be the contribution of IIM or BITS? I mean, what is Masai School's role here?",
+        "In my family there is a big scam happened online, so that's why I have to be sure.",
+        "I'll check the reviews, and how people are getting placed. I'll talk to two or three people from the school.",
+        "Is there any kind of demo facilities?",
+        "I didn't know if it was genuine or not... I thought maybe it's a scam.",
+        "How many people got placed last batch? I'm asking particularly, not overall.",
+        "The certificate is nothing for me; I want value-add in terms of outcome, not just a paper."
+      ],
+      "counterMovesThatWorked": [
+        "Crisply explain the partnership split: Masai handles admissions and placement operations; the institute provides faculty, classes, exams, and the certificate — naming the dean/faculty affiliations.",
+        "Verify live on screen: run a search for the institute's reviews, open the official institute website and programme page, and walk the student through it on their own phone step by step.",
+        "Screen-share the official payment dashboard so the student can see the money path goes through the institute's official portal before paying.",
+        "Answer stat challenges precisely — separate the per-programme placement figure from the overall company figure instead of blending numbers.",
+        "Acknowledge scam anxiety head-on ('we are legit, just to clear your doubts') and explain anomalies like lobby wait times instead of getting defensive.",
+        "Resolve operational doubts concretely on the spot — e.g. checking and confirming that paying from a parent's account with their PAN is fine."
+      ],
+      "movesThatFailed": [
+        "Answering a credibility doubt with scarcity/FOMO (thousands of applicants, closing today, seat gone) — escalated.",
+        "Repeating the urgency script with zero flexibility when the student asked for time to verify the programme — escalated.",
+        "Telling the student to research the programme on Google/ChatGPT by themselves mid-session instead of demonstrating proof — unresolved.",
+        "Refusing a demo class with only 'a top institute backs this' as justification — unresolved.",
+        "Promising PDFs and details on WhatsApp as a substitute for answering the doubt in-session — unresolved."
+      ]
+    },
+    {
+      "key": "job_guarantee_placement",
+      "label": "Job Guarantee / Placement Assurance",
+      "frequencyPct": 6.9,
+      "conversionGapNote": "The calmest category — zero escalations and 25 of 31 defused, including all 7 paid-call instances. Honest 'assistance, not a guarantee' framing plus explicit eligibility mechanics and verifiable stats defused it; the unresolved cases came from hedging, deflection, or being unable to name actual hiring companies confidently.",
+      "phrasings": [
+        "Is this just assistance or an actual placement opportunity?",
+        "I have heard it is something like placement assistance but not 100% placement.",
+        "I expect a placement guarantee or at least some assurance from your end.",
+        "What eligibility do we need to sit in placements?",
+        "What if I can't score that much? Is there any reassessment?",
+        "Can you give me a figure of how non-tech backgrounds have been doing in the placement — not only taking the course but getting a job?",
+        "What is the highest package after doing this course?"
+      ],
+      "counterMovesThatWorked": [
+        "Be honest that there is no job guarantee — the outcome is skills-based and the placement rate is verifiable online; honesty consistently defused rather than escalated.",
+        "Spell out the eligibility mechanics: attendance and marks thresholds unlock CV/portfolio building, mock interviews, and direct applications by the placement team.",
+        "Stack concrete, specific stats: 94% placement rate, 5,000+ hiring partners, 21-day median offer time, 60-70% of placed students from non-tech backgrounds.",
+        "Anchor package talk to the individual: ask the student's current package first, then quote a realistic uplift rather than the headline maximum.",
+        "Show proof live — pull up search results for the placement-rate claim on screen instead of asserting it.",
+        "When placement isn't the student's goal, say so and redirect to the skill/profile-development value instead of forcing the placement pitch."
+      ],
+      "movesThatFailed": [
+        "Claiming 5,000 hiring partners but being unable to name specific companies confidently when pressed — unresolved.",
+        "Deflecting with 'check LinkedIn profiles, I'll send you the details' instead of giving figures — unresolved.",
+        "Hedging extensively ('obviously possible, but it depends on projects, portfolio, domain...') on a domain-switch question — unresolved.",
+        "Throwing out big aspirational numbers without answering the student's direct ask for personal assurance — unresolved."
+      ]
+    },
+    {
+      "key": "course_fit_relevance",
+      "label": "Course Fit / Relevance",
+      "frequencyPct": 16.6,
+      "conversionGapNote": "The largest share of paid-call objections (19 events, all defused) — fit questions behave like buying signals when answered by mapping the curriculum to the student's own background and job with concrete use-cases. Unresolved cases involved dismissive reassurance ('nothing to worry about'), pivots to brand value or FOMO instead of the fit question, or genuinely advanced practitioners the counsellor could not differentiate the course for.",
+      "phrasings": [
+        "I'm not from a technical background, I was not coding. So how easy or how complex?",
+        "My concern is, will it be more of a theoretical one or practical with projects?",
+        "I'm already creating these agentic AIs — I'm not getting the confidence about what I will actually learn apart from what I'm doing right now.",
+        "How can I relate my background with data analytics? I've spent 2 to 2.5 years in design and I want to link both things.",
+        "The classes would be recorded or live?",
+        "I have a little confusion between this course and the data-driven product management course — which would be better for me?",
+        "For a non-tech background, is two and a half months really enough time to learn all these things?",
+        "How will it add value to my resume or CV if I am trying to switch to a different domain?"
+      ],
+      "counterMovesThatWorked": [
+        "Map the curriculum to the student's own industry with concrete use-cases — pharma demand patterns, healthcare B2B sales tracking, finance fraud detection, automating workflows in the student's current firm, integrating with their own e-commerce site.",
+        "Give the 'starts from zero' reassurance with specifics: Python framed as library usage not software development, beginner-to-advanced module progression, and 60-70% non-tech batch composition.",
+        "Walk module-by-module through the curriculum verbally rather than gesturing at a brochure.",
+        "When the student is torn between two programmes, give a real comparison (analytics = problems/requirements/strategy vs product management = plan/execute/deliver) and recommend one with reasoning for their level.",
+        "Probe vague motivation ('I signed up because I was bored') to surface genuine interest and reframe it as openness to learn.",
+        "Answer logistics crisply — live plus recorded classes, exact weekly schedule, group capstone plus individual mini-projects."
+      ],
+      "movesThatFailed": [
+        "Dismissing a depth concern with 'no no, nothing to worry about' instead of evidence — unresolved.",
+        "Pivoting to brand value and AI buzzwords when an experienced AI practitioner asked what was genuinely new for them — unresolved.",
+        "A junior counsellor fumbling tool/curriculum questions until a senior had to be pulled in — unresolved at first contact.",
+        "Sending the curriculum on WhatsApp with an end-of-day confirm deadline in place of explaining it live — unresolved.",
+        "Responding to a fit question with waiting-list/seats-filling FOMO pressure — unresolved."
+      ]
+    },
+    {
+      "key": "language_english",
+      "label": "Language / English Comfort",
+      "frequencyPct": 0.4,
+      "conversionGapNote": "Only two events in the corpus: the converting call simply confirmed the medium of instruction and moved on, while the non-converting call escalated when the counsellor responded to a hesitant English admission by questioning the student's degree choices instead of addressing the comfort gap.",
+      "phrasings": [
+        "It will be completely in English, right?",
+        "I'm comfortable. I'm a little English is... [hesitant, broken admission of limited English]"
+      ],
+      "counterMovesThatWorked": [
+        "Confirm the medium of instruction directly and simply ('completely English medium') and move on without making it a bigger issue."
+      ],
+      "movesThatFailed": [
+        "Pivoting to question why the student hadn't done a more technical degree instead of addressing the language comfort concern — escalated."
+      ]
+    },
+    {
+      "key": "tech_access",
+      "label": "Tech Access / Devices & Tools",
+      "frequencyPct": 2.7,
+      "conversionGapNote": "Split evenly between defused and unresolved. Converting calls got concrete free-vs-paid tool clarifications and live troubleshooting (screen-sharing the dashboard, sending working links); non-converting ones had device, login, or payment-access problems that were compounded by scarcity pressure or simply left hanging.",
+      "phrasings": [
+        "Will I be given the tools to practice on or will I have to purchase the subscriptions?",
+        "I wasn't able to log into my dashboard — after you click on login it doesn't take you anywhere.",
+        "Access like ChatGPT, whatever, is limited. So we have to purchase those things?",
+        "Actually, I have some technical issue... I'm not able to open the camera.",
+        "No, ma'am, actually I'm connected by my phone.",
+        "[Worried whether the laptop is good enough] It's a Ryzen 3."
+      ],
+      "counterMovesThatWorked": [
+        "Itemise exactly which tools are free (Python, SQL, Excel fully free; BI and agent-building tools free for the learning window) versus optional paid subscriptions after the course.",
+        "Troubleshoot live: screen-share the dashboard, send the working link on WhatsApp, or pull in a team member rather than deferring the issue.",
+        "Validate the student's hardware ('a Ryzen 3 is good actually') and suggest a family fallback device if needed.",
+        "Reschedule the session to when the student is home with a proper device instead of forcing it through a phone."
+      ],
+      "movesThatFailed": [
+        "Insisting the camera is mandatory and forcing leave-and-rejoin attempts in the middle of a payment flow — unresolved.",
+        "Layering seat-scarcity pressure ('first come first served') on top of a payment-access problem — unresolved.",
+        "Noting that a laptop is required for practicals and simply moving on without solving anything — unresolved."
+      ]
+    },
+    {
+      "key": "other",
+      "label": "Other / Miscellaneous",
+      "frequencyPct": 2.7,
+      "conversionGapNote": "A mixed catch-all where direct factual answers and normalising profile worries defused 8 of 12 events; the unresolved remainder involved refusing to share a payment link outside the session, improvised tricks like offering to fake a failed-payment status, and generic classes-start-today scarcity on students who needed thinking time.",
+      "phrasings": [
+        "Can you share the brochure... can I just go through it once again and get back to you?",
+        "I have to sit and think about it, right? I can't make a quick decision.",
+        "Can I get the link after 15 minutes, after the session?",
+        "I'm not having salary on account, getting salary in cash... no offer letter either.",
+        "My gap years — obviously they would have an impact. But how much impact would they be?",
+        "And stay and everything [for the campus visit] is going to be on my own, right?"
+      ],
+      "counterMovesThatWorked": [
+        "Give direct factual answers to logistics questions — exam format and city, campus visit optional with travel at the student's own cost, campus slot scheduled within the course window.",
+        "Defuse profile anxieties by normalising them: gap years are common among exam aspirants and won't block placement if skills are strong; cash salary is a future problem, not a current blocker.",
+        "When the student asks to pay asynchronously, send the payment link with a clear same-day deadline and activate the dashboard rather than refusing.",
+        "When asked for the brochure to review again, share it but attach a bounded decision window (e.g. 24 hours) so the follow-up has a deadline."
+      ],
+      "movesThatFailed": [
+        "Refusing to share the payment link, claiming no second call is possible, and demanding immediate in-session payment — unresolved.",
+        "Offering to fake a 'payment failed' status to buy the student a day — improvised, trust-eroding, unresolved.",
+        "Generic urgency ('classes are starting today, limited seats') aimed at a student who explicitly needed time to think — unresolved."
+      ]
+    }
+  ]
+}

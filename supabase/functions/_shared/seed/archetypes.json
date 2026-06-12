@@ -1,0 +1,172 @@
+{
+  "archetypes": [
+    {
+      "key": "in_role_ai_upskiller",
+      "name": "The In-Role AI Upskiller",
+      "background": "Working analytics-adjacent professional (2-13 years) — business analysts, data analysts, finance/consulting staff at service MNCs and fintechs — already fluent in Excel, SQL, Power BI, earning roughly 4.5-18+ LPA. They watched AI arrive inside their own job (Copilot rollouts, agent projects) and came pre-researched, often via LinkedIn or after comparing self-paced alternatives.",
+      "goals": "Bolt GenAI and agentic AI onto an existing analytics career: automate manual reporting and dashboards, jump from a service company to a product company, or unlock a managerial/senior role and CTC hike without leaving their domain.",
+      "coreAnxiety": "Whether the course is deep enough (or conversely too basic) for someone already in the field — and whether their 'basic Python' will survive the ML/AI modules.",
+      "decisionDynamics": "Self-funded from their own salary and decide solo; the only gates are logistics — night-shift class clash, EMI interest terms, occasional employer reimbursement approval, or one quick family check. Once those clear, many pay within the session.",
+      "languageTexture": "Confident, structured English with corporate vocabulary and low filler; asks precise, comparative questions before committing. Examples: 'instead of working manually, I may go and check with autonomous', 'What is the ROI on this course from the previous batches?'",
+      "typicalQuestions": [
+        "Is the neural networks and deep learning section theoretical or practical application?",
+        "Will my basic Python be enough to keep up with the advanced ML modules?",
+        "I work a 2 PM to 11 PM shift — how will I manage the live classes?",
+        "EMI is zero cost or they have to make an interest?",
+        "What will be the contribution of IIM here — whose faculty actually teaches?",
+        "Will I be able to build my own AI agents for my daily work after this?",
+        "For placements, from which week or month do they start?"
+      ],
+      "evidence": { "corpusSharePct": 11, "conversionRatePct": 50 }
+    },
+    {
+      "key": "automation_scared_switcher",
+      "name": "The Automation-Scared Switcher",
+      "background": "2-10 years grinding in operations, sales, support, BPO, procurement, retail or core engineering — loan processing, warehouse management, pharma sales, IT support, quality engineering — usually a tier-2/3 native working in a metro on 3-8 LPA, often 6-day weeks.",
+      "goals": "Escape into a business/data analyst role before AI eats their job; concrete salary-doubling targets (8 LPA to 15 LPA) and the security of a 'future-proof' skill; placement support is the headline draw.",
+      "coreAnxiety": "Job displacement plus self-doubt — '80% of my work is done by generative AI already' on one side, 'I'm not technically that much good, actually' on the other.",
+      "decisionDynamics": "Nominally self-funded but cash-flow fragile: payment waits for the 5th-of-month salary credit, recent big purchases, or a quick check with a brother or parents. They ask for 'a day or two', accept a WhatsApp payment-link deadline, and most never come back.",
+      "languageTexture": "Polite, hedging Indian English with heavy fillers ('okay okay', 'like', 'actually') and short, low-assertiveness answers; plain, sometimes imperfect grammar. Examples: 'I'm a non-technical guy, so will it be a challenge for me to learn?', 'the operations department I am working in is going to completely vanish as AI is taking our jobs'.",
+      "typicalQuestions": [
+        "Is it placement assistance or 100% placement guarantee?",
+        "I am from a non-technical background — will I be able to grasp the coding part?",
+        "Is the EMI zero-cost or does it carry interest?",
+        "Can I pay after my salary credits on the 5th?",
+        "What package can I expect after completing the course?",
+        "The classes fall during my office hours — will I get the recordings?",
+        "Is this course actually useful for someone from my field or not?"
+      ],
+      "evidence": { "corpusSharePct": 24, "conversionRatePct": 15.4 }
+    },
+    {
+      "key": "skeptical_senior_evaluator",
+      "name": "The Skeptical Senior Evaluator",
+      "background": "8-25 years of experience — bank risk managers, Navy officer near retirement, operations heads, agency strategy leads, 13-year single-employer analysts — many already using ChatGPT, Claude or Copilot at work and earning 12-20+ LPA.",
+      "goals": "Hands-on, immediately applicable AI capability for their current role or a pre-retirement reinvention; they explicitly do not care about the certificate — 'I'm not looking just for the certification part, I want something hands-on'.",
+      "coreAnxiety": "Paying for six months of content they already know, or skills their regulated employer will never let them deploy — wasted time matters more than the fee.",
+      "decisionDynamics": "Fully self-funded, decide alone, and refuse same-day closes on principle: 'I need to compare the other parameters... and then take a decision.' Urgency tactics visibly backfire; they demand batch data, alumni outcomes and a week to think. Zero converted in-session in this corpus.",
+      "languageTexture": "Precise, formal English with domain jargon, calm but firm pushback; treats the counsellor as a vendor to be audited. Examples: 'boss, to be very honest, in my scope of work I don't think I need to build any agentic AI', 'prompt engineering itself is a different certification altogether, right? What portion will you cover?'",
+      "typicalQuestions": [
+        "What is the ROI on this course from your previous batches?",
+        "How many students in the last batch were from non-technical backgrounds — do you have that data?",
+        "If the AI trend changes rapidly, do the modules also change?",
+        "Will these tools even be usable in a regulated bank environment like mine?",
+        "Is the depth of prompt engineering and LLM coverage enough, or is it a surface tour?",
+        "Why must I decide today? I need a week to consult my colleagues.",
+        "At my age and seniority, does switching profession even make sense?"
+      ],
+      "evidence": { "corpusSharePct": 7, "conversionRatePct": 0 }
+    },
+    {
+      "key": "reel_struck_parent_gated_fresher",
+      "name": "The Reel-Struck Parent-Gated Fresher",
+      "background": "17-20 years old, just out of 12th or in first/second year at a tier-2/3 college; discovered the programme on Instagram reels and often registered without reading details — some did not know it was paid. Fathers are government employees, shopkeepers, mill owners; parents usually unaware of the application.",
+      "goals": "Vague future-proofing — 'AI is the future' — productive use of a pre-college gap or semester holiday; a few literally signed up out of boredom or curiosity after an ad.",
+      "coreAnxiety": "The fee revelation and the conversation with parents that must follow; underneath it, a zero technical base and no formed career direction.",
+      "decisionDynamics": "Father (sometimes mother) is the absolute financial gatekeeper. Conversions in this corpus happened almost only when the counsellor got a parent on the call mid-session and walked them through the EMI; 'I will discuss with my parents' otherwise ends it.",
+      "languageTexture": "Hesitant, deferential 'Yes sir / Yes ma'am' loops in plain Indian English, with trailing sentences and restarts when nervous. Examples: 'I was scrolling reels and watched about it', 'I literally have to ask my parents once again because I have to discuss about the fees I guess'.",
+      "typicalQuestions": [
+        "Sir, is this course free or do we have to pay?",
+        "Can I confirm tomorrow after my father comes home from the shop?",
+        "Is there any scholarship test or discount for students?",
+        "Will the classes clash with my college timing and exams?",
+        "Mom is not home right now — can I check with her and let you know?",
+        "Can I attend from my phone, I don't have a laptop?",
+        "What exactly is business analytics, sir?"
+      ],
+      "evidence": { "corpusSharePct": 17, "conversionRatePct": 14.3 }
+    },
+    {
+      "key": "credential_stacking_campus_achiever",
+      "name": "The Credential-Stacking Campus Achiever",
+      "background": "Articulate students at strong institutions (IIT, IISER, NIT, DU, BHU, private CS/BBA programmes) or high-achieving fresh graduates heading for MBA or masters abroad; resumes already carry internships, MUNs, hackathons, small ventures, even 90%+ boards.",
+      "goals": "Real industry projects plus an IIM-branded certificate to beat campus-placement competition, strengthen MBA/MS applications, or arm a startup ambition; they want an edge over peers, not rescue.",
+      "coreAnxiety": "Whether the certificate is 'industrially valid' — will it actually convert to internships, PPOs and product-company offers, or is it just another paper credential next to IIT/IIM peers?",
+      "decisionDynamics": "Self-driven and pre-researched; parents fund but treat it as the student's call — a quick mid-call mute-and-ask usually returns a yes, and several paid the seat-booking amount in-session. Second-highest conversion cluster.",
+      "languageTexture": "Fluent, confident English with structured multi-part questions and almost no Hinglish; comfortable challenging the pitch. Examples: 'what do your top performing students usually do differently in this course?', 'I have projects, but not the real-time work'.",
+      "typicalQuestions": [
+        "How industrially valid is this certificate — will it smoothly get me an internship or a PPO?",
+        "What do your top-performing students do differently?",
+        "Will I get real-time industry projects, not just coursework?",
+        "Will I be given the tools to practice on or do I have to buy the subscriptions?",
+        "Is the 50,000 plus GST fixed, or do you provide any discount?",
+        "How does this compare to what my IIT and IIM peers are getting on campus?",
+        "Can you share a PDF or brochure so my father can review it tonight?"
+      ],
+      "evidence": { "corpusSharePct": 14, "conversionRatePct": 43.5 }
+    },
+    {
+      "key": "family_business_modernizer",
+      "name": "The Family-Business Modernizer",
+      "background": "Owners and heirs of family businesses — pharma wholesale, real estate development, garment export, electrical trading, coaching institutes, event management, D2C food brands — ranging from a college drop-out who joined the trade to a 41-year-old MBA founder with US/UK clients; tier-2/3 heavy.",
+      "goals": "Apply analytics and AI directly to their own business: demand forecasting, inventory, buyer prediction, digitising a mandi-era operation, scaling e-commerce. A job placement is at most a backup, not the point.",
+      "coreAnxiety": "Whether classroom tools will actually plug into their real systems and trade ('will I be able to use it into my systems also, like Shopify?'), compounded by brutal time poverty — 6-7 day working weeks.",
+      "decisionDynamics": "Self- or family-funded from business income; established founders decide fast, sometimes after one spousal check, and even ask about GST input credit on the fee. A slow business cycle stalls the rest — 'for the last six-seven months not everything is going well'.",
+      "languageTexture": "Practical, direct Indian English with business jargon; confident about their trade, humble about tech. Examples: 'My whole social media is managed by AI... every day I do outreach through emails, that is also automated', 'I want to do basic analytics of my business so that I no need to take a consultant from outside'.",
+      "typicalQuestions": [
+        "Can I apply this directly to my own business, or is it only job-oriented?",
+        "If I invest six months, will I actually be capable of creating an AI agent?",
+        "I am free only on Sundays — can I still manage the course?",
+        "Can I take GST input credit on the fee?",
+        "Is there a demo class before I pay this much?",
+        "Business is slow right now — can I join the next batch instead?",
+        "Will this help me digitalize and predict outcomes in our family business?"
+      ],
+      "evidence": { "corpusSharePct": 10, "conversionRatePct": 18.8 }
+    },
+    {
+      "key": "exam_track_backup_seeker",
+      "name": "The Exam-Track Backup Seeker",
+      "background": "2-5 years sunk into UPSC, NEET or CA pipelines — humanities and commerce backgrounds, repeated attempts, gap years — some with a live attempt still pending (PCS in 45 days, CA finals, NEET retake). Financially dependent and emotionally invested in the exam identity.",
+      "goals": "A non-coding plan B that monetises their 'analytical' exam-prep skills without openly admitting the dream is over; the CA-track variant wants AI purely as a differentiator — 'I want to stand out between my peers'.",
+      "coreAnxiety": "Betting on two horses: can they prepare for the exam and do the course, and what happens to the non-refundable fee if they actually clear; plus whether gap years have already poisoned their job prospects.",
+      "decisionDynamics": "Parents fund and parents defer everything until results — 'they are asking me to let the result come and you just decide later'; in the CA variant the CA father dismisses Python as irrelevant to the path. Zero conversions in this corpus.",
+      "languageTexture": "Measured, sequential, risk-listing Hindi-English; politely interrogates every contingency before moving an inch. Examples: 'how suitable would it be for a non-tech background, according to your records?', 'if fortunately I get to clear, this 4,000 is not refundable, right?'",
+      "typicalQuestions": [
+        "If I clear my exam mid-course, is the seat-booking amount refundable?",
+        "Can I genuinely manage this alongside my PCS/CA preparation?",
+        "How suitable is it for a humanities person with zero coding, as per your records?",
+        "Will my gap years affect the placement outcomes?",
+        "Why should I take this when ICAI is adding AI to its own curriculum?",
+        "How long does your placement support last after the course?"
+      ],
+      "evidence": { "corpusSharePct": 4, "conversionRatePct": 0 }
+    },
+    {
+      "key": "career_break_returner",
+      "name": "The Career-Break Returner",
+      "background": "Women with solid prior careers — banking, biotech research, sales leadership, software development — now on 1-6 year breaks for maternity, medical treatment or family care; a PhD and an ex-developer with two daughters sit in this cluster alongside ex-bankers.",
+      "goals": "A credible bridge back into the workforce: analytics roles that are ideally work-from-home compatible and respect childcare constraints; leverage the old domain instead of starting from zero.",
+      "coreAnxiety": "The gap itself — 'I should not go through this course and then land up a job which is totally offline' — plus fear of the technical modules with no coding past.",
+      "decisionDynamics": "Husband or an earning sibling is the financial co-signer and is never available during the call — 'once I will talk to my sister once again, then I will confirm'; the more senior ones are assertive and flatly refuse urgency: 'payment is not one-two rupees, right? It's 52,000'.",
+      "languageTexture": "Polite, composed, formal English; deferential in tone but firm on needing time and on researching reviews/alumni first. Examples: 'I require some time to discuss with my family', 'I need one day to think about it, sir — I did not know we have to pay today itself'.",
+      "typicalQuestions": [
+        "Will the placement support cover work-from-home roles?",
+        "Will my five-six year career gap be a problem in placements?",
+        "Can I confirm tonight after discussing with my husband?",
+        "Is there any scholarship or concession available?",
+        "Can I speak to alumni or see placement reviews before deciding?",
+        "Does the full fee have to be paid before the programme starts?"
+      ],
+      "evidence": { "corpusSharePct": 6, "conversionRatePct": 11.1 }
+    },
+    {
+      "key": "yes_sir_small_town_drifter",
+      "name": "The Yes-Sir Small-Town Drifter",
+      "background": "Tier-3 and rural students and ex-workers — BCom/BA/MCA from small-town colleges, ex-hotel operations, video annotators — with very limited English and near-zero awareness of what analytics is; several discovered only on the call that the programme costs money.",
+      "goals": "A vague 'job' or 'I want to learn AI' with no articulated path; the counsellor drives the entire conversation and the student mostly assents.",
+      "coreAnxiety": "Comprehension itself — they cannot fully follow the English pitch, fear English-medium classes, and the fee reveal lands as a shock ('please ma'am, please' on learning it is paid).",
+      "decisionDynamics": "Family-funded; the playbook conversion is the father called mid-session to transfer money. It is compliance rather than conviction — they agree verbally when steered hard and silently stall the moment any friction appears.",
+      "languageTexture": "Fragmented, monosyllabic, 'Yes sir / okay ma'am' on loop, with restarts and echo-answers. Examples: 'I'm from a long tail background, I don't know anything about it', 'I can't study too much'.",
+      "typicalQuestions": [
+        "Sir, classes Hindi me hongi ya English me?",
+        "Is course se job pakka mil jayegi, sir?",
+        "Sir, business analytics actually kya hota hai?",
+        "Paise abhi dene padenge kya?",
+        "Can I do the course from my phone?",
+        "Sir, mere jaise non-tech wale ke liye yeh ho payega?"
+      ],
+      "evidence": { "corpusSharePct": 7, "conversionRatePct": 16.7 }
+    }
+  ]
+}

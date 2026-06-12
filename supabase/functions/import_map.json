@@ -1,0 +1,8 @@
+{
+  "imports": {
+    "@anthropic-ai/sdk": "npm:@anthropic-ai/sdk@0.104.1",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2",
+    "hono": "npm:hono@4",
+    "hono/streaming": "npm:hono@4/streaming"
+  }
+}

@@ -1,0 +1,770 @@
+{
+  "generatedAt": "2026-06-10T00:00:00.000Z",
+  "source": "voice-bank.md (PII scrubbed)",
+  "stages": [
+    {
+      "id": "S1",
+      "name": "Call opening & logistics",
+      "phases": [
+        1
+      ],
+      "common": [
+        {
+          "text": "Hello, yeah. Just give me a minute, let me, let me switch my camera as well. Hope you are able to see me.",
+          "synthetic": false
+        },
+        {
+          "text": "Yeah, you're audible.",
+          "synthetic": false
+        },
+        {
+          "text": "Hi, I'm visible, right? Am I fully or half of my face?",
+          "synthetic": false
+        },
+        {
+          "text": "Yes, I can listen. Yeah, hi.",
+          "synthetic": false
+        },
+        {
+          "text": "Yeah. I still have a network issue.",
+          "synthetic": false
+        },
+        {
+          "text": "Just a second.",
+          "synthetic": false
+        },
+        {
+          "text": "Hello? Yes, sir, you're audible.",
+          "synthetic": false
+        },
+        {
+          "text": "No, sir, it's too low. Give me one second.",
+          "synthetic": false
+        },
+        {
+          "text": "Yeah, voice is clear, sir. But your video is getting stuck.",
+          "synthetic": false
+        },
+        {
+          "text": "Ma'am, currently I'm living in Delhi. There is a network issue.",
+          "synthetic": false
+        },
+        {
+          "text": "Actually, I have some technical issue. I was trying to, you know, join the meeting also like two to three times. So if it's okay, we can continue without the camera.",
+          "synthetic": false
+        },
+        {
+          "text": "Um, I don't know, like, I'm not able to, yeah, open it. Like, there's a start camera option, right?",
+          "synthetic": false
+        },
+        {
+          "text": "From my end, it could be because I'm in my hometown, the network is not stable here.",
+          "synthetic": false
+        },
+        {
+          "text": "Yeah, it's on already.",
+          "synthetic": false
+        }
+      ],
+      "byPersona": {}
+    },
+    {
+      "id": "S2",
+      "name": "Self-introduction",
+      "phases": [
+        1
+      ],
+      "common": [
+        {
+          "text": "Hi, hi, I'm good. I'm from Mangalore.",
+          "synthetic": false
+        },
+        {
+          "text": "I'm from West Bengal, Burdaman.",
+          "synthetic": false
+        },
+        {
+          "text": "Fine, sir, thank you.",
+          "synthetic": false
+        },
+        {
+          "text": "Well, thank you for asking. Well, I am from Rajasthan Kota, but currently I'm in Mumbai.",
+          "synthetic": false
+        },
+        {
+          "text": "I am from Jammu Kashmir. And currently I have done diploma in nautical science. So I am doing selling right now. And I wanted to explore career opportunities.",
+          "synthetic": false
+        },
+        {
+          "text": "Right now I'm just attending my college and yes, that's it about me.",
+          "synthetic": false
+        }
+      ],
+      "byPersona": {
+        "studying": [
+          {
+            "text": "I'm doing BSc honors in biochemistry and I'm in second year. My second year exams are almost done.",
+            "synthetic": false
+          },
+          {
+            "text": "I'm currently pursuing my biotech, I'm in third year, my fourth sem is about to begin in August.",
+            "synthetic": false
+          },
+          {
+            "text": "So I am 12th pass. I just finished my CA Foundation attempt in May, and right now I'm finding colleges for BCOM.",
+            "synthetic": false
+          },
+          {
+            "text": "It was good. Actually, I have my classes and office and all. So yeah, it was good.",
+            "synthetic": false
+          }
+        ],
+        "graduate": [
+          {
+            "text": "Actually, I recently finished my degree last week and received my results two days back.",
+            "synthetic": false
+          },
+          {
+            "text": "I like, I like to go coding so I thought, I've been off from coding for a long time so I thought I'll start somewhere.",
+            "synthetic": false
+          },
+          {
+            "text": "Now I am fresher, it's only skills I have from college.",
+            "synthetic": false
+          },
+          {
+            "text": "I'm planning for higher studies. Since I have almost 10 months, I'm planning to do a course similar to this to improve my resume.",
+            "synthetic": false
+          }
+        ],
+        "same-field": [
+          {
+            "text": "I'm a, well, I joined as a data analyst and right now I work as a senior data analyst.",
+            "synthetic": false
+          },
+          {
+            "text": "I will be finishing five years of experience this July.",
+            "synthetic": false
+          },
+          {
+            "text": "Like it was kind of interesting, like a business analytic with using the AI. Anyways, the market is going on with AI for now.",
+            "synthetic": false
+          },
+          {
+            "text": "I'm currently working in retail, in garden industry. And total nine year experience in this field.",
+            "synthetic": false
+          }
+        ],
+        "diff-field": [
+          {
+            "text": "I'm working in a BPO since two years, night shift, but now I want to change the field.",
+            "synthetic": true
+          },
+          {
+            "text": "Actually I'm from mechanical background, but there is no growth there, so I'm looking at the data side.",
+            "synthetic": true
+          },
+          {
+            "text": "I'm doing teaching job right now. This AI thing, I keep seeing it everywhere, so I thought let me try.",
+            "synthetic": true
+          }
+        ],
+        "non-working": [
+          {
+            "text": "Actually I took a break after my last job, family reasons. Now I want to restart properly.",
+            "synthetic": true
+          },
+          {
+            "text": "I'm at home only since one year, so I was looking for something structured.",
+            "synthetic": true
+          },
+          {
+            "text": "Nothing currently, I left my job last year. That's why I'm exploring this.",
+            "synthetic": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "S3",
+      "name": "Discovery answers — keep them SHORT",
+      "phases": [
+        1,
+        2
+      ],
+      "common": [
+        {
+          "text": "BCOM.",
+          "synthetic": false
+        },
+        {
+          "text": "6.25 CGPA.",
+          "synthetic": false
+        },
+        {
+          "text": "Odisha, Bhubaneshwar.",
+          "synthetic": false
+        },
+        {
+          "text": "Instagram, not from the official website.",
+          "synthetic": false
+        },
+        {
+          "text": "Like I got an ad on Facebook while scrolling and from that I went to your site and then came to know about the course.",
+          "synthetic": false
+        },
+        {
+          "text": "No, this is my first time.",
+          "synthetic": false
+        },
+        {
+          "text": "Not fully, but I have just checked.",
+          "synthetic": false
+        },
+        {
+          "text": "Three years.",
+          "synthetic": false
+        },
+        {
+          "text": "Yeah, the Dart language.",
+          "synthetic": false
+        },
+        {
+          "text": "It's a three year degree. It's a three year degree.",
+          "synthetic": false
+        },
+        {
+          "text": "In a day or two.",
+          "synthetic": false
+        },
+        {
+          "text": "Right now I'm in fourth semester.",
+          "synthetic": false
+        },
+        {
+          "text": "29, 29.",
+          "synthetic": false
+        },
+        {
+          "text": "For three months, it was unpaid and after that it was paid.",
+          "synthetic": false
+        },
+        {
+          "text": "I did a one-month marketing internship, but other than that I haven't attended any.",
+          "synthetic": false
+        },
+        {
+          "text": "No, my own.",
+          "synthetic": false
+        },
+        {
+          "text": "My graduation done by 2021. I don't have any experience in IT sector. My stream was electronic and communication.",
+          "synthetic": false
+        },
+        {
+          "text": "It's almost 10.30 to 7.30. But I stay extra due to some workload issues. So almost 8. No, it's six days a week.",
+          "synthetic": false
+        }
+      ],
+      "byPersona": {}
+    },
+    {
+      "id": "S4",
+      "name": "Course questions",
+      "phases": [
+        2
+      ],
+      "common": [
+        {
+          "text": "Are the classes live or recorded?",
+          "synthetic": false
+        },
+        {
+          "text": "Are the video lectures unlimited views?",
+          "synthetic": false
+        },
+        {
+          "text": "My first question is about the joint course, who are the teachers? Is it BITS or Masai?",
+          "synthetic": false
+        },
+        {
+          "text": "Where is the campus immersion?",
+          "synthetic": false
+        },
+        {
+          "text": "Actually, I wanted to know more about the courses. What is the thing? The benefit, what is the thing? What exactly I'm going to learn in this.",
+          "synthetic": false
+        },
+        {
+          "text": "I have some clarification about the placements. Which companies will be handling the placements?",
+          "synthetic": false
+        },
+        {
+          "text": "I can only do Sundays, I'm busy six days a week. I can do one day on Saturday or Sunday. Need at least weekend.",
+          "synthetic": false
+        },
+        {
+          "text": "No, I want to just learn about AI.",
+          "synthetic": false
+        }
+      ],
+      "byPersona": {
+        "studying": [
+          {
+            "text": "I have one doubt that will I be given the tools to practice on or will I have to purchase the subscriptions?",
+            "synthetic": false
+          },
+          {
+            "text": "What about attendance if I miss a live class?",
+            "synthetic": false
+          },
+          {
+            "text": "Will this clash with my college timings?",
+            "synthetic": true
+          }
+        ],
+        "graduate": [
+          {
+            "text": "After this course, what kind of jobs I can apply for?",
+            "synthetic": true
+          },
+          {
+            "text": "Is there placement support for freshers like me?",
+            "synthetic": true
+          },
+          {
+            "text": "How much time daily I have to give? Because I'm also applying for jobs side by side.",
+            "synthetic": true
+          }
+        ],
+        "same-field": [
+          {
+            "text": "Would you be letting me know the, you know, the fee structure as well because it was not mentioned thoroughly so.",
+            "synthetic": false
+          },
+          {
+            "text": "I am not sure about it. Actually, it was asked about the timings. I was thinking that it will be a weekend or it will be a recorded session or it will be a live session.",
+            "synthetic": false
+          },
+          {
+            "text": "Which this application the pandas is, because I've never heard about this with the python best pandas, right?",
+            "synthetic": false
+          }
+        ],
+        "diff-field": [
+          {
+            "text": "Sir I have never done coding, will I be able to manage?",
+            "synthetic": true
+          },
+          {
+            "text": "For somebody totally new to this, how it will start? From basics?",
+            "synthetic": true
+          },
+          {
+            "text": "If I miss something because of office, recordings will be there, no?",
+            "synthetic": true
+          }
+        ],
+        "non-working": [
+          {
+            "text": "Is it okay for someone restarting after a gap? Like the pace and all?",
+            "synthetic": true
+          },
+          {
+            "text": "Weekly how many hours I have to give?",
+            "synthetic": true
+          },
+          {
+            "text": "Is there mentor support if I get stuck somewhere?",
+            "synthetic": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "S5",
+      "name": "Acknowledgements & micro-replies",
+      "phases": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "common": [
+        {
+          "text": "Okay.",
+          "synthetic": false
+        },
+        {
+          "text": "Okay, okay.",
+          "synthetic": false
+        },
+        {
+          "text": "Yes, sir.",
+          "synthetic": false
+        },
+        {
+          "text": "Yes, ma'am.",
+          "synthetic": false
+        },
+        {
+          "text": "Yeah.",
+          "synthetic": false
+        },
+        {
+          "text": "Okay. Got it, got it.",
+          "synthetic": false
+        },
+        {
+          "text": "Okay, that's fine.",
+          "synthetic": false
+        },
+        {
+          "text": "No doubts, everything clear.",
+          "synthetic": false
+        },
+        {
+          "text": "Yes, ma'am, it's visible.",
+          "synthetic": false
+        },
+        {
+          "text": "No, ma'am.",
+          "synthetic": false
+        },
+        {
+          "text": "Sure, ma'am.",
+          "synthetic": false
+        },
+        {
+          "text": "Okay, okay, sure.",
+          "synthetic": false
+        },
+        {
+          "text": "To be very honest, not that much.",
+          "synthetic": false
+        },
+        {
+          "text": "Yeah. I'm okay with this.",
+          "synthetic": false
+        },
+        {
+          "text": "Fine, sir, thank you.",
+          "synthetic": false
+        },
+        {
+          "text": "Yes, I can try.",
+          "synthetic": false
+        }
+      ],
+      "byPersona": {}
+    },
+    {
+      "id": "S6",
+      "name": "Money & fee reactions",
+      "phases": [
+        3
+      ],
+      "common": [
+        {
+          "text": "The 52,000 is a lot for me. I earn around 90k to 1 lakh per month, after rent and living costs I have only 20-30k left. If I take EMI I might not manage. Is there a cheaper option?",
+          "synthetic": false
+        },
+        {
+          "text": "Please give me one day because this fee is very high.",
+          "synthetic": false
+        },
+        {
+          "text": "I actually need one day because the amount is very high.",
+          "synthetic": false
+        },
+        {
+          "text": "I don't know, I can afford a rough idea. Based on that you can suggest the best program.",
+          "synthetic": false
+        },
+        {
+          "text": "Can I pay the remaining amount later?",
+          "synthetic": false
+        },
+        {
+          "text": "Sir this much I was not expecting honestly.",
+          "synthetic": true
+        },
+        {
+          "text": "And this is including everything? Like no extra charges later?",
+          "synthetic": true
+        }
+      ],
+      "byPersona": {}
+    },
+    {
+      "id": "S7",
+      "name": "Objections & hesitations",
+      "phases": [
+        4
+      ],
+      "common": [
+        {
+          "text": "Can I join later after my exams?",
+          "synthetic": false
+        },
+        {
+          "text": "Is there a doubt-clearing support team?",
+          "synthetic": false
+        },
+        {
+          "text": "I am from a commerce background, will the basics be covered?",
+          "synthetic": false
+        },
+        {
+          "text": "But many colleges charge 15-20 lakh for B.Tech and the packages they offer are low. Companies like EY, Deloitte, TCS look at your projects, not just your degree.",
+          "synthetic": false
+        },
+        {
+          "text": "I'm trying the placement route and working towards it. YouTube posts are good, certified courses are okay.",
+          "synthetic": false
+        },
+        {
+          "text": "My exams are going on, like my practicals are going on.",
+          "synthetic": false
+        },
+        {
+          "text": "I do want to upgrade myself. I want to stay future relevant.",
+          "synthetic": false
+        }
+      ],
+      "byPersona": {
+        "studying": [
+          {
+            "text": "Can I join later after my exams?",
+            "synthetic": false
+          },
+          {
+            "text": "My exams are going on, like my practicals are going on.",
+            "synthetic": false
+          },
+          {
+            "text": "Parents are already paying college fees, so I have to think.",
+            "synthetic": true
+          }
+        ],
+        "graduate": [
+          {
+            "text": "I have no income right now, my father will pay, so I have to be sure.",
+            "synthetic": true
+          },
+          {
+            "text": "Will companies take this certificate seriously? Like compared to a proper degree?",
+            "synthetic": true
+          },
+          {
+            "text": "Actually I'm also preparing for government exams side by side.",
+            "synthetic": true
+          }
+        ],
+        "same-field": [
+          {
+            "text": "Honestly half of these things I already do in my job. What new will I get?",
+            "synthetic": true
+          },
+          {
+            "text": "The fee is a lot for me. After rent and everything I don't have much left.",
+            "synthetic": false
+          },
+          {
+            "text": "I do want to upgrade myself. I want to stay future relevant.",
+            "synthetic": false
+          }
+        ],
+        "diff-field": [
+          {
+            "text": "Main worry is I have never written code in my life.",
+            "synthetic": true
+          },
+          {
+            "text": "With my job timing, I get free only after 8, will that work?",
+            "synthetic": true
+          },
+          {
+            "text": "What if I'm not able to cope in between? Then?",
+            "synthetic": true
+          }
+        ],
+        "non-working": [
+          {
+            "text": "Honestly my confidence is a little less after this gap.",
+            "synthetic": true
+          },
+          {
+            "text": "Employers will ask about my gap, will this certificate help with that?",
+            "synthetic": true
+          },
+          {
+            "text": "There is no income right now, so the amount is a big thing for me.",
+            "synthetic": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "S8",
+      "name": "Family / need-to-consult",
+      "phases": [
+        4,
+        5
+      ],
+      "common": [
+        {
+          "text": "I need to discuss with my parents.",
+          "synthetic": false
+        },
+        {
+          "text": "I've spoken to my parents.",
+          "synthetic": false
+        },
+        {
+          "text": "I'm not married, I need to discuss with my parents. I will connect them myself.",
+          "synthetic": false
+        },
+        {
+          "text": "So my mother is here.",
+          "synthetic": false
+        },
+        {
+          "text": "Yes, ma'am, I have asked my parents for the payment and registration.",
+          "synthetic": false
+        },
+        {
+          "text": "Because my elder brother, he is in AWS and he suggested me on what's the ongoing language we need to learn.",
+          "synthetic": false
+        },
+        {
+          "text": "Papa will ask what is the guarantee, so I need a proper answer for him.",
+          "synthetic": true
+        }
+      ],
+      "byPersona": {}
+    },
+    {
+      "id": "S9",
+      "name": "Closing — stalls & commitments",
+      "phases": [
+        5
+      ],
+      "common": [
+        {
+          "text": "Can I pay it in EMI?",
+          "synthetic": false
+        },
+        {
+          "text": "I need to do some research about the management as well. I need some more time, like tomorrow or on Friday.",
+          "synthetic": false
+        },
+        {
+          "text": "I want to make the 4,000 payment now but my online payment is not working today because I just purchased a washing machine and refrigerator. Can we do it tomorrow?",
+          "synthetic": false
+        },
+        {
+          "text": "I'm interested but I can't pay the full amount today. So I will pay only 4,000 to block my seat, right?",
+          "synthetic": false
+        },
+        {
+          "text": "Okay, I will do it now.",
+          "synthetic": false
+        },
+        {
+          "text": "Yes, I am interested, I will do it. Let's proceed with enrollment.",
+          "synthetic": false
+        },
+        {
+          "text": "I got the email, payment link, I have completed it.",
+          "synthetic": false
+        },
+        {
+          "text": "Done. I've scanned the QR code and paid.",
+          "synthetic": false
+        },
+        {
+          "text": "It was good and very interactive. Thank you so much.",
+          "synthetic": false
+        },
+        {
+          "text": "No, that's all. Thank you.",
+          "synthetic": false
+        }
+      ],
+      "byPersona": {
+        "studying": [
+          {
+            "text": "Can I pay it in EMI?",
+            "synthetic": false
+          },
+          {
+            "text": "Yes, ma'am, I have asked my parents for the payment and registration.",
+            "synthetic": false
+          },
+          {
+            "text": "I'll confirm by evening after talking to papa.",
+            "synthetic": true
+          }
+        ],
+        "graduate": [
+          {
+            "text": "I'm interested but I can't pay the full amount today. So I will pay only 4,000 to block my seat, right?",
+            "synthetic": false
+          },
+          {
+            "text": "Give me till tomorrow, I will ask at home and confirm.",
+            "synthetic": true
+          },
+          {
+            "text": "If I pay this now, the EMI for the rest starts when?",
+            "synthetic": true
+          }
+        ],
+        "same-field": [
+          {
+            "text": "I need to do some research about the management as well. I need some more time, like tomorrow or on Friday.",
+            "synthetic": false
+          },
+          {
+            "text": "Yes, I am interested, I will do it. Let's proceed with enrollment.",
+            "synthetic": false
+          },
+          {
+            "text": "I got the email, payment link, I have completed it.",
+            "synthetic": false
+          }
+        ],
+        "diff-field": [
+          {
+            "text": "Let me first talk to one person who did this from non IT side, then I will pay.",
+            "synthetic": true
+          },
+          {
+            "text": "Give me time till weekend, I have to plan the money also.",
+            "synthetic": true
+          },
+          {
+            "text": "Can I pay it in EMI?",
+            "synthetic": false
+          }
+        ],
+        "non-working": [
+          {
+            "text": "I want to do it, just give me two days to arrange the money.",
+            "synthetic": true
+          },
+          {
+            "text": "I'll discuss at home tonight and tell you tomorrow morning.",
+            "synthetic": true
+          },
+          {
+            "text": "Can I pay the remaining amount later?",
+            "synthetic": false
+          }
+        ]
+      }
+    }
+  ]
+}
