@@ -15,10 +15,13 @@ function check(name, cond, extra = "") {
   }
 }
 
-async function call(path, { method = "GET", body } = {}) {
+async function call(path, { method = "GET", body, headers: extraHeaders } = {}) {
+  const headers = {};
+  if (body) headers["Content-Type"] = "application/json";
+  if (extraHeaders) Object.assign(headers, extraHeaders);
   const res = await fetch(`${BASE}${path}`, {
     method,
-    headers: body ? { "Content-Type": "application/json" } : undefined,
+    headers: Object.keys(headers).length ? headers : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
@@ -80,19 +83,31 @@ async function main() {
   check("POST valid rubric template clone returns 200", rtClone.status === 200 && rtClone.data.id);
   const rtDeleteDefault = await call(`/rubric-templates/${defaultTpl.id}`, { method: "DELETE" });
   check("DELETE default rubric template returns 400", rtDeleteDefault.status === 400);
-  const rtDeleteClone = await call(`/rubric-templates/${rtClone.data.id}`, { method: "DELETE" });
-  check("DELETE cloned rubric template ok", rtDeleteClone.data.ok === true);
+  // NOTE: rtClone is intentionally NOT deleted here. It is used as the smoke
+  // assignment's rubricTemplateId to test the referenced-rubric delete guard (409
+  // while active). It is deleted in the CLEANUP section after the assignment is
+  // fully completed and deleted, at which point the DELETE should return 200.
 
   console.log("ASSIGNMENT (admin -> counsellor)");
   const asnNoCourse = await call("/assignments", { method: "POST", body: { counsellorId: counsellor.id, personaId: "persona-diff-field", scenario: { title: "Smoke mock", difficulty: "medium", situation: "worried about coding", contextNotes: "" }, createdBy: "admin-1" } });
   check("create assignment without courseId returns 400", asnNoCourse.status === 400);
-  const asn = await call("/assignments", { method: "POST", body: { counsellorId: counsellor.id, personaId: "persona-diff-field", courseId: pwcCourse.id, rubricTemplateId: "rt-grounded-v2", revealPersona: false, scenario: { title: "Smoke mock", difficulty: "medium", situation: "worried about coding", contextNotes: "" }, createdBy: "admin-1" } });
+  const asn = await call("/assignments", { method: "POST", body: { counsellorId: counsellor.id, personaId: "persona-diff-field", courseId: pwcCourse.id, rubricTemplateId: rtClone.data.id, revealPersona: false, scenario: { title: "Smoke mock", difficulty: "medium", situation: "worried about coding", contextNotes: "" }, createdBy: "admin-1" } });
   check("create assignment", asn.status === 200 && asn.data.id);
   check("assignment echoes courseId", asn.data.courseId === pwcCourse.id);
-  check("assignment echoes rubricTemplateId", asn.data.rubricTemplateId === "rt-grounded-v2");
+  check("assignment echoes rubricTemplateId", asn.data.rubricTemplateId === rtClone.data.id);
   check("assignment echoes revealPersona", asn.data.revealPersona === false);
   const asnList = await call(`/assignments?counsellorId=${counsellor.id}`);
   check("assignment visible to counsellor", asnList.data.some((a) => a.id === asn.data.id));
+
+  // Referenced-persona delete guard: while the assignment is active (pending), trying
+  // to delete the persona it references must return 409.
+  const delPersonaActive = await call(`/personas/persona-diff-field`, { method: "DELETE" });
+  check("delete referenced persona while assignment active -> 409", delPersonaActive.status === 409);
+
+  // Referenced-rubric delete guard: rtClone is the assignment's rubricTemplateId;
+  // deleting it while the assignment is still pending must return 409.
+  const rtDeleteCloneActive = await call(`/rubric-templates/${rtClone.data.id}`, { method: "DELETE" });
+  check("delete referenced rubric template while assignment active -> 409", rtDeleteCloneActive.status === 409);
 
   console.log("SESSION (assigned, text mode) — this makes real LLM calls, please wait…");
   // mode is now the voice/text axis (C5); the assigned origin is driven by assignmentId.
@@ -110,7 +125,7 @@ async function main() {
   const sessionGet = await call(`/sessions/${sid}`);
   check("session origin is assigned (assignmentId-driven)", sessionGet.data.mode === "assigned");
   check("session has courseSnapshot", sessionGet.data.courseSnapshot && /Cyber Security|Ethical Hacking/i.test(sessionGet.data.courseSnapshot.name));
-  check("session snapshots rubric", sessionGet.data.rubricSnapshot?.templateId === "rt-grounded-v2");
+  check("session snapshots rubric", sessionGet.data.rubricSnapshot?.templateId === rtClone.data.id);
 
   console.log("REALTIME (token mint wiring + removed elevenlabs endpoint)");
   // Token mint: with no/invalid OPENAI_API_KEY this returns a missing-key-shaped
@@ -133,6 +148,14 @@ async function main() {
   check("message 1 returns reply + score", m1.status === 200 && m1.data.reply && typeof m1.data.satisfactionScore === "number");
   check("message 1 response has emotion", typeof m1.data.emotion === "string");
   check("message response has milestones", typeof m1.data.milestones?.objectionsRaised === "number");
+
+  // POST /cue after message 1: one LLM call, expect { cue: { headline: <non-empty> }, source: "llm"|"instant" }
+  console.log("CUE (on-demand richer cue — one LLM call)");
+  const cueRes = await call(`/sessions/${sid}/cue`, { method: "POST", body: {} });
+  check("POST /cue returns 200", cueRes.status === 200);
+  check("cue.headline is a non-empty string", typeof cueRes.data.cue?.headline === "string" && cueRes.data.cue.headline.length > 0);
+  check("cue source is 'llm' or 'instant'", cueRes.data.source === "llm" || cueRes.data.source === "instant");
+
   const m2 = await call(`/sessions/${sid}/message`, { method: "POST", body: { message: "Totally fair. There's a refund window and recordings if you fall behind, plus placement support. Shall I block your seat with the 4000 today?", deliveryMetrics: { tone: "warm", wpm: 150 } } });
   check("message 2 returns reply", m2.status === 200 && m2.data.reply);
   check("message 2 response has emotion", typeof m2.data.emotion === "string");
@@ -180,6 +203,25 @@ async function main() {
   const asnAfter = await call(`/assignments/${asn.data.id}`);
   check("assignment marked completed + linked to report", asnAfter.data.status === "completed" && asnAfter.data.reportId === rid);
 
+  // Ownership guard: counsellor-2 (Rohan Verma) is a different seeded counsellor.
+  // Smoke counsellor is counsellor-1 (Priya Sharma).
+  console.log("OWNERSHIP GUARD (session + report)");
+  const otherCounsellorId = "counsellor-2";
+  // Session: different counsellor -> 403; owner -> 200; no header -> 200 (back-compat).
+  const sessionOther = await call(`/sessions/${sid}`, { headers: { "X-User-Id": otherCounsellorId } });
+  check("GET session with wrong counsellor id -> 403", sessionOther.status === 403);
+  const sessionOwner = await call(`/sessions/${sid}`, { headers: { "X-User-Id": counsellor.id } });
+  check("GET session with owner id -> 200", sessionOwner.status === 200);
+  const sessionNoHeader = await call(`/sessions/${sid}`);
+  check("GET session with no X-User-Id header -> 200 (back-compat)", sessionNoHeader.status === 200);
+  // Report: same trio.
+  const reportOther = await call(`/reports/${rid}`, { headers: { "X-User-Id": otherCounsellorId } });
+  check("GET report with wrong counsellor id -> 403", reportOther.status === 403);
+  const reportOwner = await call(`/reports/${rid}`, { headers: { "X-User-Id": counsellor.id } });
+  check("GET report with owner id -> 200", reportOwner.status === 200);
+  const reportNoHeader = await call(`/reports/${rid}`);
+  check("GET report with no X-User-Id header -> 200 (back-compat)", reportNoHeader.status === 200);
+
   console.log("ANALYTICS");
   // Admin analytics
   const adminAnalytics = await call("/analytics/admin");
@@ -211,6 +253,32 @@ async function main() {
   const unknownAnalytics = await call("/analytics/counsellor/no-such-id-xyz");
   check("unknown counsellor id → 404", unknownAnalytics.status === 404);
 
+  console.log("LEAD PROFILES");
+  const leadAll = await call("/lead-profiles");
+  check("GET /lead-profiles returns array with length > 0", Array.isArray(leadAll.data) && leadAll.data.length > 0);
+  check("lead profile has {id, name} shape", leadAll.data.every((p) => typeof p.id === "string" && typeof p.name === "string"));
+  const leadStudying = await call("/lead-profiles?category=studying");
+  check("GET /lead-profiles?category=studying returns non-empty subset", Array.isArray(leadStudying.data) && leadStudying.data.length > 0);
+  check("all ?category=studying results have category 'studying'", leadStudying.data.every((p) => p.category === "studying"));
+
+  console.log("CONFIG ROUND-TRIP (scoring)");
+  const cfgGet1 = await call("/config/scoring");
+  check("GET /config/scoring returns 200 with recentTurnsWindow", cfgGet1.status === 200 && typeof cfgGet1.data.recentTurnsWindow === "number");
+  const origWindow = cfgGet1.data.recentTurnsWindow;
+  const newWindow = origWindow === 6 ? 8 : 6; // pick a different valid value
+  const cfgPut1 = await call("/config/scoring", { method: "PUT", body: { ...cfgGet1.data, recentTurnsWindow: newWindow } });
+  check("PUT /config/scoring with new recentTurnsWindow returns 200", cfgPut1.status === 200);
+  const cfgGet2 = await call("/config/scoring");
+  check("GET /config/scoring confirms new recentTurnsWindow", cfgGet2.data.recentTurnsWindow === newWindow);
+  // Restore original value as part of cleanup discipline.
+  const cfgPut2 = await call("/config/scoring", { method: "PUT", body: { ...cfgGet2.data, recentTurnsWindow: origWindow } });
+  check("PUT /config/scoring restores original recentTurnsWindow -> 200", cfgPut2.status === 200);
+  const cfgGet3 = await call("/config/scoring");
+  check("GET /config/scoring confirms restoration of recentTurnsWindow", cfgGet3.data.recentTurnsWindow === origWindow);
+
+  // Practice-mode lifecycle: SKIP — a second full LLM session would double smoke
+  // cost (two LLM chains for first-message + scoring). Deliberate gap.
+
   console.log("CLEANUP");
   const delReport = await call(`/reports/${rid}`, { method: "DELETE" });
   check("cleanup: delete report", delReport.data.ok === true);
@@ -218,6 +286,10 @@ async function main() {
   check("cleanup: delete session", delSession.data.ok === true);
   const delAsn = await call(`/assignments/${asn.data.id}`, { method: "DELETE" });
   check("cleanup: delete assignment", delAsn.data.ok === true);
+  // rtClone delete: assignment is now gone (completed + deleted), so the 409 guard
+  // no longer applies and this must return 200.
+  const rtCleanup = await call(`/rubric-templates/${rtClone.data.id}`, { method: "DELETE" });
+  check("cleanup: delete rubric clone (assignment completed+deleted first) -> ok", rtCleanup.data.ok === true);
 
   console.log(`\nRESULT: ${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);

@@ -122,20 +122,19 @@ export function renderPersonalitySection(flavour) {
     lines.push("You are noticeably skeptical — even reassuring answers only partly settle your doubts.");
   }
 
-  // Formality + LANGUAGE guidance. The single language policy (contract C6) is the
-  // source of truth for every student; formality only tunes HOW polished the
-  // English is, never which Hindi tokens are named (there are none). Fail-soft: a
-  // non-numeric formality renders nothing extra (the default policy from
-  // registerNote stands).
+  // Formality tunes HOW polished the English is — and nothing else. The language
+  // policy (contract C6, LANGUAGE_POLICY in prompt.js) is injected elsewhere in
+  // the prompt and is the SINGLE source of truth; restating it here with
+  // different wording ("at most one light Hindi word" vs the calibrated
+  // "roughly once every couple of turns") gave the model two conflicting dials.
   const form = flavour.formality;
   if (typeof form === "number") {
     if (form >= 4) {
-      lines.push("LANGUAGE: Speak natural Indian English, on the more polished and correct side. At most one light Hindi word every few turns; never full Hindi sentences unless the counsellor themselves speaks full Hindi sentences repeatedly.");
-    } else if (form === 3) {
-      lines.push("LANGUAGE: Speak natural Indian English. At most one light Hindi word every few turns; never full Hindi sentences unless the counsellor themselves speaks full Hindi sentences repeatedly.");
-    } else {
-      lines.push("LANGUAGE: Speak natural Indian English, casual and a little imperfect. At most one light Hindi word every few turns; never full Hindi sentences unless the counsellor themselves speaks full Hindi sentences repeatedly.");
+      lines.push("Your English is on the more polished and correct side for your background.");
+    } else if (form <= 2) {
+      lines.push("Your English is casual and a little imperfect — small grammar slips are natural for you.");
     }
+    // form === 3 renders nothing: the default register already describes neutral.
   }
 
   // Active quirks

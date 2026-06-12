@@ -23,7 +23,7 @@ Each entry: focus area, findings (incl. refuted), fixes (file:line), verificatio
 ## Open items
 - ~~Session ownership check~~ DONE iter 8 (X-User-Id header + 403 guards on session/report routes, header-absent = back-compat allow).
 - ~~EndedScreen report deep-link~~ DONE iter 8 (GET /reports?sessionId= + direct View-report link).
-- Smoke checks still worth adding: referenced-persona/rubric delete 409s, POST /sessions/:id/cue, practice-mode (no assignment) lifecycle, GET /lead-profiles, config GET/PUT round-trips, ownership 403.
+- ~~Remaining smoke checks~~ DONE iter 9 (104/104: persona/rubric delete 409s, /cue, ownership 403 trios, lead-profiles, config round-trip; practice-mode lifecycle deliberately skipped — doubles LLM smoke cost, noted in script).
 
 ## Iterations
 
@@ -156,3 +156,19 @@ Re-sweep found 2 interaction bugs between today's fixes, both fixed:
 Interactions traced safe: auto-enable + degrade re-run (ref guard holds); start-lock key space + pruning (no leak); heartbeat cleared before every throw path; client abort leaves server transcript clean (turn not persisted on write-failure); replaceTrack doesn't strand utterance state (VAD is audio-based); score-pulse sentinel ordering; /message accepts voiceEngine=openai sessions (text degrade works).
 
 Verification: server tests 142/142 · smoke 84/84 (fresh server) · lint 0 errors · build success · ownership probe on bad id → 404 (guard ordering correct).
+
+### Iteration 9 — 2026-06-12 ~07:40–08:05 IST
+Focus: prompt/report builders deep-sweep (probed composed output) · smoke coverage completion (1 hunter + 1 implementer).
+
+Prompt sweep: 5 real bugs, all fixed — every one a self-contradiction in the composed prompts:
+1. fewShot examples never address-rendered — "ma'am" calls saw four 'sir' example lines (prompt.js buildFewShotSection now renders; call moved after addressTerm init — caught a TDZ from my own first attempt via tests).
+2. Voice-bank register lines never address-rendered ("Yes, sir." next to the ma'am rule) → rendered in buildRegisterReferenceSection.
+3. personality.js injected a FOURTH language policy with conflicting wording ("at most one light Hindi word" vs the calibrated dial) → formality now only describes polish; LANGUAGE_POLICY is the single source (3 identical copies by design).
+4. Realtime prompt had no phase-3 listen-and-acknowledge carve-out (10-30-word default = student talks over the pitch) → phase-3 rule added (3-10 words, one invited question).
+5. Config meta-examples hardcode 'sir' ('hello sir', 'yes sir okay') and can't be auto-rendered → address sections in BOTH prompts explicitly de-fang generic 'sir' examples.
+
+Smoke completion: +20 checks → 104/104 live (referenced-persona/rubric delete 409s, /cue endpoint, ownership 403/200/200 trios for session + report, lead-profiles + category filter, scoring-config PUT round-trip with restoration). No new server bugs found by the new checks.
+
+Probes after fix: ma'am-call text prompt language-policy copies 4→3 (identical by design), exemplar/voice-bank/fewShot lines all ma'am-rendered; realtime carve-out present, 6.8k chars (budget 9.5k).
+
+Verification: server tests 142/142 · smoke 104/104 · lint 0 errors · build success.

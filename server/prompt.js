@@ -35,7 +35,10 @@ function addressTermOf(session) {
 // section. null term -> "listen and use sir or ma'am accordingly".
 function buildAddressSection(addressTerm) {
   if (addressTerm) {
-    return `HOW YOU ADDRESS THE COUNSELLOR:\n- Address the counsellor as "${addressTerm}" every second or third sentence (matching the exemplar lines). If they ever correct you on sir/ma'am, switch immediately and naturally without making a fuss.`;
+    // The generic-example note matters when the term is "ma'am": a few config
+    // meta-examples ('hello sir', 'yes sir, okay') are plain strings that can't
+    // be address-rendered, so we explicitly de-fang them here.
+    return `HOW YOU ADDRESS THE COUNSELLOR:\n- Address the counsellor as "${addressTerm}" every second or third sentence (matching the exemplar lines). Any example phrase in these instructions that says "sir" is generic — on THIS call always say "${addressTerm}". If they ever correct you on sir/ma'am, switch immediately and naturally without making a fuss.`;
   }
   return `HOW YOU ADDRESS THE COUNSELLOR:\n- You do not yet know whether the counsellor is "sir" or "ma'am" — listen for how they sound and use the right one accordingly. If they correct you, switch immediately and naturally without making a fuss.`;
 }
@@ -275,12 +278,14 @@ function buildNaturalSpeechSection(cfg) {
 // real-life detail). The abstract natural-speech rules were being ignored, so
 // these anchor the texture by example. Rendered right after the natural-speech
 // rules. Renders nothing when no exemplars are configured.
-function buildFewShotSection(cfg) {
+function buildFewShotSection(cfg, addressTerm) {
   const examples = Array.isArray(cfg.fewShot) ? cfg.fewShot.filter((s) => typeof s === "string" && s.trim()) : [];
   if (!examples.length) return "";
   const intro = cfg.fewShotIntro || "EXAMPLES OF REPLIES IN EXACTLY THIS REGISTER (do NOT copy verbatim):";
+  // Exemplars are stored with "sir" — render them for the actual counsellor so
+  // the examples never contradict the address section.
   return `${intro}
-${examples.map((e) => `- "${e.trim()}"`).join("\n")}`;
+${examples.map((e) => `- "${renderAddress(e.trim(), addressTerm)}"`).join("\n")}`;
 }
 
 // PER-TURN VERBOSITY OVERRIDE — the server rolls turnVerbosity ('short'|'open'|
@@ -370,12 +375,14 @@ function buildRegisterReferenceSection(cfg, persona, currentPhase, seed = "", ad
   };
 
   // Mined voice-bank lines (phases 2-4 only — the bank is not gated for phase 5).
+  // Address-rendered like the style exemplars: the mined corpus says "sir"
+  // throughout, which contradicted the address section on ma'am calls.
   const stageLines = [];
   if (currentPhase >= 2 && currentPhase <= 4) {
     const bank = voiceBankFor(category, currentPhase, 6)
       .map((e) => (typeof e === "string" ? e : e?.text))
       .filter(Boolean);
-    for (const t of bank) take(t, stageLines, 3);
+    for (const t of bank) take(renderAddress(t, addressTerm), stageLines, 3);
   }
 
   // Owner-calibrated style exemplars for this phase (address-rendered, deduped
@@ -466,11 +473,11 @@ export function buildSystemPrompt(persona, scenario, currentPhase, satisfactionS
       );
   const personalitySection = renderPersonalitySection(resolvedFlavour);
   const naturalSpeechSection = buildNaturalSpeechSection(cfg);
-  const fewShotSection = buildFewShotSection(cfg);
   const verbositySection = buildVerbositySection(cfg, currentPhase, resolvedFlavour);
   // Style exemplars rotate by the session id; the address term decides sir/ma'am.
   const seed = dispositionSession.id || "";
   const addressTerm = addressTermOf(session);
+  const fewShotSection = buildFewShotSection(cfg, addressTerm);
   const addressSection = buildAddressSection(addressTerm);
   const registerRefSection = buildRegisterReferenceSection(cfg, persona, currentPhase, seed, addressTerm);
   const tangentSection = buildTangentSection(cfg, currentPhase, resolvedFlavour);

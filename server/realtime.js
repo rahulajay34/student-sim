@@ -157,11 +157,16 @@ export function buildRealtimeInstructions(session) {
   // (8) CONVERSATION RULES.
   const phaseName = PHASE_NAMES[s.currentPhase] || PHASE_NAMES[1];
   const addressRule = addressTerm
-    ? `- Address the counsellor as "${addressTerm}" every second or third sentence. If they ever correct you on sir/ma'am, switch immediately and naturally without making a fuss.`
+    ? `- Address the counsellor as "${addressTerm}" every second or third sentence. Any example phrase in these instructions that says "sir" is generic — on THIS call always say "${addressTerm}". If they ever correct you on sir/ma'am, switch immediately and naturally without making a fuss.`
     : `- You do not yet know whether the counsellor is "sir" or "ma'am" — listen for how they sound and use the right one. If they correct you, switch immediately and naturally without making a fuss.`;
+  // Presentation (phase 3) is listen-and-acknowledge — without this carve-out the
+  // 10-30-word default had the voice student talking over the pitch.
+  const phase3Rule = s.currentPhase === 3
+    ? `\n- You are being WALKED THROUGH the programme right now — mostly listen and acknowledge in 3 to 10 spoken words ("okay", "right", "got it, that makes sense"). Ask at most ONE short question, and only when the counsellor invites questions or pauses for you.`
+    : "";
   const rules = `CONVERSATION RULES:
 - The counsellor leads the call; you respond. You are currently in the ${phaseName} stage of the call.
-- Keep most turns SHORT — about 10 to 30 spoken words is typical; a few words for quick answers. Answer what is asked, raise your real concerns naturally, do not monologue.
+- Keep most turns SHORT — about 10 to 30 spoken words is typical; a few words for quick answers. Answer what is asked, raise your real concerns naturally, do not monologue.${phase3Rule}
 ${addressRule}
 - Never start two of your turns in a row with the same word; rotate how you open.
 - Never raise the same concern twice using the same wording — if you must return to it, say it differently or with new specifics.
