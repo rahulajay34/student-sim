@@ -12,7 +12,7 @@ Owner-approved plan (2026-06-12). Decisions confirmed with the owner via Q&A:
 - Structured outputs (`output_config.format` json_schema) for scoring, breakdown, cue, and report calls — replaces regex `extractJson` as the primary path (extractJson stays as fallback).
 - `maxRetries: 0` on report calls (report.js already has its own 2-attempt loop); SDK default retries elsewhere.
 - No A/B provider flag — hard cutover (git revert is the rollback).
-- Follow-up (separate task): prompt-caching split of the student system prompt (`buildSystemPromptParts` → `cache_control` block, ~85% savings on the stable prefix; Sonnet 4.6 min cacheable prefix 2048 tokens).
+- Prompt-caching split: DONE (2026-06-13) — `buildSystemPromptParts` → two-block system w/ `cache_control` on the stable prefix, wired through engine/llm in both stacks (188 tests). STATUS: structurally live but **inert in practice** — measured real-session stable prefix is ~665 tokens vs Sonnet's 2048-token cache minimum, because session-stable sections (behaviour rules, register, few-shot, phase ladder) sit after the per-phase block in the owner-calibrated composition. ACTIVATION (deliberate follow-up, needs behavioral review): reorder session-stable sections ahead of the phase block (and/or include per-phase sections in the cached block — invalidates ~4×/session, ~80% hit rate). Only affects text sessions; voice (/observe) never composes this prompt.
 - Env: `ANTHROPIC_API_KEY` (+ optional `ANTHROPIC_MODEL`) in root .env, later Supabase secrets. Fix stale `OLLAMA_API_KEY` startup log in index.js.
 
 ### WS2 — Conversation behavior (fee-loop + fillers) — root causes verified from session ses-d04df55df1cf

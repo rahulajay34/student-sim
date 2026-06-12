@@ -1,7 +1,7 @@
 // Generates the student's turns. Builds the chat message array from the stored
 // transcript (the server owns conversation history) and the composed system prompt.
 import { chat, chatStream, STUDENT_SAMPLING, DETERMINISTIC_SAMPLING } from "./ollama.js";
-import { buildSystemPrompt, computeConvincementHint } from "./prompt.js";
+import { buildSystemPrompt, buildSystemPromptParts, computeConvincementHint } from "./prompt.js";
 import { classifyCounsellorTurn } from "./classify.js";
 
 const EMOTION_TAG_RE = /\[emotion:\s*([a-z ]{0,30})\]/gi;
@@ -55,15 +55,14 @@ function transcriptToMessages(transcript) {
 // never gets a verbosity/momentum override — turnVerbosity and lastAdjustment
 // are null by definition (no prior counsellor turn to react to yet).
 export async function getFirstMessage(persona, scenario, course, flavour = null) {
-  const systemPrompt = buildSystemPrompt(persona, scenario, 1, 50, course, null, flavour, null, null, null, null);
+  const systemParts = buildSystemPromptParts(persona, scenario, 1, 50, course, null, flavour, null, null, null, null);
   const raw = await chat([
-    { role: "system", content: systemPrompt },
     {
       role: "user",
       content:
         "Start the conversation. Your very first message must be only a self-introduction of 2-3 sentences. Improvise it fresh in your own words from your real facts (your name, what you do or study, your city, and why you took the test) — never a rehearsed-sounding script, and phrase it differently than a generic intro would. Nothing else.",
     },
-  ], { ...STUDENT_SAMPLING, mode: "fast" });
+  ], { ...STUDENT_SAMPLING, mode: "fast", systemParts });
   return parseEmotion(raw);
 }
 
@@ -184,15 +183,22 @@ function ensureNonEmpty({ text, emotion }) {
 
 // Shared pieces for the per-turn reply: turnHint classification + composed prompt
 // + message array. Used by both the streaming and non-streaming entry points.
-// personalityFlavour is passed through to buildSystemPrompt; old sessions that
-// lack the field fall soft inside buildSystemPrompt (re-rolls from persona.personality
-// or DEFAULT_PERSONALITY).
+// personalityFlavour is passed through to buildSystemPromptParts; old sessions
+// that lack the field fall soft inside buildSystemPromptParts (re-rolls from
+// persona.personality or DEFAULT_PERSONALITY).
 // turnVerbosity ('short'|'open'|null) is rolled per turn by the server and stored
 // on the session as `lastTurnVerbosity`; lastAdjustment is the counsellor's most
 // recent scoring adjustment (the one-turn-lag value — scoring runs in parallel by
-// design). Both are threaded into buildSystemPrompt so the per-turn verbosity and
-// momentum overrides render. Both fall soft to null when the server has not set
-// them (old sessions, or the opening turn).
+// design). Both are threaded into buildSystemPromptParts so the per-turn verbosity
+// and momentum overrides render. Both fall soft to null when the server has not
+// set them (old sessions, or the opening turn).
+//
+// Prompt-caching: systemParts ({ stable, variable }) replaces the flat systemPrompt
+// string in the messages array. The stable prefix is cached by the API (cache_control
+// ephemeral on block 0); the variable suffix is never cached. The flat systemPrompt
+// string is still kept on the returned context for the coherence-gate / anti-loop
+// regeneration paths (guardLoop, gateReply) which append REPEAT_NOTE / REGEN_NOTE
+// directly to the string — those paths do not use caching.
 function prepareReply(session) {
   const { personaSnapshot, scenarioSnapshot, currentPhase, satisfactionScore, transcript, courseSnapshot, personalityFlavour = null, objectionState = null } = session;
   const last = transcript[transcript.length - 1];
@@ -209,15 +215,22 @@ function prepareReply(session) {
   // Thread the full session as the LAST positional arg so the dynamic disposition
   // narrative reads the real scoreHistory + session id + persona/scenario traits
   // (stable persuadability across turns), not a stub reconstructed from positionals.
+  const systemParts = buildSystemPromptParts(
+    personaSnapshot, scenarioSnapshot, currentPhase, satisfactionScore, courseSnapshot,
+    turnHint, personalityFlavour, convincementHint, objectionState, turnVerbosity, lastAdjustment, session,
+  );
+  // Keep the flat string for the gate/loop regen paths (appended with REPEAT_NOTE /
+  // REGEN_NOTE) and for session.promptSnapshot — same content as the API sees.
   const systemPrompt = buildSystemPrompt(
     personaSnapshot, scenarioSnapshot, currentPhase, satisfactionScore, courseSnapshot,
     turnHint, personalityFlavour, convincementHint, objectionState, turnVerbosity, lastAdjustment, session,
   );
-  const messages = [{ role: "system", content: systemPrompt }, ...transcriptToMessages(transcript)];
+  // Primary message array: no system-role entry — systemParts is passed via options.
+  const messages = transcriptToMessages(transcript);
   // `transcript` is needed by gateReply/guardLoop for the regeneration + anti-loop
   // paths (transcriptToMessages + maxLoopSimilarity). Without it those paths saw
   // `undefined` and threw on transcript.length (incoherent question/invite regen).
-  return { last, turnHint, systemPrompt, messages, transcript };
+  return { last, turnHint, systemPrompt, systemParts, messages, transcript };
 }
 
 // Per-session thinking control for the STUDENT reply call only. session.thinkingMode
@@ -284,7 +297,7 @@ async function gateReply({ text, emotion }, { last, turnHint, systemPrompt, tran
 // the SPOKEN text (emotion tag stripped) and emotion is the parsed/defaulted tint.
 export async function getStudentReply(session) {
   const ctx = prepareReply(session);
-  const raw = await chat(ctx.messages, studentSampling(session));
+  const raw = await chat(ctx.messages, { ...studentSampling(session), systemParts: ctx.systemParts });
   const parsed = parseEmotion(raw);
   return ensureNonEmpty(await gateReply(parsed, ctx));
 }
@@ -298,7 +311,7 @@ export async function getStudentReply(session) {
 export async function* getStudentReplyStream(session) {
   const ctx = prepareReply(session);
   let buf = "";
-  for await (const tok of chatStream(ctx.messages, studentSampling(session))) {
+  for await (const tok of chatStream(ctx.messages, { ...studentSampling(session), systemParts: ctx.systemParts })) {
     buf += tok;
     yield tok;
   }

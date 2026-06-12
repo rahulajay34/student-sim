@@ -5,11 +5,16 @@
 // 150 words so genuine multi-sentence "open" replies are NOT replaced by a canned
 // 4-word ack. Word-loop garble must still be caught regardless of length.
 // No network or LLM calls; importing engine.js triggers no I/O.
+//
+// Also tests prompt-caching in getStudentReply/getFirstMessage:
+//   - The fake LLM client must receive systemParts (not a system-role message)
+//   - messages[] must contain no system-role entry
 
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { structurallyBroken } from "../engine.js";
+import { structurallyBroken, getStudentReply, getFirstMessage } from "../engine.js";
+import { _setClientForTests } from "../llm.js";
 
 // Build a string of N space-separated, all-distinct words (no loops).
 function words(n) {
@@ -62,4 +67,133 @@ test("a long reply with a word loop is still broken (loop wins regardless of len
 test("a normal word repeated only twice (not 3+) is not a loop", () => {
   // The loop regex needs 3+ consecutive repeats; "very very good" must stay valid.
   assert.equal(structurallyBroken("It is very very good for me."), false);
+});
+
+// ─── Prompt-caching: getStudentReply passes systemParts, not system-role ──────
+//
+// We inject a fake Anthropic client that captures what chat() receives and
+// returns a minimal valid student reply. The assertions verify that:
+//   1. options.systemParts is an object with { stable, variable } strings
+//   2. params.messages[] contains no system-role entry
+//   3. params.system is an array (the 2-block caching shape built by llm.js)
+
+const PERSONA_FIXTURE = {
+  label: "a working professional",
+  category: "professional",
+  coreAnxiety: "Is this worth the money?",
+  behaviourPrompt: "Ask about ROI and career impact.",
+};
+const SCENARIO_FIXTURE = { title: "Standard mock", difficulty: "medium" };
+const SESSION_FIXTURE = {
+  id: "engine-test-session-xyz",
+  personaSnapshot: PERSONA_FIXTURE,
+  scenarioSnapshot: SCENARIO_FIXTURE,
+  courseSnapshot: null,
+  currentPhase: 2,
+  satisfactionScore: 50,
+  transcript: [
+    { role: "student", text: "Hello sir, I am Ravi. I took the test last week." },
+    { role: "counsellor", text: "Great Ravi! What made you take the qualifier test?" },
+  ],
+  personalityFlavour: null,
+  objectionState: [],
+  scoreHistory: [],
+  counsellorAddress: "sir",
+};
+
+test("getStudentReply passes systemParts to LLM; messages[] has no system-role entry", async () => {
+  let capturedParams = null;
+  let capturedSystemParts = null;
+
+  // Intercept at the Anthropic SDK client level.
+  const fakeClient = {
+    messages: {
+      create(params, _reqOpts) {
+        capturedParams = params;
+        // Return a minimal valid response so parseEmotion + gating can run.
+        return Promise.resolve({ content: [{ type: "text", text: "Haan sir, okay. [emotion:neutral]" }] });
+      },
+      stream() {
+        return { [Symbol.asyncIterator]: () => ({ next: () => Promise.resolve({ done: true }) }) };
+      },
+    },
+  };
+
+  // The fake client also intercepts the coherence gate call (makesSense) — it
+  // returns "VALID" which makes the gate pass without a real LLM call.
+  // We override create to handle multiple calls: first call is the main student
+  // reply; second (optional) is the coherence gate. Both return valid text.
+  let callCount = 0;
+  fakeClient.messages.create = function(params, _reqOpts) {
+    callCount += 1;
+    if (callCount === 1) {
+      capturedParams = params;
+      // Capture systemParts from what was built by normalizeOpts/buildParams.
+      // params.system will be an array of blocks when systemParts was provided.
+      capturedSystemParts = params.system;
+    }
+    return Promise.resolve({ content: [{ type: "text", text: "VALID" }] });
+  };
+
+  _setClientForTests(fakeClient);
+  try {
+    // We expect this to resolve (the fake always returns VALID/non-empty text).
+    await getStudentReply(SESSION_FIXTURE);
+  } finally {
+    _setClientForTests(null);
+  }
+
+  // The primary (first) call should have systemParts-shaped system param.
+  assert.ok(capturedParams, "chat must have been called");
+  assert.ok(
+    Array.isArray(capturedSystemParts),
+    "params.system must be an array (systemParts caching shape)",
+  );
+  assert.ok(capturedSystemParts.length >= 1, "system array must have at least 1 block");
+  assert.ok(
+    capturedSystemParts[0]?.cache_control?.type === "ephemeral",
+    "block 0 must have ephemeral cache_control",
+  );
+  // messages[] must NOT contain a system-role entry.
+  assert.ok(
+    !capturedParams.messages.some((m) => m.role === "system"),
+    "messages[] must contain no system-role entry when systemParts is used",
+  );
+});
+
+test("getFirstMessage passes systemParts to LLM; messages[] has no system-role entry", async () => {
+  let capturedParams = null;
+
+  const fakeClient = {
+    messages: {
+      create(params, _reqOpts) {
+        capturedParams = params;
+        return Promise.resolve({ content: [{ type: "text", text: "Hi sir, I am Priya. [emotion:neutral]" }] });
+      },
+      stream() {
+        return { [Symbol.asyncIterator]: () => ({ next: () => Promise.resolve({ done: true }) }) };
+      },
+    },
+  };
+
+  _setClientForTests(fakeClient);
+  try {
+    await getFirstMessage(PERSONA_FIXTURE, SCENARIO_FIXTURE, null, null);
+  } finally {
+    _setClientForTests(null);
+  }
+
+  assert.ok(capturedParams, "chat must have been called for getFirstMessage");
+  assert.ok(
+    Array.isArray(capturedParams.system),
+    "params.system must be an array (systemParts caching shape) in getFirstMessage",
+  );
+  assert.ok(
+    capturedParams.system[0]?.cache_control?.type === "ephemeral",
+    "block 0 must have ephemeral cache_control in getFirstMessage",
+  );
+  assert.ok(
+    !capturedParams.messages.some((m) => m.role === "system"),
+    "messages[] must contain no system-role entry in getFirstMessage",
+  );
 });

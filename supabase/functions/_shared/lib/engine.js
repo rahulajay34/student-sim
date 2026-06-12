@@ -4,7 +4,7 @@
 //   - No process.env usage — no change needed.
 
 import { chat, chatStream, STUDENT_SAMPLING, DETERMINISTIC_SAMPLING } from "./llm.js";
-import { buildSystemPrompt, computeConvincementHint } from "./prompt.js";
+import { buildSystemPrompt, buildSystemPromptParts, computeConvincementHint } from "./prompt.js";
 import { classifyCounsellorTurn } from "./classify.js";
 
 const EMOTION_TAG_RE = /\[emotion:\s*([a-z ]{0,30})\]/gi;
@@ -44,15 +44,14 @@ function transcriptToMessages(transcript) {
 }
 
 export async function getFirstMessage(persona, scenario, course, flavour = null) {
-  const systemPrompt = buildSystemPrompt(persona, scenario, 1, 50, course, null, flavour, null, null, null, null);
+  const systemParts = buildSystemPromptParts(persona, scenario, 1, 50, course, null, flavour, null, null, null, null);
   const raw = await chat([
-    { role: "system", content: systemPrompt },
     {
       role: "user",
       content:
         "Start the conversation. Your very first message must be only a self-introduction of 2-3 sentences. Improvise it fresh in your own words from your real facts (your name, what you do or study, your city, and why you took the test) — never a rehearsed-sounding script, and phrase it differently than a generic intro would. Nothing else.",
     },
-  ], { ...STUDENT_SAMPLING, mode: "fast" });
+  ], { ...STUDENT_SAMPLING, mode: "fast", systemParts });
   return parseEmotion(raw);
 }
 
@@ -149,12 +148,16 @@ function prepareReply(session) {
   const lastEntry = history.length ? history[history.length - 1] : null;
   const lastAdjustment = (lastEntry && typeof lastEntry.adjustment === "number") ? lastEntry.adjustment : null;
 
+  const systemParts = buildSystemPromptParts(
+    personaSnapshot, scenarioSnapshot, currentPhase, satisfactionScore, courseSnapshot,
+    turnHint, personalityFlavour, convincementHint, objectionState, turnVerbosity, lastAdjustment, session,
+  );
   const systemPrompt = buildSystemPrompt(
     personaSnapshot, scenarioSnapshot, currentPhase, satisfactionScore, courseSnapshot,
     turnHint, personalityFlavour, convincementHint, objectionState, turnVerbosity, lastAdjustment, session,
   );
-  const messages = [{ role: "system", content: systemPrompt }, ...transcriptToMessages(transcript)];
-  return { last, turnHint, systemPrompt, messages, transcript };
+  const messages = transcriptToMessages(transcript);
+  return { last, turnHint, systemPrompt, systemParts, messages, transcript };
 }
 
 function studentSampling(session) {
@@ -203,7 +206,7 @@ async function gateReply({ text, emotion }, { last, turnHint, systemPrompt, tran
 
 export async function getStudentReply(session) {
   const ctx = prepareReply(session);
-  const raw = await chat(ctx.messages, studentSampling(session));
+  const raw = await chat(ctx.messages, { ...studentSampling(session), systemParts: ctx.systemParts });
   const parsed = parseEmotion(raw);
   return ensureNonEmpty(await gateReply(parsed, ctx));
 }
@@ -211,7 +214,7 @@ export async function getStudentReply(session) {
 export async function* getStudentReplyStream(session) {
   const ctx = prepareReply(session);
   let buf = "";
-  for await (const tok of chatStream(ctx.messages, studentSampling(session))) {
+  for await (const tok of chatStream(ctx.messages, { ...studentSampling(session), systemParts: ctx.systemParts })) {
     buf += tok;
     yield tok;
   }

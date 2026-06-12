@@ -471,7 +471,35 @@ export const EMOTION_INSTRUCTION = `EMOTION TAG (machine-read protocol — ALWAY
 //           absent (legacy positional callers / tests) a synthetic session is
 //           reconstructed from the positional persona/scenario/objectionState so
 //           the disposition still renders deterministically.
-export function buildSystemPrompt(persona, scenario, currentPhase, satisfactionScore = 50, course = null, turnHint = null, flavour = null, convincementHint = null, objectionState = null, turnVerbosity = null, lastAdjustment = null, session = null) {
+
+// ─── Prompt-caching split ─────────────────────────────────────────────────────
+// The prompt is split into two positional parts for Anthropic prompt caching:
+//   stable   — everything deterministic for the full session (identity, persona,
+//               scenario, knowledge bounds, situation, core anxiety, behaviour rules,
+//               address, register, personality, few-shot, tangent). Cached across
+//               turns with cache_control: { type: "ephemeral" }.
+//   variable — everything that changes per turn or per phase (current-phase
+//               instructions, disposition, tuning, momentum, objection-state,
+//               verbosity, register-reference, course FAQ, score behaviour override,
+//               emotion instruction, right-now turn discipline). NOT cached.
+//
+// The split point is immediately before buildPhaseSection — the first section
+// that changes when session.currentPhase changes.  The separator between the two
+// parts in the final composed string is "\n\n" (matching the template literal).
+//
+// buildSystemPrompt is implemented as join(buildSystemPromptParts(...)) — single
+// source of truth, zero drift possible.
+
+// Separator that joins stable + variable — must match the template exactly.
+const PARTS_SEPARATOR = "\n\n";
+
+// Returns { stable, variable } such that stable + PARTS_SEPARATOR + variable is
+// byte-identical to the legacy buildSystemPrompt(...) output (after .replace /
+// .trimEnd post-processing applied to the full joined string).
+//
+// NOTE: post-processing (.replace(/\n{3,}/g, "\n\n").trimEnd()) is applied to the
+// JOINED string, not to each part individually, to preserve byte-identity.
+export function buildSystemPromptParts(persona, scenario, currentPhase, satisfactionScore = 50, course = null, turnHint = null, flavour = null, convincementHint = null, objectionState = null, turnVerbosity = null, lastAdjustment = null, session = null) {
   const cfg = getPromptConfig();
   const booking = bookingOf(course);
   const archetypeBlock = buildArchetypeBlock(persona, scenario, currentPhase);
@@ -519,7 +547,15 @@ export function buildSystemPrompt(persona, scenario, currentPhase, satisfactionS
     ? `Your first name is ${persona.voiceName}; you are a young ${persona.voiceGender === "female" ? "woman" : "man"}. `
     : "";
   const scoreBehaviorSection = buildScoreBehaviorSection(satisfactionScore);
-  return `You are a student who is ${persona.label}. ${identityLine}
+
+  // ── STABLE prefix (cached across turns) ──────────────────────────────────────
+  // Sections: identity, general profile, archetype texture, scenario, knowledge
+  // bounds, situation, core anxiety.
+  // NOTE: archetypeBlock itself is phase-gated (empty in phases 1-2, populated
+  // from phase 3). Because it changes at the phase-3 boundary the block sits in
+  // the stable part and the cached token count changes once at that transition —
+  // Anthropic invalidates and re-caches when the text changes, which is correct.
+  const stable = `You are a student who is ${persona.label}. ${identityLine}
 
 ${buildGeneralProfile(cfg)}
 ${archetypeBlock ? `\n${archetypeBlock}\n` : ""}
@@ -531,9 +567,14 @@ YOUR SITUATION:
 You have already paid ₹99 and cleared the qualifier test. This means you have some genuine interest — you would not have paid and taken the test if you were completely uninterested. But you have not committed anything significant yet. The counsellor on this call will at some point ask you to pay ${booking} to block your seat.
 
 YOUR CORE ANXIETY:
-${persona.coreAnxiety}
+${persona.coreAnxiety}`;
 
-${buildPhaseSection(cfg, currentPhase, booking)}
+  // ── VARIABLE suffix (NOT cached — changes per turn / per phase) ───────────────
+  // Sections: phase instructions, disposition, tuning, momentum, objection-state,
+  // behaviour prompt, behaviour rules, address, register note, verbosity, natural
+  // speech, few-shot, personality, register reference, tangent, course FAQ,
+  // turn-verbosity override, score-behavior override, emotion instruction, RIGHT NOW.
+  const variable = `${buildPhaseSection(cfg, currentPhase, booking)}
 
 ${dispositionSection}
 ${tuningSection ? `\n${tuningSection}\n` : ""}${momentumSection ? `\n${momentumSection}\n` : ""}${objectionStateSection ? `\n${objectionStateSection}\n` : ""}
@@ -559,7 +600,14 @@ ${turnVerbositySection ? `\n${turnVerbositySection}\n` : ""}
 ${scoreBehaviorSection ? `\n${scoreBehaviorSection}\n` : ""}
 ${EMOTION_INSTRUCTION}
 
-${buildTurnSection(cfg, turnHint, currentPhase, course)}`.replace(/\n{3,}/g, "\n\n").trimEnd();
+${buildTurnSection(cfg, turnHint, currentPhase, course)}`;
+
+  return { stable, variable };
+}
+
+export function buildSystemPrompt(persona, scenario, currentPhase, satisfactionScore = 50, course = null, turnHint = null, flavour = null, convincementHint = null, objectionState = null, turnVerbosity = null, lastAdjustment = null, session = null) {
+  const { stable, variable } = buildSystemPromptParts(persona, scenario, currentPhase, satisfactionScore, course, turnHint, flavour, convincementHint, objectionState, turnVerbosity, lastAdjustment, session);
+  return (stable + PARTS_SEPARATOR + variable).replace(/\n{3,}/g, "\n\n").trimEnd();
 }
 
 // Fully composed CURRENT student system prompt for the transparency endpoint

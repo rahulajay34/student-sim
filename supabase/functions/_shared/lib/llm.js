@@ -51,6 +51,7 @@ function normalizeOpts(opts = {}) {
     model,
     jsonSchema,
     effort,
+    systemParts,
     temperature,
     thinking: legacyThinking,
     top_p: _tp,
@@ -71,18 +72,23 @@ function normalizeOpts(opts = {}) {
     model,
     jsonSchema,
     effort,
+    systemParts,
     temperature,
     _rest: rest,
   };
 }
 
 function buildParams(messages, model, norm) {
-  const { mode, temperature, jsonSchema, maxRetries, effort } = norm;
+  const { mode, temperature, jsonSchema, maxRetries, effort, systemParts } = norm;
 
   let systemParam;
   let userMessages = messages;
   if (messages.length > 0 && messages[0].role === "system") {
-    systemParam = messages[0].content;
+    if (systemParts) {
+      console.warn("[llm] systemParts and a system-role message are both present — systemParts wins; ignoring the system-role message");
+    } else {
+      systemParam = messages[0].content;
+    }
     userMessages = messages.slice(1);
   }
 
@@ -107,7 +113,18 @@ function buildParams(messages, model, norm) {
     output_config,
   };
 
-  if (systemParam !== undefined) params.system = systemParam;
+  if (systemParts) {
+    const blocks = [
+      { type: "text", text: systemParts.stable, cache_control: { type: "ephemeral" } },
+    ];
+    if (systemParts.variable) {
+      blocks.push({ type: "text", text: systemParts.variable });
+    }
+    params.system = blocks;
+  } else if (systemParam !== undefined) {
+    params.system = systemParam;
+  }
+
   if (temperature !== undefined && mode !== "reasoning") params.temperature = temperature;
 
   return { params, maxRetries };

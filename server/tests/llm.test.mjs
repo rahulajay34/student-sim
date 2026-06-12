@@ -225,3 +225,85 @@ test("f) top_p and repeat_penalty are dropped; temperature is kept", async () =>
   assert.ok(!("repeat_penalty" in params), "repeat_penalty must be dropped");
   assert.ok(!("frequency_penalty" in params), "no frequency_penalty translation should happen");
 });
+
+// g) Prompt-caching: systemParts → params.system is a 2-block array with
+//    cache_control only on block 0; messages[] contains no system-role entry.
+test("g1) systemParts builds a 2-block system array; cache_control on block 0 only", async () => {
+  const { fake, getCapture } = captureClient("OK");
+  _setClientForTests(fake);
+
+  const systemParts = { stable: "The stable prefix text.", variable: "The variable suffix text." };
+  await chat([{ role: "user", content: "hi" }], { ...FAST_OPTIONS, systemParts });
+
+  const { params } = getCapture();
+  assert.ok(Array.isArray(params.system), "params.system must be an array when systemParts is given");
+  assert.equal(params.system.length, 2, "system array must have 2 blocks");
+  assert.equal(params.system[0].type, "text", "block 0 must be type text");
+  assert.equal(params.system[0].text, "The stable prefix text.", "block 0 text must equal stable");
+  assert.deepEqual(params.system[0].cache_control, { type: "ephemeral" }, "block 0 must have ephemeral cache_control");
+  assert.equal(params.system[1].type, "text", "block 1 must be type text");
+  assert.equal(params.system[1].text, "The variable suffix text.", "block 1 text must equal variable");
+  assert.ok(!("cache_control" in params.system[1]), "block 1 must NOT have cache_control");
+});
+
+test("g2) systemParts + temperature still includes temperature in fast mode", async () => {
+  const { fake, getCapture } = captureClient("OK");
+  _setClientForTests(fake);
+
+  const systemParts = { stable: "Stable.", variable: "Variable." };
+  await chat([{ role: "user", content: "hi" }], { mode: "fast", temperature: 0.9, systemParts });
+
+  const { params } = getCapture();
+  assert.equal(params.temperature, 0.9, "temperature must be present in fast mode with systemParts");
+  assert.ok(Array.isArray(params.system), "system must still be an array");
+});
+
+test("g3) systemParts with empty variable emits only 1 block", async () => {
+  const { fake, getCapture } = captureClient("OK");
+  _setClientForTests(fake);
+
+  const systemParts = { stable: "Stable only.", variable: "" };
+  await chat([{ role: "user", content: "hi" }], { ...FAST_OPTIONS, systemParts });
+
+  const { params } = getCapture();
+  assert.ok(Array.isArray(params.system), "system must be an array");
+  assert.equal(params.system.length, 1, "should be 1 block when variable is empty");
+  assert.equal(params.system[0].text, "Stable only.");
+});
+
+test("g4) messages array contains no system-role entry when systemParts is used", async () => {
+  const { fake, getCapture } = captureClient("OK");
+  _setClientForTests(fake);
+
+  const systemParts = { stable: "Stable.", variable: "Variable." };
+  // No system-role message — only user messages.
+  await chat([{ role: "user", content: "hello" }], { ...FAST_OPTIONS, systemParts });
+
+  const { params } = getCapture();
+  assert.ok(Array.isArray(params.messages), "messages must be an array");
+  assert.ok(
+    !params.messages.some((m) => m.role === "system"),
+    "no system-role entry should appear in params.messages",
+  );
+  assert.equal(params.messages.length, 1, "only the user message remains in messages[]");
+});
+
+test("g5) systemParts wins over a leading system-role message in the array", async () => {
+  const { fake, getCapture } = captureClient("OK");
+  _setClientForTests(fake);
+
+  const systemParts = { stable: "Parts stable.", variable: "Parts variable." };
+  // Pass both — systemParts should win, system-role message is discarded.
+  await chat([
+    { role: "system", content: "Ignored system message." },
+    { role: "user", content: "hi" },
+  ], { ...FAST_OPTIONS, systemParts });
+
+  const { params } = getCapture();
+  assert.ok(Array.isArray(params.system), "system must be the parts array");
+  assert.equal(params.system[0].text, "Parts stable.", "parts stable wins over system-role message");
+  assert.ok(
+    !params.messages.some((m) => m.role === "system"),
+    "system-role message is not in messages[] when systemParts wins",
+  );
+});

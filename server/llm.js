@@ -70,6 +70,12 @@ export function _setClientForTests(fakeClient) {
 //   - thinking: {type:"disabled"}  → maps to mode:"fast"
 //   - temperature     → kept as-is (valid in fast mode)
 //
+// Prompt-caching: callers may pass options.systemParts = { stable, variable }
+// (from buildSystemPromptParts) instead of embedding a system role in messages[].
+// When present, buildParams builds a two-block system array with cache_control
+// on the stable block only. systemParts wins over a leading system-role message;
+// a console.warn is emitted if both are present so the collision is visible.
+//
 // Callers may also pass mode:"fast"|"reasoning" directly (preferred).
 function normalizeOpts(opts = {}) {
   const {
@@ -79,6 +85,8 @@ function normalizeOpts(opts = {}) {
     model,
     jsonSchema,
     effort,
+    // prompt-caching split { stable, variable }
+    systemParts,
     // legacy sampling knobs
     temperature,
     thinking: legacyThinking,
@@ -103,6 +111,7 @@ function normalizeOpts(opts = {}) {
     model,
     jsonSchema,
     effort,
+    systemParts,
     temperature,
     _rest: rest,
   };
@@ -110,13 +119,18 @@ function normalizeOpts(opts = {}) {
 
 // Build the Anthropic API params from normalised opts.
 function buildParams(messages, model, norm) {
-  const { mode, temperature, jsonSchema, maxRetries, effort } = norm;
+  const { mode, temperature, jsonSchema, maxRetries, effort, systemParts } = norm;
 
   // Lift a leading system role message to top-level system param.
+  // systemParts wins when both are present (logs once to surface the collision).
   let systemParam;
   let userMessages = messages;
   if (messages.length > 0 && messages[0].role === "system") {
-    systemParam = messages[0].content;
+    if (systemParts) {
+      console.warn("[llm] systemParts and a system-role message are both present — systemParts wins; ignoring the system-role message");
+    } else {
+      systemParam = messages[0].content;
+    }
     userMessages = messages.slice(1);
   }
 
@@ -141,7 +155,22 @@ function buildParams(messages, model, norm) {
     output_config,
   };
 
-  if (systemParam !== undefined) params.system = systemParam;
+  // Prompt-caching via systemParts: build a two-block system array.
+  // Block 0 carries cache_control (ephemeral) — the stable prefix.
+  // Block 1 carries the variable suffix (no cache_control).
+  // Omit block 1 when variable is empty (avoids an empty text block).
+  if (systemParts) {
+    const blocks = [
+      { type: "text", text: systemParts.stable, cache_control: { type: "ephemeral" } },
+    ];
+    if (systemParts.variable) {
+      blocks.push({ type: "text", text: systemParts.variable });
+    }
+    params.system = blocks;
+  } else if (systemParam !== undefined) {
+    params.system = systemParam;
+  }
+
   // temperature is incompatible with (adaptive) thinking — only send it on
   // fast-mode calls, where thinking is disabled.
   if (temperature !== undefined && mode !== "reasoning") params.temperature = temperature;

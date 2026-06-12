@@ -327,7 +327,10 @@ export const EMOTION_INSTRUCTION = `EMOTION TAG (machine-read protocol — ALWAY
 - End EVERY reply with a tag [emotion:X] where X is exactly one of: neutral, happy, hesitant, worried, frustrated, excited — your current emotional state.
 - This tag is invisible to the counsellor; never reference or explain it. The plain-spoken / short-reply / no-extra-words rules apply ONLY to your spoken words, NEVER to this tag. Even a one-word acknowledgement still ends with [emotion:X].`;
 
-export function buildSystemPrompt(persona, scenario, currentPhase, satisfactionScore = 50, course = null, turnHint = null, flavour = null, convincementHint = null, objectionState = null, turnVerbosity = null, lastAdjustment = null, session = null) {
+// ─── Prompt-caching split (ported from server/prompt.js) ─────────────────────
+const PARTS_SEPARATOR = "\n\n";
+
+export function buildSystemPromptParts(persona, scenario, currentPhase, satisfactionScore = 50, course = null, turnHint = null, flavour = null, convincementHint = null, objectionState = null, turnVerbosity = null, lastAdjustment = null, session = null) {
   const cfg = getPromptConfig();
   const booking = bookingOf(course);
   const archetypeBlock = buildArchetypeBlock(persona, scenario, currentPhase);
@@ -370,7 +373,8 @@ export function buildSystemPrompt(persona, scenario, currentPhase, satisfactionS
     ? `Your first name is ${persona.voiceName}; you are a young ${persona.voiceGender === "female" ? "woman" : "man"}. `
     : "";
   const scoreBehaviorSection = buildScoreBehaviorSection(satisfactionScore);
-  return `You are a student who is ${persona.label}. ${identityLine}
+
+  const stable = `You are a student who is ${persona.label}. ${identityLine}
 
 ${buildGeneralProfile(cfg)}
 ${archetypeBlock ? `\n${archetypeBlock}\n` : ""}
@@ -382,9 +386,9 @@ YOUR SITUATION:
 You have already paid ₹99 and cleared the qualifier test. This means you have some genuine interest — you would not have paid and taken the test if you were completely uninterested. But you have not committed anything significant yet. The counsellor on this call will at some point ask you to pay ${booking} to block your seat.
 
 YOUR CORE ANXIETY:
-${persona.coreAnxiety}
+${persona.coreAnxiety}`;
 
-${buildPhaseSection(cfg, currentPhase, booking)}
+  const variable = `${buildPhaseSection(cfg, currentPhase, booking)}
 
 ${dispositionSection}
 ${tuningSection ? `\n${tuningSection}\n` : ""}${momentumSection ? `\n${momentumSection}\n` : ""}${objectionStateSection ? `\n${objectionStateSection}\n` : ""}
@@ -410,7 +414,14 @@ ${turnVerbositySection ? `\n${turnVerbositySection}\n` : ""}
 ${scoreBehaviorSection ? `\n${scoreBehaviorSection}\n` : ""}
 ${EMOTION_INSTRUCTION}
 
-${buildTurnSection(cfg, turnHint, currentPhase, course)}`.replace(/\n{3,}/g, "\n\n").trimEnd();
+${buildTurnSection(cfg, turnHint, currentPhase, course)}`;
+
+  return { stable, variable };
+}
+
+export function buildSystemPrompt(persona, scenario, currentPhase, satisfactionScore = 50, course = null, turnHint = null, flavour = null, convincementHint = null, objectionState = null, turnVerbosity = null, lastAdjustment = null, session = null) {
+  const { stable, variable } = buildSystemPromptParts(persona, scenario, currentPhase, satisfactionScore, course, turnHint, flavour, convincementHint, objectionState, turnVerbosity, lastAdjustment, session);
+  return (stable + PARTS_SEPARATOR + variable).replace(/\n{3,}/g, "\n\n").trimEnd();
 }
 
 export function composeForInspection(session) {
