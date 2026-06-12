@@ -34,7 +34,7 @@ function ConnectingScreen() {
 }
 
 // ── Ended session screen ──────────────────────────────────────────────────────
-function EndedScreen({ onViewReports, onBack }) {
+function EndedScreen({ onViewReports, onBack, reportId }) {
   return (
     <div className="flex h-screen flex-col items-center justify-center gap-6 bg-stage px-6">
       <div className="w-full max-w-sm rounded-2xl border border-stage-line bg-stage-raised p-8 text-center shadow-xl">
@@ -43,12 +43,21 @@ function EndedScreen({ onViewReports, onBack }) {
           The session is complete. You can view your coaching report or return to your mocks.
         </p>
         <div className="mt-6 flex flex-col gap-3">
-          <button
-            onClick={onViewReports}
-            className="w-full rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 transition-opacity"
-          >
-            View reports
-          </button>
+          {reportId ? (
+            <Link
+              to={`/app/reports/${reportId}`}
+              className="w-full rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 transition-opacity inline-block"
+            >
+              View report
+            </Link>
+          ) : (
+            <button
+              onClick={onViewReports}
+              className="w-full rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+            >
+              View reports
+            </button>
+          )}
           <button
             onClick={onBack}
             className="w-full rounded-xl border border-stage-line bg-transparent px-4 py-2.5 text-sm font-medium text-stage-muted hover:text-stage-text transition-colors"
@@ -248,6 +257,9 @@ export default function Session() {
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [wrappingError, setWrappingError] = useState(null);
   const [wrappingElapsed, setWrappingElapsed] = useState("");
+
+  // ── Ended-screen: report id for the deep-link button ─────────────────────
+  const [endedReportId, setEndedReportId] = useState(null);
 
   // ── UI state ───────────────────────────────────────────────────────────────
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -464,6 +476,14 @@ export default function Session() {
         if (!alive) return;
         if (s.status === "ended") {
           setUiState("ended");
+          // Fetch the report for this session so the ended screen can deep-link to it.
+          api.getReports(null, sessionId)
+            .then((reports) => {
+              if (!alive) return;
+              const found = Array.isArray(reports) && reports.length > 0 ? reports[0] : null;
+              if (found?.id) setEndedReportId(found.id);
+            })
+            .catch(() => { /* fall back to reports-list link */ });
           setLoading(false);
           return;
         }
@@ -826,8 +846,12 @@ export default function Session() {
     const sid = activeSessionId || sessionId;
     // C4: /end returns { reportId, status } immediately; navigate to the report
     // page right away (ReportDetail renders the live-fill skeletons + polls).
-    api
-      .endSession(sid)
+    // Drain the observe chain FIRST: a final spoken turn whose /observe was
+    // queued before disable would otherwise race /end at the server lock and,
+    // losing, be absent from the report transcript.
+    observeChainRef.current
+      .catch(() => {})
+      .then(() => api.endSession(sid))
       .then((res) => {
         navigate("/app/reports/" + res.reportId);
       })
@@ -893,6 +917,7 @@ export default function Session() {
       <EndedScreen
         onViewReports={() => navigate("/app/reports")}
         onBack={() => navigate("/app/mocks")}
+        reportId={endedReportId}
       />
     );
   }

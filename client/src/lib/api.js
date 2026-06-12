@@ -1,10 +1,27 @@
 // Flat API client. Every method hits the Express server (Vite proxies /api -> :3001)
 // and throws Error(data.error) on a non-2xx response.
 
+// Read the current user id from localStorage fail-soft (returns null on any error
+// or absence). Used to populate the X-User-Id ownership header.
+function getUserId() {
+  try {
+    const raw = localStorage.getItem("mct_user");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed?.id || null;
+  } catch {
+    return null;
+  }
+}
+
 async function req(path, { method = "GET", body } = {}) {
+  const headers = {};
+  if (body) headers["Content-Type"] = "application/json";
+  const uid = getUserId();
+  if (uid) headers["X-User-Id"] = uid;
   const res = await fetch(`/api${path}`, {
     method,
-    headers: body ? { "Content-Type": "application/json" } : undefined,
+    headers: Object.keys(headers).length ? headers : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
@@ -66,7 +83,13 @@ export const api = {
     }),
 
   // reports
-  getReports: (counsellorId) => req(`/reports${qs(counsellorId)}`),
+  getReports: (counsellorId, sessionId) => {
+    const params = new URLSearchParams();
+    if (counsellorId) params.set("counsellorId", counsellorId);
+    if (sessionId) params.set("sessionId", sessionId);
+    const q = params.toString();
+    return req(`/reports${q ? "?" + q : ""}`);
+  },
   getReport: (id) => req(`/reports/${id}`),
 
   // rubric templates

@@ -1086,8 +1086,10 @@ function CallStage({
         )}
       </div>
 
-      {/* ── Voice status pill (bottom-left) ───────────────────────────── */}
-      <VoiceStatusPill voice={voice} />
+      {/* ── Voice status pill (bottom-left) — voice mode only: after a mic-denied
+          degrade to text the hook's stale error would otherwise keep an error
+          pill on screen next to the toast that already explained it. */}
+      {isVoice && <VoiceStatusPill voice={voice} />}
     </div>
   );
 }

@@ -197,12 +197,27 @@ export function createSentenceChunker({ minChunkLen = MIN_CHUNK_LEN } = {}) {
   };
 }
 
+// Read the current user id from localStorage for the ownership header (mirrors api.js).
+function _getUserId() {
+  try {
+    const raw = localStorage.getItem("mct_user");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed?.id || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function postMessageStream(sessionId, body, { onToken, onDone, onError, signal } = {}) {
   let res;
+  const streamHeaders = { "Content-Type": "application/json", Accept: "text/event-stream" };
+  const uid = _getUserId();
+  if (uid) streamHeaders["X-User-Id"] = uid;
   try {
     res = await fetch(`/api/sessions/${sessionId}/message`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+      headers: streamHeaders,
       body: JSON.stringify(body || {}),
       signal,
     });

@@ -101,6 +101,37 @@ function rollTurnVerbosity({ talkativeness, currentPhase, turnType, lastTurnVerb
   return Math.random() < pOpen ? "open" : "short";
 }
 
+// --- Ownership helpers (dummy-auth grade, matching the app's pre-seeded login) ---
+// Resolves the caller from the X-User-Id header. Returns the user record or null.
+// Absence of the header (curl / smoke / old clients) returns null → guards bypass.
+function requesterFor(req) {
+  const uid = req.get("x-user-id");
+  if (!uid) return null;
+  return store.getById("users", uid) || null;
+}
+
+// Returns true (and sends a 403) when a non-admin requester tries to access a
+// session that belongs to another counsellor. Returns false when access is allowed.
+// A missing header (null requester) always allows — back-compat with curl/smoke.
+function deniedForSession(req, res, session) {
+  const requester = requesterFor(req);
+  if (!requester) return false;
+  if (requester.role === "admin") return false;
+  if (session.counsellorId === requester.id) return false;
+  res.status(403).json({ error: "This session belongs to another counsellor." });
+  return true;
+}
+
+// Same pattern for reports.
+function deniedForReport(req, res, report) {
+  const requester = requesterFor(req);
+  if (!requester) return false;
+  if (requester.role === "admin") return false;
+  if (report.counsellorId === requester.id) return false;
+  res.status(403).json({ error: "This report belongs to another counsellor." });
+  return true;
+}
+
 // --- Auth ------------------------------------------------------------------
 app.post("/api/login", (req, res) => {
   const { email, password } = req.body || {};
@@ -668,6 +699,7 @@ app.post("/api/sessions/:id/message", lockedHandler(async (req, res) => {
   if (!session) return res.status(404).json({ error: "Session not found. Please start a new session." });
   // 409 ended-session guard FIRST — before any SSE headers are written.
   if (session.status === "ended") return res.status(409).json({ error: "This session has ended." });
+  if (deniedForSession(req, res, session)) return;
   const { message, deliveryMetrics: rawDeliveryMetrics } = req.body || {};
   if (!message) return res.status(400).json({ error: "message is required" });
 
@@ -934,6 +966,7 @@ function buildSteering(session) {
 app.post("/api/sessions/:id/realtime/openai-token", async (req, res) => {
   const session = store.getById("sessions", req.params.id);
   if (!session) return res.status(404).json({ error: "Session not found" });
+  if (deniedForSession(req, res, session)) return;
   try {
     // Resolve the voice: an explicit live-picked voice wins; otherwise gender-match
     // (female→marin, male→cedar) from the session's student gender.
@@ -959,6 +992,7 @@ app.post("/api/sessions/:id/observe", lockedHandler(async (req, res) => {
   const session = store.getById("sessions", req.params.id);
   if (!session) return res.status(404).json({ error: "Session not found. Please start a new session." });
   if (session.status === "ended") return res.status(409).json({ error: "This session has ended." });
+  if (deniedForSession(req, res, session)) return;
   // Strip [emotion:*] tags and a bare trailing emotion word from BOTH texts before
   // storing/scoring (the realtime model should never emit these, but guard anyway).
   const cText = stripEmotionArtifacts(typeof req.body?.counsellorText === "string" ? req.body.counsellorText : "");
@@ -1114,6 +1148,7 @@ app.post("/api/sessions/:id/end", lockedHandler(async (req, res) => {
   // the LLM fan-out runs in the background (startReportJob) OUTSIDE the lock.
   const session = store.getById("sessions", req.params.id);
   if (!session) return res.status(404).json({ error: "Session not found" });
+  if (deniedForSession(req, res, session)) return;
 
   try {
     const existing = store.getAll("reports").find((r) => r.sessionId === session.id);
@@ -1177,6 +1212,7 @@ app.post("/api/sessions/:id/end", lockedHandler(async (req, res) => {
 app.get("/api/sessions/:id", (req, res) => {
   const s = store.getById("sessions", req.params.id);
   if (!s) return res.status(404).json({ error: "Session not found" });
+  if (deniedForSession(req, res, s)) return;
   res.json(s);
 });
 
@@ -1185,8 +1221,11 @@ app.delete("/api/sessions/:id", (req, res) => {
   // final store.update silently no-op (the record is gone), dropping that turn.
   // End it first; assignments already guard the same way.
   const s = store.getById("sessions", req.params.id);
-  if (s && s.status !== "ended") {
-    return res.status(409).json({ error: "Session is still active — end it before deleting." });
+  if (s) {
+    if (deniedForSession(req, res, s)) return;
+    if (s.status !== "ended") {
+      return res.status(409).json({ error: "Session is still active — end it before deleting." });
+    }
   }
   store.remove("sessions", req.params.id);
   res.json({ ok: true });
@@ -1194,9 +1233,10 @@ app.delete("/api/sessions/:id", (req, res) => {
 
 // --- Reports ---------------------------------------------------------------
 app.get("/api/reports", (req, res) => {
-  const { counsellorId } = req.query;
+  const { counsellorId, sessionId } = req.query;
   let all = store.getAll("reports");
   if (counsellorId) all = all.filter((r) => r.counsellorId === counsellorId);
+  if (sessionId) all = all.filter((r) => r.sessionId === sessionId);
   // newest first
   all.sort((a, b) => (a.generatedAt < b.generatedAt ? 1 : -1));
   res.json(all);
@@ -1205,6 +1245,7 @@ app.get("/api/reports", (req, res) => {
 app.get("/api/reports/:id", (req, res) => {
   const r = store.getById("reports", req.params.id);
   if (!r) return res.status(404).json({ error: "Report not found" });
+  if (deniedForReport(req, res, r)) return;
   res.json(r);
 });
 
@@ -1280,11 +1321,11 @@ app.get("/api/sessions/:id/prompt", (req, res) => {
 });
 
 // On-demand richer cue: one deterministic LLM call over recent context, falling
-// back to the synchronous corpus cue on any failure/timeout. Admin/counsellor-
-// agnostic (no auth layer exists). Returns { cue, source }.
+// back to the synchronous corpus cue on any failure/timeout. Returns { cue, source }.
 app.post("/api/sessions/:id/cue", async (req, res) => {
   const session = store.getById("sessions", req.params.id);
   if (!session) return res.status(404).json({ error: "Session not found" });
+  if (deniedForSession(req, res, session)) return;
   // Same cue v2 context the per-turn path passes: last scoring adjustment + reason
   // and the live objection state. Computed once for both the success-fallback and
   // error-fallback instantCue calls below.

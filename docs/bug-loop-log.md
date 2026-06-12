@@ -21,9 +21,9 @@ Each entry: focus area, findings (incl. refuted), fixes (file:line), verificatio
 - [x] smoke-api gaps (iter 7) — rotation COMPLETE; further iterations go deeper on open items + re-sweeps
 
 ## Open items
-- Session routes have no ownership check (any counsellor can read/message/end another's session by URL). Dummy auth is by design (CLAUDE.md), but a light counsellorId check on /sessions/:id routes would prevent accidental cross-ending. Deferred — needs an identity header the client doesn't send yet.
-- EndedScreen "View reports" links to the list, not the session's own report (minor UX; needs reportId lookup on the ended path).
-- Smoke checks still worth adding: referenced-persona/rubric delete 409s, POST /sessions/:id/cue, practice-mode (no assignment) lifecycle, GET /lead-profiles, config GET/PUT round-trips.
+- ~~Session ownership check~~ DONE iter 8 (X-User-Id header + 403 guards on session/report routes, header-absent = back-compat allow).
+- ~~EndedScreen report deep-link~~ DONE iter 8 (GET /reports?sessionId= + direct View-report link).
+- Smoke checks still worth adding: referenced-persona/rubric delete 409s, POST /sessions/:id/cue, practice-mode (no assignment) lifecycle, GET /lead-profiles, config GET/PUT round-trips, ownership 403.
 
 ## Iterations
 
@@ -141,3 +141,18 @@ Smoke: live run 80/80 on the old suite; hunter's "regressions" were a STALE serv
 Solid (verified): Modal trap incl. zero-focusables + Escape-during-loading; Table aria-sort semantics; native Slider semantics; SearchInput labels; Login form a11y; MicPicker dropdown a11y; cue turn guards.
 
 Verification: server tests 142/142 · smoke 84/84 (fresh server) · lint 0 errors · build success.
+
+### Iteration 8 — 2026-06-12 ~07:29–07:50 IST
+Focus: open-items implementation · fresh-eyes re-sweep of today's 3 highest-churn files (1 implementer + 1 read-only hunter).
+
+Implemented (open items):
+1. Session/report ownership guard: client sends X-User-Id (api.js + stream.js); server 403s non-admin cross-counsellor access on GET/message/observe/end/cue/openai-token/DELETE session routes + GET report; absent header = back-compat allow (smoke/curl unaffected).
+2. EndedScreen deep-links to the session's own report (GET /api/reports?sessionId= filter + View-report link with list fallback).
+
+Re-sweep found 2 interaction bugs between today's fixes, both fixed:
+3. Mic-denied degrade left the hook's stale voice.error rendering an error pill alongside the explanatory toast → status pill renders only in voice mode (CallStage.jsx:1090).
+4. The final spoken turn could vanish from the report: a queued /observe racing /end at the server lock lost silently → doEndSession drains observeChainRef before calling /end (Session.jsx:852).
+
+Interactions traced safe: auto-enable + degrade re-run (ref guard holds); start-lock key space + pruning (no leak); heartbeat cleared before every throw path; client abort leaves server transcript clean (turn not persisted on write-failure); replaceTrack doesn't strand utterance state (VAD is audio-based); score-pulse sentinel ordering; /message accepts voiceEngine=openai sessions (text degrade works).
+
+Verification: server tests 142/142 · smoke 84/84 (fresh server) · lint 0 errors · build success · ownership probe on bad id → 404 (guard ordering correct).
