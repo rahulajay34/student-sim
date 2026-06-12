@@ -78,6 +78,7 @@ function normalizeOpts(opts = {}) {
     maxRetries,
     model,
     jsonSchema,
+    effort,
     // legacy sampling knobs
     temperature,
     thinking: legacyThinking,
@@ -101,6 +102,7 @@ function normalizeOpts(opts = {}) {
     maxRetries,
     model,
     jsonSchema,
+    effort,
     temperature,
     _rest: rest,
   };
@@ -108,7 +110,7 @@ function normalizeOpts(opts = {}) {
 
 // Build the Anthropic API params from normalised opts.
 function buildParams(messages, model, norm) {
-  const { mode, temperature, jsonSchema, maxRetries } = norm;
+  const { mode, temperature, jsonSchema, maxRetries, effort } = norm;
 
   // Lift a leading system role message to top-level system param.
   let systemParam;
@@ -124,11 +126,8 @@ function buildParams(messages, model, norm) {
       : { type: "disabled" };
 
   const output_config = {};
-  if (mode === "reasoning") {
-    output_config.effort = "high";
-  } else {
-    output_config.effort = "low";
-  }
+  // Explicit effort option wins; otherwise reasoning→high, fast→low.
+  output_config.effort = effort || (mode === "reasoning" ? "high" : "low");
 
   if (jsonSchema) {
     output_config.format = { type: "json_schema", schema: jsonSchema };

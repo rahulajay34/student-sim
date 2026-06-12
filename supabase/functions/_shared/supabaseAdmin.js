@@ -5,7 +5,7 @@
 // NOTE: @supabase/supabase-js resolves via the Deno import map (import_map.json)
 // under Deno. Under Node it must be available in the project's node_modules.
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { getEnv } from "./env.js";
 
 let _admin = null;

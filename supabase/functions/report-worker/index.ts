@@ -41,15 +41,19 @@ function json(body, status) {
 // ---------------------------------------------------------------------------
 
 function validateServiceKey(req) {
+  // Accept either the dedicated WORKER_SHARED_SECRET (used by the pg_cron
+  // sweeper via Vault and by the api fn's /end kick) or the platform-injected
+  // service role key (defense-in-depth / transitional).
+  const shared = getEnv("WORKER_SHARED_SECRET");
   const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
-  if (!serviceKey) {
-    console.error("[report-worker] SUPABASE_SERVICE_ROLE_KEY is not set");
+  if (!shared && !serviceKey) {
+    console.error("[report-worker] neither WORKER_SHARED_SECRET nor SUPABASE_SERVICE_ROLE_KEY is set");
     return false;
   }
   const auth = req.headers.get("authorization") || req.headers.get("Authorization") || "";
   const m = auth.match(/^Bearer\s+(\S+)$/i);
   if (!m) return false;
-  return m[1] === serviceKey;
+  return (!!shared && m[1] === shared) || (!!serviceKey && m[1] === serviceKey);
 }
 
 // ---------------------------------------------------------------------------

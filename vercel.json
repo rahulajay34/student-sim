@@ -13,23 +13,23 @@
   "rewrites": [
     {
       "source": "/api/sessions/:id/message",
-      "destination": "https://PROJECT_REF.supabase.co/functions/v1/session/api/sessions/:id/message"
+      "destination": "https://nhdstfzpihhwvuboowhs.supabase.co/functions/v1/session/api/sessions/:id/message"
     },
     {
       "source": "/api/sessions/:id/observe",
-      "destination": "https://PROJECT_REF.supabase.co/functions/v1/session/api/sessions/:id/observe"
+      "destination": "https://nhdstfzpihhwvuboowhs.supabase.co/functions/v1/session/api/sessions/:id/observe"
     },
     {
       "source": "/api/sessions/:id/cue",
-      "destination": "https://PROJECT_REF.supabase.co/functions/v1/session/api/sessions/:id/cue"
+      "destination": "https://nhdstfzpihhwvuboowhs.supabase.co/functions/v1/session/api/sessions/:id/cue"
     },
     {
       "source": "/api/sessions/:id/realtime/openai-token",
-      "destination": "https://PROJECT_REF.supabase.co/functions/v1/session/api/sessions/:id/realtime/openai-token"
+      "destination": "https://nhdstfzpihhwvuboowhs.supabase.co/functions/v1/session/api/sessions/:id/realtime/openai-token"
     },
     {
       "source": "/api/(.*)",
-      "destination": "https://PROJECT_REF.supabase.co/functions/v1/api/api/$1"
+      "destination": "https://nhdstfzpihhwvuboowhs.supabase.co/functions/v1/api/api/$1"
     },
     {
       "source": "/(.*)",

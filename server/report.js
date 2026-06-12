@@ -266,9 +266,10 @@ function sanitizeObjectionCategory(raw) {
 }
 
 // ─── LLM call options ───────────────────────────────────────────────────────
-// Each fan-out call uses mode:"reasoning" for quality, with a 60s timeout.
-// Two retry attempts; both use reasoning mode.
-const CALL_TIMEOUT_MS = 60_000;
+// Each fan-out call uses mode:"reasoning" for quality, with a 100s timeout.
+// Two retry attempts; both use reasoning mode. (100s: Call A was observed
+// hovering around 60s in production — 60s caused spurious fallback reports.)
+const CALL_TIMEOUT_MS = 100_000;
 
 // ─── JSON schemas for structured output ─────────────────────────────────────
 // Call A: rubric grading + phase breakdown.
@@ -389,6 +390,10 @@ async function runCall(label, prompt, jsonSchema) {
   const callOpts = {
     ...DETERMINISTIC_SAMPLING,
     mode: "reasoning",
+    // effort medium: keeps report fan-out latency well under the edge
+    // function wall-clock cap (mirrors the _shared port); adaptive thinking
+    // still engages on hard grading.
+    effort: "medium",
     timeoutMs: CALL_TIMEOUT_MS,
     maxRetries: 0,
     jsonSchema,

@@ -21,8 +21,8 @@
 // Authored as plain JavaScript syntax (no TS-only syntax) per project convention;
 // validated via `node --check` on a temp .mjs copy.
 
-import { Hono } from "hono";
-import { streamSSE } from "hono/streaming";
+import { Hono } from "npm:hono@4.10.1";
+import { streamSSE } from "npm:hono@4.10.1/streaming";
 
 import { getEnv } from "../_shared/env.js";
 import { getSupabaseAdmin } from "../_shared/supabaseAdmin.js";
@@ -31,9 +31,10 @@ import { corsHeaders, handlePreflight } from "../_shared/cors.js";
 import { normalizePath } from "../_shared/path.js";
 import { authenticate, assertOwnerOrAdmin, errorResponse, httpError } from "../_shared/auth.js";
 
-import { advancePhase, initObjectionState, PHASE_NAMES } from "../_shared/lib/phases.js";
+import { advancePhase, PHASE_NAMES } from "../_shared/lib/phases.js";
 import {
   raiseObjection, resolveObjection, detectObjectionCategory, openObjections, steeringSummary,
+  initObjectionState,
 } from "../_shared/lib/objections.js";
 import { instantCue, llmCue } from "../_shared/lib/cues.js";
 import { getStudentReply, getStudentReplyStream } from "../_shared/lib/engine.js";

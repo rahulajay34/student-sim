@@ -70,17 +70,26 @@ needs two things. Until both are set the job **no-ops with a NOTICE** (it never 
    on conflict (key) do update set value = excluded.value, updated_at = now();
    ```
 
-2. **Service-role key** (secret) → Supabase **Vault**, secret name `service_role_key`.
-   The key is **never** stored in `app_config` (which is plain app data); the sweeper
-   reads it from `vault.decrypted_secrets` at call time.
+2. **Worker shared secret** (secret) → BOTH a function secret `WORKER_SHARED_SECRET`
+   AND Supabase **Vault** secret name `worker_shared_secret` (same random value).
+   The worker accepts this secret (or the platform-injected service-role key) as
+   its Bearer auth; the sweeper reads it from `vault.decrypted_secrets` at call
+   time. A dedicated secret is used instead of the service-role key because the
+   platform-injected `SUPABASE_SERVICE_ROLE_KEY` inside edge functions can be a
+   new-format key that differs from the dashboard's legacy JWT key, breaking
+   key-equality auth. Never store secrets in `app_config` (plain app data).
 
+   ```sh
+   SECRET=$(openssl rand -hex 32)
+   supabase secrets set WORKER_SHARED_SECRET=$SECRET --project-ref <ref>
+   ```
    ```sql
-   -- run once; get the key from Project Settings → API → service_role
-   select vault.create_secret('<service-role-key>', 'service_role_key');
+   -- run once with the same value:
+   select vault.create_secret('<the-same-random-value>', 'worker_shared_secret');
    -- to rotate later:
    -- select vault.update_secret(
-   --   (select id from vault.secrets where name = 'service_role_key'),
-   --   '<new-service-role-key>');
+   --   (select id from vault.secrets where name = 'worker_shared_secret'),
+   --   '<new-value>');  -- and re-run supabase secrets set with the new value
    ```
 
 Both can be run from Studio's SQL editor or via `psql` against the project DB.

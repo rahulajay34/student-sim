@@ -7,7 +7,7 @@
 // map (import_map.json) under Deno. Under Node it will NOT resolve from this
 // directory (no node_modules here) — exclude llm.js from node import-smoke tests.
 
-import Anthropic from "@anthropic-ai/sdk";
+import Anthropic from "npm:@anthropic-ai/sdk@0.104.1";
 import { getEnv } from "../env.js";
 
 export const MODEL = "claude-sonnet-4-6";
@@ -50,6 +50,7 @@ function normalizeOpts(opts = {}) {
     maxRetries,
     model,
     jsonSchema,
+    effort,
     temperature,
     thinking: legacyThinking,
     top_p: _tp,
@@ -69,13 +70,14 @@ function normalizeOpts(opts = {}) {
     maxRetries,
     model,
     jsonSchema,
+    effort,
     temperature,
     _rest: rest,
   };
 }
 
 function buildParams(messages, model, norm) {
-  const { mode, temperature, jsonSchema, maxRetries } = norm;
+  const { mode, temperature, jsonSchema, maxRetries, effort } = norm;
 
   let systemParam;
   let userMessages = messages;
@@ -90,11 +92,8 @@ function buildParams(messages, model, norm) {
       : { type: "disabled" };
 
   const output_config = {};
-  if (mode === "reasoning") {
-    output_config.effort = "high";
-  } else {
-    output_config.effort = "low";
-  }
+  // Explicit effort option wins; otherwise reasoning→high, fast→low.
+  output_config.effort = effort || (mode === "reasoning" ? "high" : "low");
 
   if (jsonSchema) {
     output_config.format = { type: "json_schema", schema: jsonSchema };

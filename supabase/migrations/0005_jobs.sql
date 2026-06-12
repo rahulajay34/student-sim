@@ -51,14 +51,18 @@ begin
   from public.app_config
   where key = 'edge_base_url';
 
-  -- secret from Vault (named 'service_role_key')
+  -- Shared worker secret from Vault (named 'worker_shared_secret'). A dedicated
+  -- secret rather than the service role key: the platform-injected
+  -- SUPABASE_SERVICE_ROLE_KEY inside edge functions can differ from the
+  -- dashboard's legacy JWT key (new-format keys), which made key-equality
+  -- auth between the sweeper and the worker unreliable.
   select decrypted_secret into v_service_key
   from vault.decrypted_secrets
-  where name = 'service_role_key'
+  where name = 'worker_shared_secret'
   limit 1;
 
   if v_base_url is null or v_base_url = '' or v_service_key is null then
-    raise notice 'sweep_stale_reports: edge_base_url and/or vault secret service_role_key not configured — skipping';
+    raise notice 'sweep_stale_reports: edge_base_url and/or vault secret worker_shared_secret not configured — skipping';
     return;
   end if;
 

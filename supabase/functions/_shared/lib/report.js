@@ -229,7 +229,9 @@ function sanitizeObjectionCategory(raw) {
   return "other";
 }
 
-const CALL_TIMEOUT_MS = 60_000;
+// 100s per attempt: Call A (rubric, reasoning mode + large schema) was observed
+// hovering around 60s in production — 60s caused spurious fallback reports.
+const CALL_TIMEOUT_MS = 100_000;
 
 const REPORT_A_SCHEMA = {
   type: "object",
@@ -341,6 +343,10 @@ async function runCall(label, prompt, jsonSchema) {
   const callOpts = {
     ...DETERMINISTIC_SAMPLING,
     mode: "reasoning",
+    // effort medium: high-effort report calls exceeded the edge function
+    // wall-clock cap (A+B then C at ~90s each). Medium fits with margin and
+    // adaptive thinking still engages on hard grading.
+    effort: "medium",
     timeoutMs: CALL_TIMEOUT_MS,
     maxRetries: 0,
     jsonSchema,

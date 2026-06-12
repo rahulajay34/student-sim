@@ -1,7 +1,7 @@
 // _shared/lib/grounding.js — ported from server/grounding.js.
 // CHANGES:
-//   - Replaced readFileSync seed loading with JSON import attributes.
-//     import x from "../seed/foo.json" with { type: "json" } — works in Deno AND Node 25.
+//   - Replaced readFileSync seed loading with JSON import attributes
+//     (the `with { type: "json" }` form) — works in Deno AND Node 25.
 //   - No process.env usage — no change needed there.
 
 import archetypesRaw from "../seed/archetypes.json" with { type: "json" };

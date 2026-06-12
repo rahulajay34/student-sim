@@ -26,8 +26,15 @@ cd server && npm install && npm start         # or: npm run dev (node --watch)
 cd client && npm install && npm run dev
 npm run build      # production build      | npm run lint   # eslint .
 
-# End-to-end API smoke test (server must be running)
+# End-to-end API smoke test (legacy Express server must be running)
 node scripts/smoke-api.mjs
+
+# End-to-end smoke against the DEPLOYED Supabase stack (auth, RLS, live LLM turns, report worker)
+node scripts/smoke-edge.mjs
+
+# Static check: every named ESM import across supabase/functions actually exists
+# (catches the boot-error class node --check and deno cache both miss)
+node scripts/check-edge-bindings.mjs
 
 # Server unit tests (no running server needed)
 node --test server/tests/*.mjs

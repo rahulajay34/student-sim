@@ -4,7 +4,7 @@
 // Auth: authenticate(req) — NO back-compat allow-all (unlike server/index.js).
 // Written in plain JS syntax (no TS-only syntax) for Node --check compatibility.
 
-import { Hono } from "hono";
+import { Hono } from "npm:hono@4.10.1";
 import { normalizePath } from "../_shared/path.js";
 import { corsHeaders, handlePreflight } from "../_shared/cors.js";
 import { authenticate, assertAdmin, assertSuperadmin, assertOwnerOrAdmin, httpError, errorResponse } from "../_shared/auth.js";
@@ -162,9 +162,10 @@ async function commitSessionTurn(sessionId, token, patch) {
 // ─────────────────────────────────────────────────────────────────────────────
 function fireReportWorker(reportId) {
   const supabaseUrl = getEnv("SUPABASE_URL");
-  const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
+  // Prefer the dedicated shared secret (same one the pg_cron sweeper uses).
+  const serviceKey = getEnv("WORKER_SHARED_SECRET") || getEnv("SUPABASE_SERVICE_ROLE_KEY");
   if (!supabaseUrl || !serviceKey) {
-    console.warn("[api] Cannot fire report worker: missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+    console.warn("[api] Cannot fire report worker: missing SUPABASE_URL or worker secret");
     return;
   }
   const url = `${supabaseUrl}/functions/v1/report-worker`;
