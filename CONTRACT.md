@@ -77,6 +77,7 @@ Session   { id, assignmentId|null, counsellorId, mode:"assigned"|"practice",
             personalityFlavour: { mood, activeQuirks:[string], talkativeness, humour, skepticism, formality, notes },
             voice:{key,name,gender},         // student identity picked at start (server/voices.js); drives display name + OpenAI gender-match
                                              // NOTE: elevenLabsVoiceId is absent (removed with the classic/ElevenLabs engines)
+            counsellorAddress:"sir"|"ma'am"|null,  // inferred from counsellor's first name at session start; null = ambiguous
             leadCard:{profileId,name,gender,age,occupation,education,city}|null,  // resolved from profileId at start; null for bare-persona sessions
             scenarioSnapshot:Scenario,       // Scenario may carry pushiness:1-5 and hesitancy:1-5 sliders (neutral 3)
             courseSnapshot:Course|null,      // full Course record snapshotted at session start
@@ -145,7 +146,7 @@ Legacy reports without a `rubricSnapshot` use the fixed 6-criterion list noted a
 | GET | `/personas` | — | `[Persona]` |
 | POST | `/personas` | `{name,category,label,coreAnxiety,behaviourPrompt,description,personality?}` | `Persona` |
 | PUT | `/personas/:id` | partial Persona (incl. personality) | `Persona` |
-| DELETE | `/personas/:id` | — | `{ok:true}` |
+| DELETE | `/personas/:id` | — | `{ok:true}` or 409 if active (non-completed) assignments reference this persona |
 | GET | `/courses` | — | `[Course]` (supports `?active=1` to filter active only) |
 | POST | `/courses` | `{name,institute,category?,duration?,format?,feeTotal?,feeBooking?,feeNote?,emiNote?,curriculum?,outcomes?,eligibility?,usps?,batchInfo?,sourceUrl?,active?}` | `Course` |
 | PUT | `/courses/:id` | partial Course (name/category/institute/duration/format/feeTotal/feeBooking/feeNote/emiNote/curriculum/outcomes/eligibility/usps/batchInfo/active) | `Course` |
@@ -153,20 +154,20 @@ Legacy reports without a `rubricSnapshot` use the fixed 6-criterion list noted a
 | GET | `/rubric-templates` | — | `[RubricTemplate]` |
 | POST | `/rubric-templates` | `{name,description,criteria}` (weights must sum to 100; ≥3 criteria; `isDefault` always false for created templates) | `RubricTemplate` |
 | PUT | `/rubric-templates/:id` | partial RubricTemplate (name/description/criteria; `isDefault` changes ignored) | `RubricTemplate` |
-| DELETE | `/rubric-templates/:id` | — | `{ok:true}` or 400 `{error:"Cannot delete the default template"}` if `isDefault` |
+| DELETE | `/rubric-templates/:id` | — | `{ok:true}` or 400 if `isDefault`; 409 if active (non-completed) assignments use this template |
 | GET | `/assignments?counsellorId=` | — | `[Assignment + {personaName,counsellorName,hasReport}]` (omit query ⇒ all) |
 | POST | `/assignments` | `{counsellorId,personaId,courseId,rubricTemplateId?,personaPromptOverride?,scenario,revealPersona?}` (`courseId` required; `rubricTemplateId` optional, must exist if provided; `revealPersona` boolean, default true) | `Assignment` |
 | GET | `/assignments/:id` | — | enriched `Assignment` |
-| DELETE | `/assignments/:id` | — | `{ok:true}` |
-| POST | `/sessions/start` | `{mode:"voice"\|"text", counsellorId, assignmentId?, personaId?, scenario?, courseId?, openaiVoice?, profileId?}` (`mode:"text"` selects the text engine; all other values (including omitted) default to `"voice"` (OpenAI Realtime). `courseId` optional; assigned sessions inherit from assignment. `openaiVoice` optional voice key. `profileId` optional lead-profile id.) | `{sessionId, firstMessage, emotion, currentPhase, satisfactionScore, milestones, voice, voiceEngine, openaiVoice, sessionMode, revealPersona, leadCard}` |
+| DELETE | `/assignments/:id` | — | `{ok:true}` or 409 if an active (non-ended) session exists for this assignment |
+| POST | `/sessions/start` | `{mode:"voice"\|"text", counsellorId, assignmentId?, personaId?, scenario?, courseId?, openaiVoice?, profileId?}` (`mode:"text"` selects the text engine; all other values (including omitted) default to `"voice"` (OpenAI Realtime). `courseId` optional; assigned sessions inherit from assignment. `openaiVoice` optional voice key. `profileId` optional lead-profile id.) | `{sessionId, firstMessage, emotion, currentPhase, satisfactionScore, milestones, voice, voiceEngine, openaiVoice, sessionMode, revealPersona, leadCard}` — 409 if an active session already exists for this assignment (duplicate-start lock per assignmentId) |
 | POST | `/sessions/:id/message` | `{message, deliveryMetrics?, thinking?}` | `{reply, emotion, currentPhase, satisfactionScore, scoreReason, turnType, milestones, cue}` (409 if session ended; text sessions only; SSE when `Accept: text/event-stream` — see below) |
 | POST | `/sessions/:id/cue` | — | `{cue, source}` — richer on-demand coaching cue: one deterministic LLM call (`llmCue`) over recent context, falling back to the synchronous corpus `instantCue` on any failure/timeout. `source` ∈ `"llm"\|"corpus"`. Admin/counsellor-agnostic (no auth layer). |
 | POST | `/sessions/:id/end` | — | `{reportId, status:"generating"\|"ready"\|"fallback"}` — immediately returns after persisting a stub; report fills in the background. Idempotent: re-calling while `status:"generating"` returns the same `reportId`; re-calling on a `"fallback"` or stale `"generating"` stub (server restart) re-kicks generation. |
 | GET | `/sessions/:id` | — | `Session` |
 | GET | `/sessions/:id/prompt` | — | `{studentSystemPrompt, scoringPrompt, reportPrompt}` (composed, current; admin-only at UI layer) |
-| DELETE | `/sessions/:id` | — | `{ok:true}` (test/admin cleanup) |
-| GET | `/reports?counsellorId=` | — | `[Report]` (summaries ok; omit query ⇒ all) |
-| GET | `/reports/:id` | — | `Report` |
+| DELETE | `/sessions/:id` | — | `{ok:true}` (test/admin cleanup) — 409 if session is still active (end it first) |
+| GET | `/reports` | `?counsellorId=` and/or `?sessionId=` (both optional; omit for all) | `[Report]` sorted newest first |
+| GET | `/reports/:id` | — | `Report` — 403 if requester is a non-admin counsellor who doesn't own this report (X-User-Id header; absent = back-compat allow) |
 | DELETE | `/reports/:id` | — | `{ok:true}` (test/admin cleanup) |
 | GET | `/config/prompts` | — | merged prompt-config (`prompt-config.json` over built-in defaults) |
 | PUT | `/config/prompts` | prompt-config object | merged prompt-config (persisted; loaders fail soft to defaults) |
@@ -177,6 +178,8 @@ Server owns the transcript: `/sessions/:id/message` appends to the stored sessio
 does NOT send history. `start` for `mode:"assigned"` derives persona+scenario from the assignment
 and flips assignment status to `in_progress`; `end` generates the report and sets `reportId` +
 status `completed`.
+
+**Ownership guard** (dummy-auth grade): session routes (`GET /sessions/:id`, `/message`, `/observe`, `/end`, `/realtime/openai-token`) and `GET /reports/:id` check the `X-User-Id` request header. Non-admin counsellors are 403'd if the resource belongs to another counsellor. Absent header → back-compat allow (curl/smoke/old clients). `hasReport` on enriched assignments verifies the report record still exists (stale `reportId` after a delete would show a broken link).
 
 **Per-turn pipeline** (`/sessions/:id/message`): 409 ended-session guard FIRST → classify the
 counsellor message into `turnType` (`statement`|`question`|`invite`) → push the counsellor
@@ -269,7 +272,7 @@ endpoint, e.g. `api.login(email,password)`, `api.getPersonas()`, `api.createPers
 `api.deleteAssignment(id)`, `api.startSession(payload)`, `api.sendMessage(id,message,deliveryMetrics?,thinking?)`,
 `api.endSession(id)`, `api.regenerateReport(sessionId)` (re-calls `/end` on a fallback), `api.getSession(id)`,
 `api.getOpenAIRealtimeToken(id,voice?)`, `api.observeTurn(id,{counsellorText?,studentText?,deliveryMetrics?})`,
-`api.getReports(counsellorId?)`, `api.getReport(id)`, `api.getLeadProfiles(category?)`,
+`api.getReports(counsellorId?,sessionId?)`, `api.getReport(id)`, `api.getLeadProfiles(category?)`,
 `api.getAdminAnalytics()`, `api.getCounsellorAnalytics(id)`,
 `api.getPromptConfig()`, `api.updatePromptConfig(data)`, `api.getScoringConfig()`, `api.updateScoringConfig(data)`,
 `api.getSessionPrompts(id)`.
@@ -406,7 +409,9 @@ All LLM calls (chat, scoring, coherence gate, report) use **MiniMax-M3** via `ht
 filename kept). Sampling presets: `STUDENT_SAMPLING {temperature:0.9, top_p:0.95, repeat_penalty:1.3}`
 for roleplay; `DETERMINISTIC_SAMPLING {temperature:0.2}` for scoring/coherence/report. `chat()`
 accepts an options object (`timeoutMs`, `model` override, sampling knobs) and throws
-`Error{code:'LLM_TIMEOUT'}` on timeout (45 s chat/scoring, 60 s per report call); `chatStream()` is
+`Error{code:'LLM_TIMEOUT'}` on timeout (45 s chat/scoring, 120 s per report call); `chatStream()` is
 the async-generator streaming variant. M3 is a reasoning model: `<think>…</think>` blocks are
-stripped from both `chat()` and `chatStream()` output. In voice sessions MiniMax is NOT used for the
-student's spoken replies (OpenAI Realtime owns those); it remains the analytics brain via `/observe`.
+stripped from both `chat()` and `chatStream()` output. `stripThink` is also exported for callers that
+need to post-process raw content themselves; an unclosed `<think>` block (model truncated mid-think)
+is stripped to empty rather than leaking the internal monologue. In voice sessions MiniMax is NOT used
+for the student's spoken replies (OpenAI Realtime owns those); it remains the analytics brain via `/observe`.

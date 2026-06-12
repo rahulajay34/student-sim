@@ -265,3 +265,15 @@ Consistency confirmed: X-User-Id on every /api fetch (and correctly NOT on the O
 Data audit + cleanup: 15 unlinked stranded "active" sessions (abandoned tests + green-room ghosts, 5-36h old) marked ended via atomic write; ses-4fe39c73 left active (linked to in_progress asn-7e2725c3, needs the owner's call); 3 legacy fallback reports left as-is (regenerable, but rewriting history is the owner's call — rep-c6b991f3 is the one a counsellor can see); 1 historical orphan (rep-1f1a7b03 → deleted session) left documented; 0 duplicate ids, 0 generating-stub orphans, 0 unknown users, 0 residual emotion tags.
 
 Verification: server tests 147/147 · lint 0 errors · build success.
+
+### Iteration 16 (final find-and-fix, owner-directed) — 2026-06-12 ~09:16–09:35 IST
+Focus: docs sync (CLAUDE.md + CONTRACT.md vs 17 commits of drift) · API fuzz probe (orchestrator).
+
+Docs: both files updated against verified code — ownership guard, 409 matrix, report status/partial/headline + ?sessionId filter, store atomic writes + 12-hex ids, disposition raisedCount gate + LEGACY convincement, style-exemplars system + counsellorAddress, SSE heartbeat + abort, mic device selection, delivery-metric verdicts, analytics null/self-exclusion/canonical-keys, smoke 104; bug-loop-log referenced in Notes. Report timeout doc corrected to 120s (verified in ollama.js).
+
+Fuzz findings, 3 fixed:
+1. Oversized request bodies returned Express's default HTML error page WITH a stack trace to JSON clients → JSON error middleware (413/400/500 shapes) (server/index.js, before listen).
+2. Malformed JSON bodies → same middleware returns {"error":"invalid JSON body"} (was HTML).
+3. No per-turn length cap below the 100KB body limit (an 80KB paste would balloon the prompt + LLM bill) → /message rejects >4000 chars with a clear 400; /observe transcripts slice to 4000 (rejecting would drop a real spoken turn mid-call).
+
+Verification: server tests 147/147 · smoke 104/104 live · lint 0 errors · build success · fuzz re-probe returns JSON on all paths.

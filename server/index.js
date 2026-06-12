@@ -716,6 +716,11 @@ app.post("/api/sessions/:id/message", lockedHandler(async (req, res) => {
   if (deniedForSession(req, res, session)) return;
   const { message, deliveryMetrics: rawDeliveryMetrics } = req.body || {};
   if (!message) return res.status(400).json({ error: "message is required" });
+  // Sane spoken/typed turn cap, far below the 100KB body limit: an accidental
+  // huge paste would otherwise balloon the prompt and the LLM bill.
+  if (String(message).length > 4000) {
+    return res.status(400).json({ error: "message too long (max 4000 characters)" });
+  }
 
   // Per-turn thinking toggle: if the client sent body.thinking ('on'|'off'),
   // update session.thinkingMode BEFORE the reply is generated so the student
@@ -1009,8 +1014,10 @@ app.post("/api/sessions/:id/observe", lockedHandler(async (req, res) => {
   if (deniedForSession(req, res, session)) return;
   // Strip [emotion:*] tags and a bare trailing emotion word from BOTH texts before
   // storing/scoring (the realtime model should never emit these, but guard anyway).
-  const cText = stripEmotionArtifacts(typeof req.body?.counsellorText === "string" ? req.body.counsellorText : "");
-  const sText = stripEmotionArtifacts(typeof req.body?.studentText === "string" ? req.body.studentText : "");
+  // Voice transcripts are capped by slicing (not rejecting): a 4xx here would
+  // silently drop a real spoken turn from the transcript mid-call.
+  const cText = stripEmotionArtifacts(typeof req.body?.counsellorText === "string" ? req.body.counsellorText.slice(0, 4000) : "");
+  const sText = stripEmotionArtifacts(typeof req.body?.studentText === "string" ? req.body.studentText.slice(0, 4000) : "");
   // deliveryMetrics arrives only with a counsellor turn.
   const deliveryMetrics = cText ? sanitizeRealtimeDeliveryMetrics(req.body?.deliveryMetrics) : null;
   if (!cText && !sText) return res.status(400).json({ error: "counsellorText or studentText is required" });
@@ -1384,6 +1391,22 @@ app.get("/api/analytics/counsellor/:id", (req, res) => {
   const assignments = store.getAll("assignments");
   const users = store.getAll("users");
   res.json(buildCounsellorAnalytics(req.params.id, { reports, assignments, users }));
+});
+
+// JSON error responses for body-parser failures — without this, an oversized or
+// malformed payload returned Express's default HTML error page (with a stack
+// trace) to API clients expecting JSON.
+// eslint-disable-next-line no-unused-vars
+app.use((err, _req, res, _next) => {
+  if (res.headersSent) return;
+  if (err?.type === "entity.too.large") {
+    return res.status(413).json({ error: "request body too large" });
+  }
+  if (err?.type === "entity.parse.failed") {
+    return res.status(400).json({ error: "invalid JSON body" });
+  }
+  console.error("Unhandled request error:", err?.message);
+  res.status(500).json({ error: err?.message || "internal error" });
 });
 
 const PORT = process.env.PORT || 3001;
