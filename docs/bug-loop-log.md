@@ -11,8 +11,8 @@ Each entry: focus area, findings (incl. refuted), fixes (file:line), verificatio
 - [x] Session resume edge cases (old sessions, ended sessions, foreign sessions) (iter 2)
 - [x] Objections/disposition logic edge cases (iter 3)
 - [x] Report fallback + regenerate paths (iter 3)
-- [ ] useOpenAIRealtime lifecycle (reconnect, unmount, voice/mic change)
-- [ ] GreenRoom flows (mic denied, assignment vs practice)
+- [x] useOpenAIRealtime lifecycle (reconnect, unmount, voice/mic change) (iter 4)
+- [x] GreenRoom flows (mic denied, assignment vs practice) (iter 4)
 - [ ] store.js concurrency + data integrity
 - [ ] stream.js SSE parsing edge cases
 - [ ] lib/format.js helpers
@@ -72,3 +72,19 @@ Found 5 real bugs, all fixed:
 Refuted/OK (heavily probed): computeDisposition NaN-safe on empty/missing scoreHistory/personality/scenario and at score 0/100; persuadability deterministic per session id and varies across ids; no stuck-guarded with all-addressed; raise/resolve safe on null/unknown/never-raised categories; re-raise updates lastPhrasing; /message vs /observe same resolve→raise order, no duplicate-category entries; steeringSummary safe on null phrasings/5 objections; regenerate arg sessionId correct end-to-end; stub fields preserved on regeneration (store.update merge); reportJobs Map always cleaned via finally; partial reports render sane; DELETE on generating report crash-free; pre-refactor fallback reports regenerate correctly.
 
 Verification: server tests 142/142 pass · client lint 0 errors · build success · live probe: zero-objection perfect history → "warming" (was "ready"), one addressed concern → "ready".
+
+### Iteration 4 — 2026-06-12 ~06:27–06:50 IST
+Focus: useOpenAIRealtime lifecycle · GreenRoom/join flows (2 read-only sonnet hunters).
+
+Found 7 real bugs, all fixed:
+1. Zombie WebRTC connection: unmount during the token fetch let the in-flight connect() finish against a dead component (live mic + audio element + red recording dot) → unmount cleanup bumps connectGenRef before teardown (useOpenAIRealtime.js:584).
+2. Late transcription.completed corrupted the NEXT utterance's delivery metrics (utterRef reset clobbered N+1 mid-speech) → pendingUtterRef parks a finished-but-untranscribed utterance; transcripts read it and never reset a live accumulator (useOpenAIRealtime.js speech_started/completed cases).
+3. Steering error misattribution: ANY realtime error within 2s of a steering send was swallowed + permanently flipped role fallback → steering sends carry a client event_id; rejection matched by echoed id (or steering-shaped message), all other errors surface (useOpenAIRealtime.js error case + sendSteeringRaw).
+4. Mic denied on voice join left a dead voice UI with no escape → degrades to text chat with a warn toast ("allow mic + refresh to retry voice") (Session.jsx auto-enable catch).
+5. Test-mic stream + rAF leaked forever if the user clicked Join while the permission prompt was open → mountedRef guard releases the late stream (GreenRoom.jsx testMic).
+6. Double /sessions/start for one assignment created a duplicate session and orphaned the first (assignment.sessionId overwritten) → 409 guard when a live session exists (server/index.js:441).
+7. Auto-enable effect depended on the location.state OBJECT (its own state-clearing navigate re-fired it; only the ref guard prevented a second connect) → stable primitive deps (Session.jsx).
+
+Refuted/OK: StrictMode double-mount guarded; changeVoice/changeMic/enable interleavings via generation counter; PTT mute-latch across reconnects; RMS sampler cleanup; metric division guards; no handler stacking or AudioContext growth across reconnects; steering never sends response.create; unmount teardown closes pc/mic/ctx; mic-device ideal-fallback wired through join+changeMic; devicechange listener cleanup; assignment override/rubric/profile threading; router state shape compatibility (assigned vs practice vs voice/text); back-navigation replace semantics; double-click Start guards; Safari permissions API absence.
+
+Verification: server tests 142/142 pass · client lint 0 errors · build success.

@@ -551,11 +551,23 @@ export default function Session() {
     if (isVoice) {
       voice.enable(openaiVoiceRef.current)
         .then(() => voice.setMuted?.(true))
-        .catch(() => { /* enable failed — counsellor can retry via the mic button */ });
+        .catch(() => {
+          // Mic denied / connection failed: don't leave a dead voice UI — degrade
+          // to text chat (same coaching engine) and say so. The mic button still
+          // lets them retry voice once they fix permissions.
+          setSessionMode("text");
+          pushToast(
+            "Couldn't start voice (mic blocked or connection failed) — switched to text chat. Allow mic access and refresh the page to retry voice.",
+            { tone: "warn", ttl: 10000 },
+          );
+        });
     }
     // Clear the autoVoice flag so back-navigation doesn't re-trigger it.
     navigate(location.pathname, { replace: true, state: {} });
-  }, [isNewRoute, loading, location.state]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Stable primitive dep: depending on the location.state OBJECT re-ran this
+    // effect when the state-clearing navigate below swapped the reference (the
+    // ref guard held, but only by luck of never being reset).
+  }, [isNewRoute, loading, sessionMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Send a message (TEXT mode: MiniMax /message SSE) ───────────────────────
   async function submit(raw) {

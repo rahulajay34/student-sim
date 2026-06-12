@@ -129,6 +129,13 @@ function MicCheck() {
       : { audio: true };
     try {
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      // The user may have clicked Join while the permission prompt was open —
+      // the component is gone and stopTest() already ran against empty refs, so
+      // releasing here is the only thing preventing a forever-live mic + rAF loop.
+      if (!mountedRef.current) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
       setMicState("granted");
       // Labels are now available — refresh so the dropdown shows real names.
       refreshDevices();
@@ -194,7 +201,8 @@ function MicCheck() {
   }, [refreshDevices]);
 
   // Tear down the live test stream when the component unmounts.
-  useEffect(() => () => stopTest(), [stopTest]);
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; stopTest(); }, [stopTest]);
 
   // Persist + re-test on selection so the meter reflects the chosen input.
   function onSelect(e) {

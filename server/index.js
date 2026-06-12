@@ -439,6 +439,18 @@ app.post("/api/sessions/start", async (req, res) => {
     if (isAssigned) {
       assignment = store.getById("assignments", assignmentId);
       if (!assignment) return res.status(404).json({ error: "Assignment not found" });
+      // One live session per assignment: a double-click race or second tab would
+      // otherwise create a duplicate and orphan the first (assignment.sessionId
+      // gets overwritten, so the original could never be resumed or reported).
+      if (assignment.sessionId) {
+        const live = store.getById("sessions", assignment.sessionId);
+        if (live && live.status !== "ended") {
+          return res.status(409).json({
+            error: "An active session already exists for this assignment.",
+            sessionId: assignment.sessionId,
+          });
+        }
+      }
       personaId2 = assignment.personaId;
       scenario2 = assignment.scenario;
       override = assignment.personaPromptOverride;
