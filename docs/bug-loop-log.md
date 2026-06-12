@@ -187,3 +187,19 @@ Refuted/OK (probed): ISO-week Monday bucketing correct across the IST/UTC bounda
 Live sweep: /login redirect for signed-in users works in-browser; counsellor + admin dashboards render with real data, zero console errors.
 
 Verification: server tests 142/142 · lint 0 errors · build success · analytics probes (team-excl-self, solo fallback, null avgScore) pass.
+
+### Iteration 11 — 2026-06-12 ~08:14–08:35 IST
+Focus: per-turn pipeline (engine/scoring/cues/classify/phases) · shared report components + counsellor pages (2 probing hunters).
+
+Found 7 real bugs, all fixed:
+1. PAYMENT_ASK_RE: bare "today only"/"offer ends" jumped phase 4→5 on unrelated messages ("I'm free today only") → urgency markers now require payment context in the same breath (server/phases.js:20; probes confirm both directions).
+2. isBackchannel missed all Devanagari acks (हाँ/जी/ठीक है went through full LLM scoring) → Devanagari forms added to in-file defaults + scoring-config.json kept in sync.
+3. TAG_QUESTION missed Devanagari rhetorical tags ("ठीक है ना?" classified as a real question) → Devanagari terminals added (server/classify.js:27).
+4. INVITE_PATTERNS missed "you can/please/go ahead, ask me anything" word order → pattern added (server/classify.js).
+5. Counsellor Reports list showed fake "0%" + a red danger badge for generating stubs (admin side was fixed in iter 1, counsellor side missed) → "—" + slate "generating" badge (Reports.jsx:72).
+6. MyMocks "View report" linked into an error page when the report had been deleted (hasReport only checked the id existed) → server hasReport verifies existence; client shows "Report unavailable" (server/index.js:384, MyMocks.jsx:143).
+7. (counted with 6 — client + server halves of the stale-reportId fix.)
+
+Refuted/OK (probed): makesSense gate fails OPEN on LLM timeout (no canned-call cascades); anti-loop guard immune to short backchannels (<4 token guard) and Hinglish particle overlap; structurallyBroken needs literal 3× repeats; scoring extractJson robust to string/clamped/missing/prose-wrapped LLM outputs; phase regression impossible; multi-phase jump per call impossible; cues leak no hidden disposition state; ScoreArcChart 0/1/2-point + 0/100-score guards; RubricBar score-0/decimal-weight/legacy-6 safe; TranscriptView doesn't render deliveryMetrics (both shapes irrelevant), long-message wrap safe, all-null phases safe; MyMocks orphaned persona/deleted-session paths graceful.
+
+Verification: server tests 142/142 · lint 0 errors · build success · 5 behavior probes pass (payment-ask both directions, Devanagari tag, ask-me-anything invite, Devanagari backchannel).

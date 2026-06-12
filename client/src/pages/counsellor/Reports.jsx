@@ -70,11 +70,13 @@ export default function Reports() {
       render: (r) => (
         <div className="flex items-center gap-2.5">
           <span className="tabular-nums font-semibold text-ink">
-            {r.overall?.percent ?? 0}%
+            {r.overall?.percent != null ? `${r.overall.percent}%` : "—"}
           </span>
-          <Badge color={bandColor(r.overall?.band)}>
-            {r.overall?.band || "—"}
-          </Badge>
+          {r.overall?.band ? (
+            <Badge color={bandColor(r.overall.band)}>{r.overall.band}</Badge>
+          ) : (
+            <Badge color="slate">generating</Badge>
+          )}
         </div>
       ),
     },

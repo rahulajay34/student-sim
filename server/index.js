@@ -381,7 +381,9 @@ app.get("/api/lead-profiles", (req, res) => {
 function enrichAssignment(a) {
   const persona = store.getById("personas", a.personaId);
   const counsellor = store.getById("users", a.counsellorId);
-  return { ...a, personaName: persona?.name || "(deleted persona)", counsellorName: counsellor?.name || "(unknown)", hasReport: !!a.reportId };
+  // hasReport verifies the report still EXISTS — a stale reportId after a delete
+  // gave the counsellor a "View report" link straight into an error page.
+  return { ...a, personaName: persona?.name || "(deleted persona)", counsellorName: counsellor?.name || "(unknown)", hasReport: !!a.reportId && !!store.getById("reports", a.reportId) };
 }
 
 app.get("/api/assignments", (req, res) => {

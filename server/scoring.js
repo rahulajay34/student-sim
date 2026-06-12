@@ -80,6 +80,9 @@ export const DEFAULT_SCORING_CONFIG = {
     "right", "yes", "yeah", "yep", "yup", "sure", "fine", "alright",
     "great", "good", "correct", "perfect", "exactly", "got it", "cool",
     "samajh", "samjha", "samjhi", "bilkul", "sahi", "okk", "okkk",
+    // Devanagari forms — the STT transcribes spoken Hindi acks in Devanagari,
+    // and without these every "हाँ" went through a full LLM scoring call.
+    "हाँ", "हां", "हान", "जी", "ठीक", "ठीक है", "अच्छा", "बिल्कुल", "सही", "ओके", "समझ",
   ],
   severityBands: [
     { range: "0", label: "Ordinary / expected", guidance: "The modal adjustment. An ordinary turn that does what a competent counsellor would do at this moment — plain explaining, a short factual answer, a normal discovery question, a routine acknowledgement — scores 0. Most turns score 0." },

@@ -16,6 +16,8 @@ const INVITE_PATTERNS = [
   /\bfeel free to ask\b/i,
   /\bwhat (?:questions?|doubts?) do you have\b/i,
   /\banything (?:else )?you (?:want|would like|'?d like) to (?:ask|know)\b/i,
+  // Reversed order: "you can ask me anything" / "please ask me anything".
+  /\b(?:you can|please|go ahead(?:\s+and)?)\s+ask(?:\s+me)?\s+anything\b/i,
 ];
 
 // "For any queries, feel free to reach out on WhatsApp" is a goodbye, and
@@ -24,7 +26,9 @@ const INVITE_PATTERNS = [
 const FAREWELL_GUARD = /\b(?:feel free to (?:reach|contact|connect|whatsapp|message)|reach (?:out|me)|(?:can|may) (?:directly |always |anytime )?(?:reach|contact|call|whatsapp|message)|whats\s?app|contact (?:me|number)|point of cont(?:act|ract)|my number|later you can|after (?:the|this) call|help (?:you )?with|ask me (?:in between|at the end|later|any\s?time)|in between or at the end)\b/i;
 
 // Confirmation tags that make a sentence rhetorical, not a real question.
-const TAG_QUESTION = /(?:^|[,\s])(?:right|okay|ok|correct|theek hai|thik hai|haina|hai na|na|got it|fine|yes|yeah|clear|samajh gaye?|understood)\s*\?\s*$/i;
+// Devanagari equivalents included — the STT emits Hindi acks in Devanagari and
+// "ठीक है ना?" was being classified as a real question.
+const TAG_QUESTION = /(?:^|[,\s])(?:right|okay|ok|correct|theek hai|thik hai|haina|hai na|na|got it|fine|yes|yeah|clear|samajh gaye?|understood|ठीक है(?: ना)?|सही है(?: ना)?|समझ गए(?: ना)?|क्लियर|ना)\s*\?\s*$/i;
 
 // Latin Hinglish + Devanagari interrogatives (Scribe STT transcribes spoken
 // Hindi in Devanagari, so क्या/कैसे/कितना must classify like kya/kaise/kitna).

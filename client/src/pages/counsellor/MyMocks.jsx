@@ -141,14 +141,18 @@ export default function MyMocks() {
 
                 <div className="mt-5 flex items-center justify-end border-t border-line pt-4">
                   {isCompleted ? (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      as={Link}
-                      to={`/app/reports/${a.reportId}`}
-                    >
-                      View report
-                    </Button>
+                    a.hasReport ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        as={Link}
+                        to={`/app/reports/${a.reportId}`}
+                      >
+                        View report
+                      </Button>
+                    ) : (
+                      <span className="text-xs text-muted">Report unavailable</span>
+                    )
                   ) : (
                     <Button
                       variant="primary"
