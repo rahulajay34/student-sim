@@ -71,10 +71,10 @@ export function difficultyColor(level) {
   return "warn";
 }
 
-// 1-5 rubric score -> color token.
+// 1-10 rubric score -> color token.
 export function rubricColor(score) {
-  if (score >= 4) return "success";
-  if (score >= 3) return "warn";
+  if (score >= 8) return "success";
+  if (score >= 5) return "warn";
   return "danger";
 }
 

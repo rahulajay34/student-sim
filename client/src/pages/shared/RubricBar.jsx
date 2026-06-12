@@ -8,7 +8,7 @@ export default function RubricBar({ item }) {
   const { label, weight, score, level, justification } = item;
   const color = rubricColor(score);
   const hex = TOKEN_HEX[color];
-  const pct = Math.max(0, Math.min(100, (score / 5) * 100));
+  const pct = Math.max(0, Math.min(100, (score / 10) * 100));
 
   return (
     <div className="space-y-2">
@@ -26,7 +26,7 @@ export default function RubricBar({ item }) {
             </span>
           )}
           <span className="text-sm font-semibold tabular-nums" style={{ color: hex }}>
-            {score}/5
+            {score}/10
           </span>
         </div>
       </div>

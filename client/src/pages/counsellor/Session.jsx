@@ -271,6 +271,7 @@ export default function Session() {
   const [scoreHistory, setScoreHistory] = useState([]);
   const [milestones, setMilestones] = useState(null);
   const [lastDeliveryMetrics, setLastDeliveryMetrics] = useState(null);
+  const [lastScoreBreakdown, setLastScoreBreakdown] = useState(null);
 
   // ── Live coaching cue ──────────────────────────────────────────────────────
   const [cue, setCue] = useState(null);
@@ -628,6 +629,13 @@ export default function Session() {
       }
       if (res?.milestones) setMilestones(res.milestones);
       setEmotion(newEmotion);
+      setLastScoreBreakdown(res?.scoreBreakdown ?? null);
+
+      // ── Student hung up — auto-navigate to ended screen ───────────────────
+      if (res?.studentHungUp) {
+        setTimeout(() => setUiState("ended"), 1800);
+        return;
+      }
 
       // ── Live coaching cue ──────────────────────────────────────────────────
       const turn = ++turnCounterRef.current;
@@ -1045,6 +1053,7 @@ export default function Session() {
         scoreHistory={scoreHistory}
         deliveryMetrics={lastDeliveryMetrics}
         milestones={milestones}
+        scoreBreakdown={lastScoreBreakdown}
         emotion={emotion}
         cue={cue}
         cueRefining={cueRefining}

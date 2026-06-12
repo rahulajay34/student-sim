@@ -266,6 +266,7 @@ export default function CallSidebar({
   open,
   onToggle,
   tab,
+  scoreBreakdown,
   onTab,
   messages,
   awaitingReply,
@@ -430,6 +431,7 @@ export default function CallSidebar({
                   deliveryMetrics={deliveryMetrics}
                   milestones={milestones}
                   emotion={emotion}
+                  scoreBreakdown={scoreBreakdown}
                 />
               </div>
             </div>

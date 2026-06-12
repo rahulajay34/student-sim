@@ -192,5 +192,28 @@
     "createdAt": "2026-06-11T12:29:21.032Z",
     "sessionId": "ses-13f287fb",
     "reportId": "rep-e49fb2b6"
+  },
+  {
+    "id": "asn-7595c17d2500",
+    "counsellorId": "counsellor-1",
+    "personaId": "persona-diff-field",
+    "courseId": "course-24604389",
+    "personaPromptOverride": null,
+    "profileId": "lead-098",
+    "scenario": {
+      "title": "",
+      "difficulty": "medium",
+      "situation": "This is Dhruv, a 20-year-old from Patiala, Punjab. He is 12th pass, took a two-year drop, and works in his father's wholesale-retail medicine business, which he wants to digitalize and grow. He is polite and deferential on the call but knows almost nothing technical, and admits he may struggle to attend classes because his father may not spare him the time. He won't spend money without asking his parents first.",
+      "contextNotes": "",
+      "pushiness": 3,
+      "hesitancy": 3
+    },
+    "rubricTemplateId": "rt-grounded-v2",
+    "revealPersona": true,
+    "status": "in_progress",
+    "createdBy": "admin-1",
+    "createdAt": "2026-06-12T08:26:37.563Z",
+    "sessionId": "ses-8988150a3538",
+    "reportId": null
   }
 ]

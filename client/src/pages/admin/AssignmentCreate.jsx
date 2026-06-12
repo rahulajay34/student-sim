@@ -7,6 +7,7 @@ import Button from "../../ui/Button";
 import Input from "../../ui/Input";
 import Textarea from "../../ui/Textarea";
 import Select from "../../ui/Select";
+import SearchableSelect from "../../ui/SearchableSelect";
 import Slider from "../../ui/Slider";
 import Spinner from "../../ui/Spinner";
 import EmptyState from "../../ui/EmptyState";
@@ -345,16 +346,16 @@ export default function AssignmentCreate() {
               title="Course"
               hint="Which programme will the counsellor be selling on this call?"
             >
-              <Select
+              <SearchableSelect
                 label="Course"
-                placeholder="Select a course…"
+                placeholder="Search courses…"
                 value={courseId}
                 error={errors.courseId}
                 onChange={(e) => {
                   setCourseId(e.target.value);
                   setErrors((prev) => ({ ...prev, courseId: undefined }));
                 }}
-                options={courses.map((c) => ({ value: c.id, label: `${c.name} — ${c.institute}` }))}
+                options={courses.map((c) => ({ value: c.id, label: c.name, group: c.institute }))}
               />
             </Section>
 

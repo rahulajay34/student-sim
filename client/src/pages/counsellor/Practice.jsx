@@ -6,6 +6,7 @@ import Button from "../../ui/Button";
 import Input from "../../ui/Input";
 import Textarea from "../../ui/Textarea";
 import Select from "../../ui/Select";
+import SearchableSelect from "../../ui/SearchableSelect";
 import Slider from "../../ui/Slider";
 import Spinner from "../../ui/Spinner";
 import EmptyState from "../../ui/EmptyState";
@@ -207,11 +208,12 @@ export default function Practice() {
             {/* Course */}
             {courses.length > 0 && (
               <div className="space-y-3">
-                <Select
+                <SearchableSelect
                   label="Course"
+                  placeholder="Search courses…"
                   value={courseId}
                   onChange={(e) => setCourseId(e.target.value)}
-                  options={courses.map((c) => ({ value: c.id, label: `${c.name} — ${c.institute}` }))}
+                  options={courses.map((c) => ({ value: c.id, label: c.name, group: c.institute }))}
                 />
               </div>
             )}

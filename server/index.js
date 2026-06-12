@@ -817,7 +817,7 @@ app.post("/api/sessions/:id/message", lockedHandler(async (req, res) => {
     })();
 
     // Scoring and reply run CONCURRENTLY (reply sees the pre-message score).
-    const [{ adjustment, reason, addressedObjection }, reply] = await Promise.all([scorePromise, replyPromise]);
+    const [{ adjustment, reason, addressedObjection, breakdown }, reply] = await Promise.all([scorePromise, replyPromise]);
     replyResult = reply;
 
     // Apply the score and backfill scoreAfter + scoreReason onto the counsellor entry.
@@ -863,11 +863,34 @@ app.post("/api/sessions/:id/message", lockedHandler(async (req, res) => {
       lastCounsellorAdjustment, lastCounsellorScoreReason, objectionState: session.objectionState,
     });
 
+    // Auto-end the session when preScore was already below 35 — the student said
+    // goodbye in their reply. Mark ended here so the next request gets a 409.
+    const studentHungUp = preScore < 35;
+    if (studentHungUp) {
+      session.status = "ended";
+      session.endedAt = new Date().toISOString();
+      store.update("sessions", session.id, session);
+      // Kick async report generation (same as /end) without waiting for it.
+      const reportStub = {
+        id: store.newId("report"),
+        sessionId: session.id,
+        counsellorId: session.counsellorId,
+        assignmentId: session.assignmentId,
+        status: "generating",
+        createdAt: new Date().toISOString(),
+        ...stubReportSections(session),
+      };
+      store.insert("reports", reportStub);
+      generateReport(session, reportStub.id).catch((e) => console.error("[auto-end] report gen failed:", e.message));
+    }
+
     const payload = {
       reply: replyText, emotion,
       currentPhase: session.currentPhase, satisfactionScore: session.satisfactionScore,
       scoreReason: reason, turnType, milestones: session.milestones,
       cue,
+      ...(studentHungUp ? { studentHungUp: true } : {}),
+      ...(breakdown ? { scoreBreakdown: breakdown } : {}),
     };
     if (send) {
       send("done", payload);

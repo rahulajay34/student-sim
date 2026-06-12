@@ -421,6 +421,29 @@ function buildTangentSection(cfg, currentPhase, flavour) {
   return cfg.tangentRule;
 }
 
+// SCORE-BASED BEHAVIOR OVERRIDE — absolute score level gates two hard behavior
+// switches. These override the disposition narrative when active and are placed
+// just before the emotion instruction so they are the highest-recency directive.
+//   < 35: student is done — say a rude goodbye and end the call.
+//   35–39: student is very defensive — push back sharply, give nothing easy.
+function buildScoreBehaviorSection(satisfactionScore) {
+  const s = typeof satisfactionScore === "number" ? satisfactionScore : 50;
+  if (s < 35) {
+    return `OVERRIDE — THIS CALL IS OVER FOR YOU:
+The counsellor has wasted enough of your time and you are done. You are frustrated and fed up.
+Your reply MUST be a short, blunt, rude goodbye. Do NOT engage with whatever the counsellor just said.
+Say something like: "This is a waste of my time. Please don't call me again. Goodbye." — in your own words but with the same dismissive, final tone.
+After saying goodbye you are silent. Do NOT continue the conversation.`;
+  }
+  if (s < 40) {
+    return `OVERRIDE — YOU ARE VERY DEFENSIVE RIGHT NOW:
+You have lost patience with this call. You are visibly frustrated and guarded.
+Push back sharply on whatever the counsellor says. Be blunt and skeptical. Give short, terse replies.
+Do NOT give them easy validation. Challenge vague claims and make them work hard for every response.`;
+  }
+  return "";
+}
+
 // The [emotion:X] protocol instruction. CARVE-OUT: this is rendered AFTER the
 // plain-spoken register rules and explicitly states the tag is exempt from
 // every "talk like a plain student" rule, so nothing suppresses or mangles it.
@@ -495,6 +518,7 @@ export function buildSystemPrompt(persona, scenario, currentPhase, satisfactionS
   const identityLine = persona.voiceName
     ? `Your first name is ${persona.voiceName}; you are a young ${persona.voiceGender === "female" ? "woman" : "man"}. `
     : "";
+  const scoreBehaviorSection = buildScoreBehaviorSection(satisfactionScore);
   return `You are a student who is ${persona.label}. ${identityLine}
 
 ${buildGeneralProfile(cfg)}
@@ -532,6 +556,7 @@ ${registerRefSection}
 ${tangentSection ? `\n${tangentSection}\n` : ""}
 ${buildCourseFaqSection(cfg, course, currentPhase)}
 ${turnVerbositySection ? `\n${turnVerbositySection}\n` : ""}
+${scoreBehaviorSection ? `\n${scoreBehaviorSection}\n` : ""}
 ${EMOTION_INSTRUCTION}
 
 ${buildTurnSection(cfg, turnHint, currentPhase, course)}`.replace(/\n{3,}/g, "\n\n").trimEnd();

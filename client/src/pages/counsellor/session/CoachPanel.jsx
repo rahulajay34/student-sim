@@ -124,8 +124,65 @@ function MilestoneRow({ done, label }) {
   );
 }
 
+// ── Breakdown rating colors ─────────────────────────────────────────────────────
+const RATING_STYLE = {
+  1: { bg: "#2d0a0a", color: "#f87171", label: "Not useful" },
+  2: { bg: "#3b1a00", color: "#fb923c", label: "Weak" },
+  3: { bg: "#1a1f2e", color: "#8b90a8", label: "Neutral" },
+  4: { bg: "#052e16", color: "#4ade80", label: "Useful" },
+  5: { bg: "#064e3b", color: "#34d399", label: "Excellent" },
+};
+
+// ── Score breakdown card ────────────────────────────────────────────────────────
+function ScoreBreakdownCard({ breakdown }) {
+  if (!Array.isArray(breakdown) || !breakdown.length) return null;
+  return (
+    <Card title="Last message — info breakdown">
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {breakdown.map((piece, i) => {
+          const s = RATING_STYLE[piece.rating] || RATING_STYLE[3];
+          return (
+            <div key={i} style={{
+              background: s.bg,
+              border: `1px solid ${s.color}22`,
+              borderRadius: 8,
+              padding: "6px 10px",
+            }}>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                <span style={{ fontSize: "0.75rem", color: "#c7cde8", lineHeight: 1.4, flex: 1 }}>
+                  {piece.text}
+                </span>
+                <span style={{
+                  flexShrink: 0,
+                  fontSize: "0.625rem",
+                  fontWeight: 700,
+                  padding: "1px 6px",
+                  borderRadius: 9999,
+                  background: s.bg,
+                  color: s.color,
+                  border: `1px solid ${s.color}44`,
+                }}>
+                  {s.label}
+                </span>
+              </div>
+              {piece.reason && (
+                <p style={{ margin: "3px 0 0 0", fontSize: "0.6875rem", color: s.color, opacity: 0.8 }}>
+                  {piece.reason}
+                </p>
+              )}
+            </div>
+          );
+        })}
+        <p style={{ margin: "2px 0 0 0", fontSize: "0.6875rem", color: "#8b90a8", fontStyle: "italic" }}>
+          Give information one point at a time for better impact.
+        </p>
+      </div>
+    </Card>
+  );
+}
+
 // ── CoachPanel ─────────────────────────────────────────────────────────────────
-export default function CoachPanel({ satisfaction, scoreHistory, deliveryMetrics, milestones }) {
+export default function CoachPanel({ satisfaction, scoreHistory, deliveryMetrics, milestones, scoreBreakdown }) {
   const prevObjectionsRef = useRef(milestones?.objectionsRaised ?? 0);
   const [objectionFlash, setObjectionFlash] = useState(false);
 
@@ -165,6 +222,9 @@ export default function CoachPanel({ satisfaction, scoreHistory, deliveryMetrics
           <span>Objection raised — address it before moving on</span>
         </div>
       )}
+
+      {/* Score breakdown (info-heavy turns) */}
+      <ScoreBreakdownCard breakdown={scoreBreakdown} />
 
       {/* Satisfaction */}
       <Card title="Student satisfaction">

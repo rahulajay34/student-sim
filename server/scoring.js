@@ -287,6 +287,65 @@ export function scoringPromptForInspection(opts = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// Message breakdown scoring — for info-heavy counsellor turns (> INFO_HEAVY_WORDS).
+// Breaks the message into distinct information pieces, rates each 1-5 on
+// usefulness, and returns a ranked list the client can display as feedback.
+// This runs concurrently with the regular scorer and is purely additive — it
+// does NOT affect the adjustment value.
+// ---------------------------------------------------------------------------
+const INFO_HEAVY_WORDS = 40;
+
+function wordCount(text) {
+  return String(text || "").trim().split(/\s+/).filter(Boolean).length;
+}
+
+function buildBreakdownPrompt({ message, recentTurns = [], phase = 1, courseName } = {}) {
+  const ctx = recentTurns.length
+    ? recentTurns.map((t) => `${t.role === "counsellor" ? "COUNSELLOR" : "STUDENT"}: ${trunc(t.text, 200)}`).join("\n")
+    : "(call just started)";
+  return `A counsellor on a sales-training call has delivered a long message containing multiple pieces of information. Break it into its distinct informational units and rate each one.
+
+CONTEXT (recent turns):
+${ctx}
+
+COUNSELLOR'S MESSAGE:
+${trunc(message, 1000)}
+
+Break the message into at most 6 distinct information pieces. For each piece, rate its usefulness to the student at this stage of the call (Phase ${phase} of 5 for ${courseName || "an analytics programme"}):
+
+Rating scale:
+1 = Not useful (irrelevant, filler, or confusing)
+2 = Weak (vague or only partially relevant)
+3 = Neutral (basic expected info, neither helps nor hurts)
+4 = Useful (clear and relevant, addresses what the student needs)
+5 = Excellent (specific, directly addresses a concern or question)
+
+Return ONLY a JSON object:
+{"pieces": [{"text": "<short summary of this piece, max 15 words>", "rating": <1-5>, "reason": "<one short phrase>"}]}`;
+}
+
+async function scoreBreakdown({ message, recentTurns = [], phase = 1, courseName } = {}) {
+  if (wordCount(message) < INFO_HEAVY_WORDS) return null;
+  try {
+    const prompt = buildBreakdownPrompt({ message, recentTurns, phase, courseName });
+    const raw = await chat([{ role: "user", content: prompt }], { ...SCORING_SAMPLING, timeoutMs: 12000 });
+    const result = extractJson(raw);
+    if (!Array.isArray(result?.pieces) || !result.pieces.length) return null;
+    return result.pieces
+      .slice(0, 6)
+      .filter((p) => p && typeof p.text === "string")
+      .map((p) => ({
+        text: String(p.text).trim(),
+        rating: Math.max(1, Math.min(5, Math.round(Number(p.rating)) || 3)),
+        reason: String(p.reason || "").trim(),
+      }));
+  } catch (err) {
+    console.warn("[scoring] breakdown failed:", err.message);
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // scoreMessage — new signature:
 //   scoreMessage(message, { recentTurns, phase, turnType, courseName })
 // Backward-compatible shim for the old positional call from index.js:
@@ -326,13 +385,26 @@ export async function scoreMessage(message, opts, legacyCourseName, chatOpts = {
   const norm = normalizeOpts(opts, legacyCourseName);
   const prompt = buildScoringPrompt({ message, ...norm }, config);
 
+  // Run breakdown concurrently for info-heavy messages (no-op for short ones).
+  const breakdownPromise = scoreBreakdown({
+    message, recentTurns: norm.recentTurns, phase: norm.phase, courseName: norm.courseName,
+  });
+
   try {
     // chatOpts may carry a timeoutMs so a raced caller (e.g. /observe's 15s
     // Promise.race) can abort the in-flight LLM fetch instead of leaving it dangling.
-    const raw = await chat([{ role: "user", content: prompt }], { ...SCORING_SAMPLING, ...chatOpts });
+    const [raw, breakdown] = await Promise.all([
+      chat([{ role: "user", content: prompt }], { ...SCORING_SAMPLING, ...chatOpts }),
+      breakdownPromise,
+    ]);
     const result = extractJson(raw);
     const adjustment = Math.max(-10, Math.min(10, Math.round(Number(result.adjustment)) || 0));
-    return { adjustment, reason: result.reason || "", addressedObjection: coerceAddressedObjection(result.addressedObjection) };
+    return {
+      adjustment,
+      reason: result.reason || "",
+      addressedObjection: coerceAddressedObjection(result.addressedObjection),
+      ...(breakdown ? { breakdown } : {}),
+    };
   } catch (err) {
     console.error("Scoring error:", err.message);
     return { adjustment: 0, reason: "scoring unavailable", addressedObjection: null };

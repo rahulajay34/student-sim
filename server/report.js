@@ -35,7 +35,7 @@ export const LEGACY_RUBRIC = [
   { key: "communication", label: "Communication & Empathy", weight: 10 },
 ];
 
-const LEVEL_LABELS = { 1: "Poor", 2: "Developing", 3: "Competent", 4: "Proficient", 5: "Excellent" };
+const LEVEL_LABELS = { 1: "Poor", 2: "Poor", 3: "Developing", 4: "Developing", 5: "Competent", 6: "Competent", 7: "Good", 8: "Good", 9: "Excellent", 10: "Excellent" };
 const PHASE_NAMES_V2 = ["Opening", "Discovery", "Presentation", "Objections & Negotiation", "Close"];
 
 const bandFor = (pct) => (pct >= 75 ? "Excellent" : pct >= 50 ? "Good" : "Needs Work");
@@ -100,6 +100,31 @@ SCENARIO: ${session.scenarioSnapshot?.title || "n/a"} (difficulty: ${session.sce
 FINAL STUDENT SATISFACTION: ${session.satisfactionScore}/100`;
 }
 
+// Formats anchor text for a rubric criterion, handling both the new 1-10 key
+// format ("1","4","7","9","10") and the legacy 1-5 format ("1"-"5"). Legacy
+// anchors are remapped to 1-10 positions so they stay semantically correct.
+function formatAnchors(anchors) {
+  if (!anchors) return "";
+  if (anchors["10"] || anchors["7"]) {
+    // New 1-10 format
+    const parts = [];
+    if (anchors["1"]) parts.push(`1=${anchors["1"]}`);
+    if (anchors["4"]) parts.push(`4=${anchors["4"]}`);
+    if (anchors["7"]) parts.push(`7=${anchors["7"]}`);
+    if (anchors["9"]) parts.push(`9=${anchors["9"]}`);
+    if (anchors["10"]) parts.push(`10=${anchors["10"]}`);
+    return parts.length ? ` Anchors (1-10 scale): ${parts.join(" | ")}` : "";
+  }
+  // Legacy 1-5 format — remap to 1-10 positions
+  const parts = [];
+  if (anchors["1"]) parts.push(`1=${anchors["1"]}`);
+  if (anchors["2"]) parts.push(`4=${anchors["2"]}`);
+  if (anchors["3"]) parts.push(`7=${anchors["3"]}`);
+  if (anchors["4"]) parts.push(`9=${anchors["4"]}`);
+  if (anchors["5"]) parts.push(`10=${anchors["5"]}`);
+  return parts.length ? ` Anchors (1-10 scale): ${parts.join(" | ")}` : "";
+}
+
 // ─── Call A prompt: rubric grading + 5-phase breakdown ───────────────────────
 function buildRubricPrompt(session, criteria) {
   const c = session.courseSnapshot;
@@ -111,9 +136,7 @@ COURSE FACTS (ground truth — penalize the counsellor under "knowledge" for con
 ` : "";
 
   const rubricLines = criteria.map((r) => {
-    const anchorText = r.anchors
-      ? ` Anchors: 1=${r.anchors["1"]} | 3=${r.anchors["3"]} | 5=${r.anchors["5"]}`
-      : "";
+    const anchorText = formatAnchors(r.anchors);
     return `- ${r.key} (${r.label}, weight ${r.weight}%).${anchorText}`;
   }).join("\n");
 
@@ -129,12 +152,40 @@ ${milestoneLines}
 FULL TRANSCRIPT (turns are numbered):
 ${transcriptText(session.transcript)}
 
-Evaluate the COUNSELLOR (not the student) on these rubric criteria, each scored 1-5. The anchors describe what each level sounds like — quote the anchor behaviour you observed:
+Evaluate the COUNSELLOR (not the student) on these rubric criteria, each scored 1-10.
+
+SCORING PHILOSOPHY — this is the most important instruction, read it first:
+Every criterion starts at 6/10. This is the baseline for a typical Indian counsellor doing a normal job on a real call.
+From that 6, add or subtract based on what actually happened:
+
+  +1  One clear positive element above the baseline (asked a follow-up question, gave a concrete figure, validated the student's situation).
+  +2  A noticeably stronger element (multiple good moments in the criterion, or one genuinely impressive move).
+  +3  Outstanding — the kind of thing that visibly turns the call around. Rare.
+  +4  Exceptional. Reserve for moments that would be cited as a model in training. Very rare.
+
+  -1  One identifiable fault — a small gap, a vague answer where a specific was called for, a single missed beat.
+  -2  A clear and notable weakness — e.g. skipped discovery entirely OR gave a generic pitch with no student-specific link OR deflected an objection without engaging it.
+  -3  Multiple compounding faults in the same criterion — the counsellor consistently failed this dimension across the call.
+  -4  Significant harm or failure — coercion, false facts, dismissing the student, talking past a concern repeatedly.
+  -5  Catastrophic failure. Reserve for the very worst behaviour: lying, bullying, inventing deadlines to pressure a hesitant student.
+
+CALIBRATION EXAMPLES:
+- Mispronounces the student's name once but otherwise holds a polite, professional opener → -1 → score 5.
+- Mispronounces the name MULTIPLE times and never corrects, jumps straight to pitch, no personal connection at all → -2 → score 4.
+- Asks 2-3 standard checklist questions (background, goals, current situation) but doesn't probe the "why" → -1 → score 5.
+- Makes a plain, timely payment ask even if it's not elegantly framed → 0 to +1 → score 6-7.
+- A converted call where the student agreed to pay GENERALLY suggests the counsellor did enough — scores should reflect that.
+- Being polite, clear, and patient throughout (even without being warm) is +0 → 6.
+
+Do NOT penalize a counsellor for being generic or script-like — that is the Indian counselling baseline, not a fault. Only penalise it when it actively ignores what the student just said.
+
+The anchors below describe behaviour at specific levels for reference — quote whichever level best matches what you observed:
+
 ${rubricLines}
 
 Return ONLY a JSON object with this exact shape:
 {
-  "rubric": [ { "key": "<criterion key>", "score": 1-5, "justification": "one sentence grounded in the transcript, referencing the matched anchor behaviour" } ],
+  "rubric": [ { "key": "<criterion key>", "score": 1-10, "justification": "one sentence grounded in the transcript, referencing the matched anchor behaviour" } ],
   "phaseBreakdown": [ { "phase": 1-5, "summary": "...", "didWell": "...", "toImprove": "..." } ],   // exactly 5, named phases: ${PHASE_NAMES_V2.join(", ")}
   "outcome": "Converted" | "Not Converted",
   "outcomeDetail": "one sentence on whether the student agreed to pay ${c?.feeBooking ? `₹${c.feeBooking}` : "the seat-block fee"} and why"
@@ -172,7 +223,7 @@ function buildDrillsPrompt(session, gradedRubric) {
   const sorted = [...gradedRubric].sort((a, b) => a.score - b.score);
   const weakest = sorted.slice(0, 3);
   const scoreLines = gradedRubric
-    .map((r) => `- ${r.key} (${r.label}): scored ${r.score}/5`)
+    .map((r) => `- ${r.key} (${r.label}): scored ${r.score}/10`)
     .join("\n");
   const weakestKeys = weakest.map((r) => r.key).join(", ") || "(none)";
 
@@ -180,7 +231,7 @@ function buildDrillsPrompt(session, gradedRubric) {
 
 ${metaHeader(session)}
 
-RUBRIC SCORES (1-5, already graded — target the weakest):
+RUBRIC SCORES (1-10, already graded — target the weakest):
 ${scoreLines}
 
 The weakest criteria are: ${weakestKeys}.
@@ -258,13 +309,13 @@ export function buildFallbackReport(session) {
     key: c.key,
     label: c.label,
     weight: Math.round((c.weight / totalWeight) * 1000) / 10,
-    score: 3,
-    level: LEVEL_LABELS[3],   // "Competent" — honest neutral placeholder
+    score: 7,
+    level: LEVEL_LABELS[7],   // "Good" — honest neutral placeholder
     justification: "Report generation failed — neutral placeholder.",
   }));
 
-  // Neutral mid-band percent: score 3 / max 5 = 60%
-  const percent = Math.round(rubric.reduce((sum, r) => sum + (3 / 5) * r.weight, 0));
+  // Neutral mid-band percent: score 7 / max 10 = 70%
+  const percent = Math.round(rubric.reduce((sum, r) => sum + (7 / 10) * r.weight, 0));
 
   const phaseBreakdown = PHASE_NAMES_V2.map((name, i) => ({
     phase: i + 1,
@@ -334,7 +385,7 @@ function assembleRubric(session, rawA, criteria) {
   const totalWeight = criteria.reduce((n, c) => n + c.weight, 0) || 100;
   const rubric = criteria.map((c) => {
     const r = byKey.get(c.key) || {};
-    const score = clamp(r.score ?? 3, 1, 5);
+    const score = clamp(r.score ?? 7, 1, 10);
     return {
       key: c.key, label: c.label,
       weight: Math.round((c.weight / totalWeight) * 1000) / 10,   // renormalized (voice_delivery may be excluded)
@@ -342,7 +393,7 @@ function assembleRubric(session, rawA, criteria) {
       justification: typeof r.justification === "string" ? r.justification : "(not graded by the model — defaulted to Competent)",
     };
   });
-  const percent = Math.round(rubric.reduce((sum, r) => sum + (r.score / 5) * r.weight, 0));
+  const percent = Math.round(rubric.reduce((sum, r) => sum + (r.score / 10) * r.weight, 0));
 
   const phaseBreakdown = PHASE_NAMES_V2.map((name, i) => {
     const p = (rawA?.phaseBreakdown || []).find((x) => Number(x.phase) === i + 1) || {};
