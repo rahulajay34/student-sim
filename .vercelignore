@@ -1,0 +1,16 @@
+# Never upload secrets or server-side code to Vercel — only the client builds there.
+.env
+.env.local
+client/.env.local
+server
+supabase
+scripts
+docs
+voice-samples
+requirements.txt
+suggesstion.md
+*.log
+.claude
+client/dist
+client/node_modules
+node_modules
