@@ -119,7 +119,16 @@ function TrendChart({ data }) {
   const innerW = W - PAD.left - PAD.right;
   const innerH = H - PAD.top - PAD.bottom;
 
-  const xs = data.map((_, i) => PAD.left + (data.length === 1 ? innerW / 2 : (i / (data.length - 1)) * innerW));
+  // X positions are TIME-proportional (weekStart dates), not index-proportional:
+  // gap weeks are skipped in the data, so equal index spacing made a 9-week span
+  // look like 3 consecutive weeks and lied about the slope.
+  const times = data.map((d) => new Date(d.weekStart).getTime());
+  const tMin = Math.min(...times);
+  const tMax = Math.max(...times);
+  const span = tMax - tMin;
+  const xs = times.map((t) =>
+    PAD.left + (span === 0 ? innerW / 2 : ((t - tMin) / span) * innerW),
+  );
   const yOf = (pct) => PAD.top + innerH - (pct / 100) * innerH;
 
   const polyline = data.map((d, i) => `${xs[i]},${yOf(d.avgPercent)}`).join(" ");

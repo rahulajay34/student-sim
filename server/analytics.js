@@ -55,6 +55,49 @@ function avg(arr) {
   return arr.reduce((s, v) => s + v, 0) / arr.length;
 }
 
+// Collapse an LLM-emitted objection category onto the canonical keys defined in
+// objections.js. Substring rules, checked in order — first hit wins; anything
+// unrecognized passes through unchanged (it still aggregates with itself).
+const OBJECTION_KEY_RULES = [
+  ["emi", "emi_affordability"],
+  ["installment", "emi_affordability"],
+  ["afford", "emi_affordability"],
+  ["fee", "fee"],
+  ["price", "fee"],
+  ["cost", "fee"],
+  ["money", "fee"],
+  ["budget", "fee"],
+  ["parent", "parents_family"],
+  ["family", "parents_family"],
+  ["father", "parents_family"],
+  ["mother", "parents_family"],
+  ["time", "time_commitment"],
+  ["schedule", "time_commitment"],
+  ["priorit", "competing_priorities"],
+  ["exam", "competing_priorities"],
+  ["placement", "job_guarantee_placement"],
+  ["job", "job_guarantee_placement"],
+  ["salary", "job_guarantee_placement"],
+  ["guarantee", "job_guarantee_placement"],
+  ["trust", "trust_legitimacy"],
+  ["legitimacy", "trust_legitimacy"],
+  ["scam", "trust_legitimacy"],
+  ["certificate", "trust_legitimacy"],
+  ["fit", "course_fit_relevance"],
+  ["relevan", "course_fit_relevance"],
+  ["background", "course_fit_relevance"],
+  ["tech_access", "tech_access"],
+  ["laptop", "tech_access"],
+  ["english", "language_english"],
+  ["language", "language_english"],
+];
+function canonicalObjectionKey(cat) {
+  for (const [needle, canonical] of OBJECTION_KEY_RULES) {
+    if (cat.includes(needle)) return canonical;
+  }
+  return cat;
+}
+
 // ---------------------------------------------------------------------------
 // Admin analytics
 // ---------------------------------------------------------------------------
@@ -80,7 +123,9 @@ export function buildAdminAnalytics({ reports, assignments, users }) {
   const completionRatePct = totalAssigned === 0 ? 0 : Math.round(safe(completedAssignments, totalAssigned) * 100);
 
   const percents = reports.map((r) => r.overall?.percent).filter((v) => typeof v === "number" && Number.isFinite(v));
-  const avgScore = percents.length === 0 ? 0 : Math.round(safe(percents.reduce((s, v) => s + v, 0), percents.length));
+  // null (not 0) with no scored reports — the dashboard renders "—" for null but
+  // a fresh install showed a real-looking "0%".
+  const avgScore = percents.length === 0 ? null : Math.round(safe(percents.reduce((s, v) => s + v, 0), percents.length));
 
   // trendDelta: delta of the trailing window vs the preceding equal-size window
   // (window = min(5, floor(n/2))); null when fewer than 2 reports
@@ -231,14 +276,17 @@ export function buildAdminAnalytics({ reports, assignments, users }) {
 
   // ---- Objection performance -----------------------------------------------
 
-  // Aggregate drills[].objectionCategory across all reports that have drills
+  // Aggregate drills[].objectionCategory across all reports that have drills.
+  // The category comes from an LLM and drifts ("fee" / "fees" / "fee_concerns"),
+  // fragmenting one real objection into several count-1 buckets — collapse onto
+  // the canonical keys from objections.js via canonicalObjectionKey.
   const catCount = new Map(); // category -> count
   for (const r of reports) {
     if (!Array.isArray(r.drills) || r.drills.length === 0) continue;
     for (const d of r.drills) {
       const raw = (d.objectionCategory || "").trim().toLowerCase();
       if (!raw || raw === "none" || raw === "n/a" || raw === "unknown") continue;
-      const cat = raw.replace(/[\s/‐-―-]+/g, "_");
+      const cat = canonicalObjectionKey(raw.replace(/[\s/‐-―-]+/g, "_"));
       catCount.set(cat, (catCount.get(cat) || 0) + 1);
     }
   }
@@ -331,9 +379,14 @@ export function buildCounsellorAnalytics(counsellorId, { reports, assignments, u
     mine[key] = scores && scores.length > 0 ? Math.round(avg(scores) * 10) / 10 : null;
   }
 
-  // team: avg score per key from ALL counsellors (anonymous)
+  // team: avg score per key from the OTHER counsellors (anonymous). Including
+  // self pulled the "team" line 1/N toward the counsellor's own polygon — at two
+  // counsellors the comparison was half self. Solo fallback: when no one else
+  // has scored reports yet, fall back to all reports so the radar still renders.
+  const otherReports = reports.filter((r) => r.counsellorId !== counsellorId && Number.isFinite(r.overall?.percent));
+  const teamSource = otherReports.length > 0 ? otherReports : reports;
   const teamKeyScores = {};
-  for (const r of reports) {
+  for (const r of teamSource) {
     for (const item of rubricItems(r)) {
       if (!teamKeyScores[item.key]) teamKeyScores[item.key] = [];
       teamKeyScores[item.key].push(item.score);

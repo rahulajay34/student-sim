@@ -172,3 +172,18 @@ Smoke completion: +20 checks → 104/104 live (referenced-persona/rubric delete 
 Probes after fix: ma'am-call text prompt language-policy copies 4→3 (identical by design), exemplar/voice-bank/fewShot lines all ma'am-rendered; realtime carve-out present, 6.8k chars (budget 9.5k).
 
 Verification: server tests 142/142 · smoke 104/104 · lint 0 errors · build success.
+
+### Iteration 10 — 2026-06-12 ~08:01–08:15 IST
+Focus: analytics math + dashboard rendering (1 probing hunter) · live browser sweep of both dashboards (orchestrator).
+
+Found 4 real bugs, all fixed:
+1. Radar "team average" included the requesting counsellor — at 2 counsellors the team line was half self (probe: mine=1, peer=5 → team showed 3) → team computed from OTHER counsellors' scored reports, solo fallback to all (server/analytics.js:334; probe now: team=5, solo=2).
+2. Admin avgScore KPI returned 0 instead of null with zero scored reports — fresh installs showed a real-looking "0%" → null (server/analytics.js:83).
+3. Weekly trend chart spaced points by array index, not date — 3 points spanning 9 calendar weeks rendered like consecutive weeks, lying about slope → time-proportional x from weekStart (AdminDashboard.jsx:122).
+4. Objection hot-spots fragmented by LLM category drift ("fee"/"fees"/"fee_concerns" = 3 buckets of 1) → canonicalObjectionKey substring rules collapse onto objections.js keys (server/analytics.js).
+
+Refuted/OK (probed): ISO-week Monday bucketing correct across the IST/UTC boundary; trendDelta guards for 1-2 reports; heatmap correct on mixed legacy/v2 rubrics with null (not 0) for absent criteria; recommendedDrill latest-by-generatedAt incl. regeneration; RadarChart <3-axes guard; CountUp renders 0; all .toFixed call sites null-guarded.
+
+Live sweep: /login redirect for signed-in users works in-browser; counsellor + admin dashboards render with real data, zero console errors.
+
+Verification: server tests 142/142 · lint 0 errors · build success · analytics probes (team-excl-self, solo fallback, null avgScore) pass.
