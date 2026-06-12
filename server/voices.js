@@ -67,8 +67,12 @@ export function inferGenderFromName(name) {
 export function pickStudentVoice(seed = "", gender = null) {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) | 0;
-  const pool = gender
-    ? STUDENT_VOICES.filter((v) => v.gender === gender)
+  // Normalize so "F"/"M"/"Female" from any future data source still genders the
+  // pool instead of silently falling through to the full catalog.
+  const g = typeof gender === "string" ? gender.trim().toLowerCase() : null;
+  const canonical = g === "f" || g === "female" ? "female" : g === "m" || g === "male" ? "male" : null;
+  const pool = canonical
+    ? STUDENT_VOICES.filter((v) => v.gender === canonical)
     : STUDENT_VOICES;
   const list = pool.length ? pool : STUDENT_VOICES;
   return list[Math.abs(hash) % list.length];

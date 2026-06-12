@@ -203,3 +203,17 @@ Found 7 real bugs, all fixed:
 Refuted/OK (probed): makesSense gate fails OPEN on LLM timeout (no canned-call cascades); anti-loop guard immune to short backchannels (<4 token guard) and Hinglish particle overlap; structurallyBroken needs literal 3× repeats; scoring extractJson robust to string/clamped/missing/prose-wrapped LLM outputs; phase regression impossible; multi-phase jump per call impossible; cues leak no hidden disposition state; ScoreArcChart 0/1/2-point + 0/100-score guards; RubricBar score-0/decimal-weight/legacy-6 safe; TranscriptView doesn't render deliveryMetrics (both shapes irrelevant), long-message wrap safe, all-null phases safe; MyMocks orphaned persona/deleted-session paths graceful.
 
 Verification: server tests 142/142 · lint 0 errors · build success · 5 behavior probes pass (payment-ask both directions, Devanagari tag, ask-me-anything invite, Devanagari backchannel).
+
+### Iteration 12 — 2026-06-12 ~08:29–08:50 IST
+Focus: content-grounding layer (grounding/courseContext/register/voices/leadProfiles), never directly swept (1 probing hunter).
+
+Found 5 real bugs (2 live, 3 latent), all fixed:
+1. LIVE: admin-created personas (category "custom") got NO archetype texture and NO objection repertoire — every custom persona ran a shallower simulation → null-archetype path now injects the generic fallback repertoire from phase 3 (server/prompt.js buildArchetypeBlock; probe: custom phase-4 prompt now carries OBJECTIONS YOU GENUINELY HOLD).
+2. LIVE: assignment creation accepted nonexistent profileIds silently (session then started with a blank lead card) → 400 validation (server/index.js:405).
+3. LATENT: fmtINR(NaN) rendered "₹NaN" into the prompt (typeof NaN === "number") → Number.isFinite guard (courseContext.js:34).
+4. LATENT: pickStudentVoice silently ignored non-canonical gender strings ("F"/"Female" → random-gender voice) → normalized (voices.js:67).
+5. LATENT: a corrupt/locked leadProfiles.json silently started sessions with the wrong (bare) student → loud error log at session start (index.js:530).
+
+Refuted/OK (probed): objectionRepertoire keys match objections.js detection categories (no drift); difficulty variants fall to medium; voiceBankFor safe on custom/unknown categories, phase 5, n>pool; registerStatsFor all phases + deterministic rotation; inferGenderFromName full-name/caps/whitespace handling; profile.gender precedence over name inference (Kiran case); all 170 lead profiles canonical genders; lead-profiles category filter correct (note: no "graduate" profiles exist — data gap, not code); courses.json fees all finite; LEGACY_COURSE_CONTEXT path composes cleanly.
+
+Verification: server tests 142/142 · smoke 104/104 live · lint 0 errors · build success · probes (custom-persona repertoire, fmtINR, gender normalization) pass.

@@ -31,7 +31,9 @@ COUNSELLOR'S OBJECTIVE ON THIS CALL:
 The counsellor is trying to get you to pay ₹4,000 to block your seat. You have already paid ₹99 and cleared the qualifier test, which means you have some baseline interest in the programme — but you have not made any financial commitment beyond that initial ₹99.
 `;
 
-export const fmtINR = (n) => (typeof n === "number" ? `₹${n.toLocaleString("en-IN")}` : null);
+// Number.isFinite matters: typeof NaN === "number", and "₹NaN" in the fee line
+// would poison the student prompt.
+export const fmtINR = (n) => (typeof n === "number" && Number.isFinite(n) ? `₹${n.toLocaleString("en-IN")}` : null);
 
 export function buildCourseContext(course) {
   if (!course) return LEGACY_COURSE_CONTEXT;

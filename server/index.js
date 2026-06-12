@@ -402,6 +402,11 @@ app.post("/api/assignments", (req, res) => {
     const tpl = store.getById("rubric-templates", rubricTemplateId);
     if (!tpl) return res.status(400).json({ error: "rubricTemplateId not found" });
   }
+  if (profileId && !loadLeadProfile(profileId)) {
+    // A stale/mistyped profileId would otherwise be stored silently and the
+    // session would start with a blank lead card.
+    return res.status(400).json({ error: "profileId not found in lead profiles" });
+  }
   const { revealPersona } = req.body || {};
   const assignment = {
     id: store.newId("asn"),
@@ -528,6 +533,12 @@ async function startSessionHandler(req, res) {
     // panel. Bare-persona sessions (no profile) leave leadCard null.
     const sessionId = store.newId("ses");
     const profile = loadLeadProfile(profileId2);
+    if (profileId2 && !profile) {
+      // A profile was assigned but couldn't be resolved (corrupt/locked file or a
+      // pre-validation stale id) — the counsellor would silently get a different
+      // student than assigned. Log loudly; the session still starts bare.
+      console.error(`[session-start] profileId ${profileId2} could not be resolved — starting with a bare persona`);
+    }
     const leadCard = profile
       ? {
           profileId: profile.id,

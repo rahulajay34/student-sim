@@ -99,7 +99,18 @@ export function buildKnowledgeBounds(cfg, course) {
 // has not surfaced objections yet, so the list is omitted to cut prompt size.
 function buildArchetypeBlock(persona, scenario, currentPhase) {
   const archetype = archetypeForPersona(persona);
-  if (!archetype) return "";
+  if (!archetype) {
+    // Admin-created personas (category "custom") have no mined archetype — but
+    // they still deserve a grounded objection repertoire from phase 3 on;
+    // objectionRepertoire(null, …) returns the generic fallback set. Without
+    // this, every custom persona ran a noticeably shallower simulation.
+    if (currentPhase < 3) return "";
+    const fallback = objectionRepertoire(null, scenario?.difficulty);
+    if (!fallback.length) return "";
+    return `OBJECTIONS YOU GENUINELY HOLD (raise them naturally at realistic moments, in your own words — these are real phrasings from students like you):
+${fallback.map((r) => `- ${r.label}: e.g. ${r.phrasings.map((p) => `"${p}"`).join(" / ")}`).join("\n")}
+Do not dump all objections at once; surface them as the conversation makes them relevant. A good counsellor answer defuses an objection; a pushy or vague answer escalates it.`;
+  }
   const texture = `WHO YOU REALLY ARE (mined from real calls with students like you — embody this):
 - Background: ${archetype.background}
 - Goals: ${archetype.goals}
