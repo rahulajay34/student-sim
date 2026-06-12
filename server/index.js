@@ -1021,7 +1021,13 @@ function startReportJob(sessionId, reportId) {
   const job = (async () => {
     // Read the session fresh at job start; it was marked ended at stub time.
     const session = store.getById("sessions", sessionId);
-    if (!session) return;
+    if (!session) {
+      // Session deleted between stub insert and job start (e.g. test cleanup):
+      // without this the stub would sit at "generating" forever.
+      const orphan = store.getById("reports", reportId);
+      if (orphan) store.update("reports", reportId, { status: "fallback", regenerable: true });
+      return;
+    }
 
     // generateReport handles its own retries and returns a {fallback:true} shape
     // on Call A failure; only an unexpected throw lands in the catch below.
@@ -1089,7 +1095,8 @@ app.post("/api/sessions/:id/end", lockedHandler(async (req, res) => {
       // no active job) — re-kick a fresh background job instead of getting stuck.
       if (needsRegeneration(existing) || existing.status === "fallback" || existing.status === "generating") {
         store.update("reports", existing.id, { status: "generating" });
-        store.update("sessions", session.id, { status: "ended", endedAt: new Date().toISOString() });
+        // Preserve the original end time on regeneration — only stamp it once.
+        store.update("sessions", session.id, { status: "ended", endedAt: session.endedAt || new Date().toISOString() });
         if (session.assignmentId) store.update("assignments", session.assignmentId, { status: "completed", reportId: existing.id });
         startReportJob(session.id, existing.id);
         return res.json({ reportId: existing.id, status: "generating" });

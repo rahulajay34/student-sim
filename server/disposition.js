@@ -169,13 +169,16 @@ function readinessSignal(session) {
   const base = 0.30 * momTerm + 0.25 * turnTerm + 0.30 * objTerm;
   // Persuadability nudges the whole thing up or down by up to ±0.15.
   const signal = clamp01(base + (persuadability - 0.5) * 0.30 + 0.15 * objTerm);
-  return { signal, open, ratio, mom, good, bad, persuadability };
+  return { signal, open, raisedCount: arr.length, ratio, mom, good, bad, persuadability };
 }
 
-function stageFromSignal(signal, open) {
-  // "ready" demands BOTH a high signal AND no concern left dangling — a student
-  // does not say yes with an unanswered worry on the table.
-  if (signal >= 0.7 && open.length === 0) return "ready";
+function stageFromSignal(signal, open, raisedCount) {
+  // "ready" demands a high signal AND no concern left dangling AND that at least
+  // one concern was actually raised and answered — open.length === 0 is also true
+  // when NOTHING was ever raised, and a real student doesn't agree to pay in the
+  // opening minutes just because the counsellor sounded pleasant (a high
+  // persuadability roll made that reachable in phase 1 with zero objections).
+  if (signal >= 0.7 && open.length === 0 && raisedCount > 0) return "ready";
   if (signal >= 0.5) return "warming";
   if (signal >= 0.3) return "listening";
   return "guarded";
@@ -204,7 +207,7 @@ function categoryPhrase(category) {
 
 function buildNarrative(session, ev) {
   const { signal, open, mom, good } = ev;
-  const stage = stageFromSignal(signal, open);
+  const stage = stageFromSignal(signal, open, ev.raisedCount);
   const state = Array.isArray(session?.objectionState) ? session.objectionState : [];
   const addressed = addressedObjections(state);
 
@@ -261,7 +264,7 @@ export function computeDisposition(session) {
     };
   }
   const ev = readinessSignal(session);
-  const stage = stageFromSignal(ev.signal, ev.open);
+  const stage = stageFromSignal(ev.signal, ev.open, ev.raisedCount);
   const narrative = buildNarrative(session, ev);
   return { stage, narrative, persuadability: ev.persuadability };
 }

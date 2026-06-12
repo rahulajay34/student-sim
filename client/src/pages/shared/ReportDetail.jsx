@@ -230,6 +230,10 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
   // time setReport swaps in a new object — otherwise `startedAt` reset every tick
   // and the 3-minute give-up timeout could never fire.
   const pollStartRef = useRef(null);
+  // Bumped by handleRegenerate so the poll effect restarts even when the report
+  // was already "generating" before the retry (isGenerating true → true never
+  // re-runs the effect on its own, which left the timed-out page polling-dead).
+  const [retryNonce, setRetryNonce] = useState(0);
   useEffect(() => {
     if (!isGenerating) {
       pollStartRef.current = null;
@@ -257,13 +261,16 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
       active = false;
       clearInterval(timer);
     };
-  }, [id, isGenerating]);
+  }, [id, isGenerating, retryNonce]);
 
   // Regenerate a fallback (or timed-out) report by re-calling /end for the session.
   async function handleRegenerate() {
     if (!report?.sessionId || regenerating) return;
     setRegenerating(true);
     setPollTimedOut(false);
+    // Fresh 3-minute window + force the poll effect to restart.
+    pollStartRef.current = null;
+    setRetryNonce((n) => n + 1);
     try {
       await api.regenerateReport(report.sessionId);
       const fresh = await api.getReport(id);

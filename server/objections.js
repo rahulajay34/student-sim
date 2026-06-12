@@ -180,9 +180,10 @@ const RELATED_GROUPS = [
   ["competing_priorities", "parents_family", "time_commitment"],
   // Trust / quality cluster.
   ["job_guarantee_placement", "trust_legitimacy", "course_fit_relevance"],
-  // Access / fit cluster.
-  ["tech_access", "course_fit_relevance"],
-  ["language_english", "course_fit_relevance"],
+  // NOTE: tech_access and language_english were once grouped with
+  // course_fit_relevance, which made answering a laptop/tools or
+  // English-instruction question silently resolve the unrelated
+  // "is this right for my background?" concern. They stand alone now.
 ];
 
 function relatedKeys(category) {

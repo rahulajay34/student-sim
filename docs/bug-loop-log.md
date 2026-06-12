@@ -9,8 +9,8 @@ Each entry: focus area, findings (incl. refuted), fixes (file:line), verificatio
 - [x] Admin CRUD pages (Personas/Courses/Rubrics/Assignments edit flows) (iter 2)
 - [ ] Auth/routing guards + deep links
 - [x] Session resume edge cases (old sessions, ended sessions, foreign sessions) (iter 2)
-- [ ] Objections/disposition logic edge cases
-- [ ] Report fallback + regenerate paths
+- [x] Objections/disposition logic edge cases (iter 3)
+- [x] Report fallback + regenerate paths (iter 3)
 - [ ] useOpenAIRealtime lifecycle (reconnect, unmount, voice/mic change)
 - [ ] GreenRoom flows (mic denied, assignment vs practice)
 - [ ] store.js concurrency + data integrity
@@ -58,3 +58,17 @@ Found 8 real bugs, 7 fixed + 1 deferred:
 Refuted/OK: ended-session resume renders EndedScreen safely; /end double-call idempotent across tabs (withSessionLock + status branches); turnCounter staleness after remount safe; /app/session/new with null router state redirects cleanly; sessionMode stale-default race is safely ordered by .then/.finally; prompt-config PUT round-trip clobber concern unfounded.
 
 Verification: server tests 142/142 pass · client lint 0 errors · build success.
+
+### Iteration 3 — 2026-06-12 ~06:16–06:35 IST
+Focus: objections/disposition edge cases · report fallback+regenerate paths (2 read-only sonnet hunters with node -e probes).
+
+Found 5 real bugs, all fixed:
+1. Premature "ready" with ZERO objections raised — 42.8% of easy-persona session ids could hit "agree to pay" in phase 1 off 10 good turns alone (probe: 428/1000) → ready now also requires raisedCount > 0 (server/disposition.js stageFromSignal + call sites).
+2. RELATED_GROUPS over-grouping: answering tech_access or language_english silently resolved the unrelated course_fit_relevance concern → removed both micro-groups (server/objections.js:184-185).
+3. Retry after the 3-min poll timeout left ReportDetail polling-dead forever (isGenerating true→true never re-ran the effect) → retryNonce dep + pollStartRef reset in handleRegenerate (ReportDetail.jsx).
+4. session.endedAt overwritten on every regeneration → stamped only once (server/index.js:1092).
+5. Session deleted between stub insert and job start left the report at "generating" forever → orphaned stub now flips to fallback/regenerable (server/index.js startReportJob).
+
+Refuted/OK (heavily probed): computeDisposition NaN-safe on empty/missing scoreHistory/personality/scenario and at score 0/100; persuadability deterministic per session id and varies across ids; no stuck-guarded with all-addressed; raise/resolve safe on null/unknown/never-raised categories; re-raise updates lastPhrasing; /message vs /observe same resolve→raise order, no duplicate-category entries; steeringSummary safe on null phrasings/5 objections; regenerate arg sessionId correct end-to-end; stub fields preserved on regeneration (store.update merge); reportJobs Map always cleaned via finally; partial reports render sane; DELETE on generating report crash-free; pre-refactor fallback reports regenerate correctly.
+
+Verification: server tests 142/142 pass · client lint 0 errors · build success · live probe: zero-objection perfect history → "warming" (was "ready"), one addressed concern → "ready".
