@@ -25,6 +25,7 @@ import {
 } from "./realtime.js";
 import { computeDisposition } from "./disposition.js";
 import { steeringSummary } from "./objections.js";
+import { exemplarsFor, renderAddress } from "./styleExemplars.js";
 import { writeFileSync, readFileSync } from "fs";
 
 // Voice/text session mode (contract C5). A session is either a VOICE call (OpenAI
@@ -427,6 +428,17 @@ app.post("/api/sessions/start", async (req, res) => {
     const persona = store.getById("personas", personaId2);
     if (!persona) return res.status(404).json({ error: "Persona not found" });
 
+    // Address term — how the student addresses the counsellor on this call. Inferred
+    // from the counsellor's first name (inferGenderFromName takes the first token of
+    // a full name). female -> "ma'am", male -> "sir", ambiguous/unknown -> null (the
+    // student then listens for how the counsellor sounds). Persisted so the call and
+    // resumes stay consistent.
+    const counsellorUser = store.getById("users", counsellorId);
+    const counsellorGender = inferGenderFromName(counsellorUser?.name);
+    const counsellorAddress = counsellorGender === "female" ? "ma'am"
+      : counsellorGender === "male" ? "sir"
+      : null;
+
     // Resolve the chosen lead profile (if any) into a CRM-style "lead card": the
     // real name + structured background the counsellor would actually have. This
     // drives the student's display name, gender (hence the voice), and the brief
@@ -523,6 +535,7 @@ app.post("/api/sessions/start", async (req, res) => {
       promptSnapshot,
       personalityFlavour,
       leadCard,
+      counsellorAddress,
       revealPersona,
       thinkingMode,
       voiceEngine,
@@ -840,7 +853,18 @@ function buildSteering(session) {
   const phase = session.currentPhase || 1;
   const phaseName = PHASE_NAMES[phase] || PHASE_NAMES[1];
   parts.push(`Stage: ${phaseName} — ${PHASE_NEXT[phase] || PHASE_NEXT[1]}`);
-  parts.push("Keep your replies short — about 5 to 15 spoken words.");
+  parts.push("Keep your replies conversational — about 10 to 30 spoken words.");
+
+  // One phase-appropriate style anchor, rotated by turn count so the voice model
+  // gets a fresh exemplar as the call progresses (the seed folds in the transcript
+  // length, then we take the first of a single-line draw). Fail-soft to nothing.
+  const addressTerm = (session.counsellorAddress === "sir" || session.counsellorAddress === "ma'am")
+    ? session.counsellorAddress : null;
+  const turns = Array.isArray(session.transcript) ? session.transcript.length : 0;
+  const anchorSeed = `${session.id || ""}|turn${turns}`;
+  const anchor = exemplarsFor(phase, 1, anchorSeed)[0];
+  if (anchor) parts.push(`Sound like: "${renderAddress(anchor, addressTerm)}"`);
+
   return parts.join("\n");
 }
 

@@ -16,23 +16,57 @@ import { archetypeForPersona } from "./grounding.js";
 import { computeDisposition, renderDispositionSection } from "./disposition.js";
 import { summarizeForPrompt } from "./objections.js";
 import { PHASE_NAMES } from "./phases.js";
+import { exemplarsFor, renderAddress, antiPatterns } from "./styleExemplars.js";
+
+// Resolve the session's counsellor-address term, fail-soft for old sessions that
+// predate the field (missing/invalid -> null = "listen and use sir or ma'am").
+function addressTermOf(session) {
+  const a = session?.counsellorAddress;
+  return (a === "sir" || a === "ma'am") ? a : null;
+}
 
 // ── VOICE DELIVERY block ──────────────────────────────────────────────────────
-// Ready-to-paste instruction block, copied verbatim from the "## 4. VOICE DELIVERY"
-// section of docs/research/indian-accent-prosody.md (grounded on 216 real calls).
-// Kept as a module constant so the .md is NOT read at runtime. If you update the
-// research doc, re-paste this block to keep the numbers in sync.
-const VOICE_DELIVERY = `VOICE DELIVERY
+// BINDING delivery rules derived from the owner-calibrated style dials
+// (server/data/seed/style-exemplars.json). The old prose block (grounded on
+// docs/research/indian-accent-prosody.md) said the call was "otherwise fully in
+// English" and the bot came out robotic and too clean; these rules push fillers,
+// hesitation, light Hindi particles, and the address term to home base. The
+// {addressTerm} placeholder is filled per session. A few prosody numbers from the
+// research doc are kept (tempo/intonation) since they still hold.
+function buildVoiceDelivery(addressTerm) {
+  const addr = addressTerm || "sir or ma'am";
+  const addrRule = addressTerm
+    ? `Address the counsellor as "${addressTerm}" every second or third sentence — this is binding, do not drop it and do not switch to the other one.`
+    : `Address the counsellor every second or third sentence. You do not yet know if they are "sir" or "ma'am" — listen for how they sound and use the right one; if they correct you, switch immediately and naturally without making a fuss.`;
+  return `VOICE DELIVERY (these are binding — you sound like a real student, NOT a clean AI voice):
 
-Speak ENGLISH with an Indian accent throughout. At most one light Hindi word (e.g., "haan", "theek hai") may appear once or twice per session — the conversation is otherwise fully in English.
+- FILLERS: most of your replies carry 1-2 natural fillers — umm, actually, like, you know, yeah. A reply with zero fillers should be rare, not your default.
+- HESITATION: trail off with "..." sometimes when you are thinking or unsure. A doubled-word stammer ("I, I think...") at most ONCE in the whole call — not a habit.
+- LIGHT HINDI PARTICLES: weave in a light Hindi particle — haan, thoda, abhi, achha, matlab, bhi, or a sentence-final "na" — about once every one to three turns. Particles ONLY, never a full Hindi clause or verb phrase.
+- ADDRESS: ${addrRule}
+- LENGTH: most turns run 10-30 words; short for quick answers, longer when genuinely explaining yourself. Never monologue.
+- Tempo ~125-155 WPM with brief 0.4-0.8 s pauses every 10-15 words; syllable-timed rhythm; gentle high-rise on checks like "right?" / "okay?". Energy low-to-moderate; softer when hesitant or deferring.`;
+}
 
-Tempo: 125–155 WPM during active speech bursts (target ~140 WPM). Pause briefly — 0.4–0.8 s — roughly every 10–15 words within a turn, and 0.5–1.5 s between your turn and the counsellor's next prompt.
+// HOW YOU SOUND — real exemplar lines for the session's current phase, address-term
+// rendered. Framed as TEXTURE to imitate, never repeat verbatim. Includes 2-3
+// antiPatterns as explicit "never do" lines. Returns "" when no exemplars load
+// (fail-soft).
+function buildHowYouSound(currentPhase, addressTerm, seed) {
+  const phase = Number(currentPhase) || 1;
+  const lines = exemplarsFor(phase, 8, seed)
+    .map((l) => renderAddress(l, addressTerm))
+    .filter(Boolean);
+  if (!lines.length) return "";
 
-Intonation: syllable-timed rhythm (equal beat per syllable, not stress-timed). Use a gentle high-rise on confirmation checks ("right?", "okay?") and rising terminal on genuine questions. Stress falls on content words; prepositions are unstressed and shortened.
+  const bad = antiPatterns().slice(0, 3);
+  const neverBlock = bad.length
+    ? `\n\nNEVER do these — they break the illusion:\n${bad.map((b) => `- ${b}`).join("\n")}`
+    : "";
 
-Fillers and address: say "sir" (or "ma'am") in roughly every second or third sentence. Sprinkle "like", "actually", "you know", "okay so" as natural hedges — about one per 6–8 sentences each, not every sentence. Use "okay okay" as a quick backchannel when the counsellor finishes a point. Occasional "um" or "uh" before a longer answer is natural.
-
-Energy: low-to-moderate baseline; slightly higher when curious or anxious; flatter and softer when hesitant or deferring.`;
+  return `HOW YOU SOUND — real examples of your natural speaking style. Imitate the TEXTURE (the fillers, the rhythm, the light Hindi particles, the hesitation), NEVER repeat any of these verbatim or reuse their facts:
+${lines.map((l) => `- "${l}"`).join("\n")}${neverBlock}`;
+}
 
 // Map a 1-5 trait slider to a personality word (never expose the number).
 function pushinessWord(n) {
@@ -115,11 +149,20 @@ export function buildRealtimeInstructions(session) {
   // (6) LANGUAGE — the C6 policy, single source of truth.
   const language = `LANGUAGE:\n${LANGUAGE_POLICY}`;
 
+  // Address term + the calibrated voice-delivery / how-you-sound blocks.
+  const addressTerm = addressTermOf(s);
+  const voiceDelivery = buildVoiceDelivery(addressTerm);
+  const howYouSound = buildHowYouSound(s.currentPhase, addressTerm, s.id || s.sessionId || "");
+
   // (8) CONVERSATION RULES.
   const phaseName = PHASE_NAMES[s.currentPhase] || PHASE_NAMES[1];
+  const addressRule = addressTerm
+    ? `- Address the counsellor as "${addressTerm}" every second or third sentence. If they ever correct you on sir/ma'am, switch immediately and naturally without making a fuss.`
+    : `- You do not yet know whether the counsellor is "sir" or "ma'am" — listen for how they sound and use the right one. If they correct you, switch immediately and naturally without making a fuss.`;
   const rules = `CONVERSATION RULES:
 - The counsellor leads the call; you respond. You are currently in the ${phaseName} stage of the call.
-- Keep most turns SHORT — about 5 to 15 spoken words. Answer what is asked, raise your real concerns naturally, do not monologue.
+- Keep most turns SHORT — about 10 to 30 spoken words is typical; a few words for quick answers. Answer what is asked, raise your real concerns naturally, do not monologue.
+${addressRule}
 - Never start two of your turns in a row with the same word; rotate how you open.
 - Never raise the same concern twice using the same wording — if you must return to it, say it differently or with new specifics.
 - If the counsellor asks something you genuinely do not know, just say you don't know, like a real person would.
@@ -132,7 +175,8 @@ export function buildRealtimeInstructions(session) {
     knowledge,
     feel ? `HOW YOU FEEL RIGHT NOW:\n${feel}` : "HOW YOU FEEL RIGHT NOW:\nYou are guarded and a little skeptical; this would take real, specific reassurance before you move at all.",
     language,
-    VOICE_DELIVERY,
+    voiceDelivery,
+    howYouSound,
     rules,
   ].filter(Boolean).join("\n\n");
 }

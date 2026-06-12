@@ -9834,5 +9834,462 @@
       }
     ],
     "generatedAt": "2026-06-11T15:32:11.385Z"
+  },
+  {
+    "id": "rep-120599d9",
+    "sessionId": "ses-c5c34655",
+    "assignmentId": null,
+    "counsellorId": "counsellor-1",
+    "counsellorName": "Priya Sharma",
+    "personaName": "Working Professional — Same Field",
+    "scenarioTitle": "Free practice",
+    "status": "ready",
+    "finalScore": 50,
+    "scoreArc": [
+      {
+        "turn": 0,
+        "score": 50
+      },
+      {
+        "turn": 1,
+        "score": 51
+      },
+      {
+        "turn": 2,
+        "score": 52
+      },
+      {
+        "turn": 3,
+        "score": 51
+      },
+      {
+        "turn": 4,
+        "score": 52
+      },
+      {
+        "turn": 5,
+        "score": 53
+      },
+      {
+        "turn": 6,
+        "score": 52
+      },
+      {
+        "turn": 7,
+        "score": 51
+      },
+      {
+        "turn": 8,
+        "score": 50
+      },
+      {
+        "turn": 9,
+        "score": 50
+      },
+      {
+        "turn": 10,
+        "score": 50
+      }
+    ],
+    "benchmarks": {
+      "sessionMinutes": 4.9,
+      "medianPaidMinutes": 25.1,
+      "paymentAskSeen": false,
+      "paymentAskNormPct": 87
+    },
+    "transcript": [
+      {
+        "role": "counsellor",
+        "text": "Hey, hi IT, am I audible to you?",
+        "phase": 1,
+        "turnType": "question",
+        "scoreAfter": 51,
+        "ts": "2026-06-11T23:38:04.564Z",
+        "deliveryMetrics": {
+          "wpm": 176,
+          "pauses": 0,
+          "energyVar": 0.00168,
+          "durationMs": 2730
+        },
+        "scoreReason": "Reasonable audibility check to start the call, a competent Opening move though not exceptional."
+      },
+      {
+        "role": "student",
+        "text": "Hi, yes, I can hear you clearly.",
+        "emotion": "neutral",
+        "phase": 1,
+        "scoreAfter": 51,
+        "ts": "2026-06-11T23:38:09.740Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Okay, so hi IT, this is Rahul from Masai School, and I'll be guiding you through in this counseling session. So before I guide you, may I know your full introduction?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 52,
+        "ts": "2026-06-11T23:38:38.355Z",
+        "deliveryMetrics": {
+          "wpm": 134,
+          "pauses": 0,
+          "energyVar": 0.00177,
+          "durationMs": 13913
+        },
+        "scoreReason": "Polite self-introduction with light agenda-setting and a genuine open discovery question asking the student to introduce themselves, which is good rapport/discovery craft for the opening of Phase 2."
+      },
+      {
+        "role": "student",
+        "text": "Sure, Rahul. So, I’m Adithi. I’m originally from Shimla, Himachal Pradesh. I’ve got about one and a half years of experience in software development. I’m looking to switch my career into something new.",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 52,
+        "ts": "2026-06-11T23:38:42.226Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "اوکے میں نو مطلب انڈائریکٹلی کہ",
+        "phase": 2,
+        "turnType": "statement",
+        "scoreAfter": 51,
+        "ts": "2026-06-11T23:39:01.837Z",
+        "deliveryMetrics": {
+          "wpm": 75,
+          "pauses": 0,
+          "energyVar": 0.00196,
+          "durationMs": 4792
+        },
+        "scoreReason": "Urdu/Hindi transliterated fragment that is incoherent and appears to ignore the student's introduction about wanting to switch careers — fails to build on her answer."
+      },
+      {
+        "role": "student",
+        "text": "Right now I’m a software developer,",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 51,
+        "ts": "2026-06-11T23:39:05.628Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "If you are saying you want to switch into something new, then what is that new thing you are searching for?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 52,
+        "ts": "2026-06-11T23:39:10.828Z",
+        "deliveryMetrics": {
+          "wpm": 154,
+          "pauses": 0,
+          "energyVar": 0.00153,
+          "durationMs": 8186
+        },
+        "scoreReason": "Genuine open discovery question that directly builds on the student's own stated goal of switching careers, inviting them to articulate what they want."
+      },
+      {
+        "role": "student",
+        "text": "So, I’m aiming to move into more AI-driven roles, sir, you know, maybe something around GenAI or automation.",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 52,
+        "ts": "2026-06-11T23:39:14.062Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Okay, this seems interesting. So why now? I mean, you are already doing a job and all. Why do you want to shift your career now?",
+        "phase": 2,
+        "turnType": "question",
+        "scoreAfter": 53,
+        "ts": "2026-06-11T23:39:35.346Z",
+        "deliveryMetrics": {
+          "wpm": 176,
+          "pauses": 0,
+          "energyVar": 0.00205,
+          "durationMs": 8868
+        },
+        "scoreReason": "A reasonable open discovery question that builds on the student's stated goal of switching into AI/GenAI by probing their motivation/timing — solid discovery craft for phase 2."
+      },
+      {
+        "role": "student",
+        "text": "Actually, sir, I’ve seen these new AI tools changing how we work. I don’t want to be left behind.",
+        "emotion": "neutral",
+        "phase": 2,
+        "scoreAfter": 53,
+        "ts": "2026-06-11T23:39:40.832Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Yeah, it seems like a lot of people are similar to you. They are fearing the AI, like, will AI get their jobs or something like that.",
+        "phase": 2,
+        "turnType": "statement",
+        "scoreAfter": 52,
+        "ts": "2026-06-11T23:40:04.500Z",
+        "deliveryMetrics": {
+          "wpm": 150,
+          "pauses": 1,
+          "energyVar": 0.00255,
+          "durationMs": 10821
+        },
+        "scoreReason": "The counsellor generalizes and projects ('a lot of people are similar to you, fearing AI') instead of building on the student's specific answer or asking a genuine follow-up probe."
+      },
+      {
+        "role": "counsellor",
+        "text": "So, you are now currently working, correct, and you don't want to be left behind.",
+        "phase": 3,
+        "turnType": "statement",
+        "scoreAfter": 51,
+        "ts": "2026-06-11T23:40:11.470Z",
+        "deliveryMetrics": {
+          "pauses": 0,
+          "energyVar": 0.00003
+        },
+        "scoreReason": "Repetitive echo of the student's own words without adding value or advancing the presentation; comes across as filler."
+      },
+      {
+        "role": "counsellor",
+        "text": "So what do you want from this counseling session as an end goal?",
+        "phase": 3,
+        "turnType": "question",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T23:40:16.413Z",
+        "scoreReason": "Asks a leading/closed question about the end goal instead of moving into the Presentation phase content; skips agenda-setting and feels premature rather than serving discovery or presentation craft."
+      },
+      {
+        "role": "student",
+        "text": "I want clarity, sir, on the actual value—what I’ll gain from this course.",
+        "emotion": "neutral",
+        "phase": 3,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T23:40:20.623Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Sure, so you have enrolled into this new age software engineering program, so may I know what do you know about this field as of now?",
+        "phase": 3,
+        "turnType": "question",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T23:40:50.635Z",
+        "deliveryMetrics": {
+          "wpm": 155,
+          "pauses": 0,
+          "energyVar": 0.00196,
+          "durationMs": 10092
+        },
+        "scoreReason": "Asks what the student already knows about the field, which is a reasonable discovery/check-in question before presenting, but it's slightly backwards for Presentation phase (should be presenting now) and doesn't tie to anything the student said."
+      },
+      {
+        "role": "student",
+        "text": "Honestly, sir, I just know it’s a seven-month online programme tied to IIT Roorkee and Masai. That’s about it.",
+        "emotion": "neutral",
+        "phase": 3,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T23:40:56.022Z"
+      },
+      {
+        "role": "counsellor",
+        "text": "Okay, so you know that this program is tied to IIT Roorkee, and we want to assure you that we at Masai are 100% giving you credibility that your program will be held by the faculties of IIT faculty only, and you will be also given the certificate from IIT Roorkee only. So it will be a seven-month program going forward, so will you be okay doing it part-time?",
+        "phase": 3,
+        "turnType": "question",
+        "scoreAfter": 50,
+        "ts": "2026-06-11T23:41:44.003Z",
+        "deliveryMetrics": {
+          "wpm": 142,
+          "pauses": 0,
+          "energyVar": 0.00368,
+          "durationMs": 29130
+        },
+        "scoreReason": "Counsellor provides a reasonable explanation about IIT Roorkee faculty and certification, and checks on part-time feasibility — plain presenting and a routine check-in, nothing specifically tied to the student's stated concern about course value."
+      },
+      {
+        "role": "student",
+        "text": "Part-time could work, sir, but what’s the class timing like?",
+        "emotion": "neutral",
+        "phase": 3,
+        "scoreAfter": 50,
+        "ts": "2026-06-11T23:41:49.655Z"
+      }
+    ],
+    "generatedAt": "2026-06-11T23:42:46.163Z",
+    "fallback": false,
+    "regenerable": false,
+    "overall": {
+      "percent": 43,
+      "band": "Needs Work",
+      "outcome": "Not Converted",
+      "outcomeDetail": "The counsellor never made the payment ask, the student did not agree to pay ₹4,000, and the call ended with an open scheduling question and no follow-up anchor, consistent with the 50/100 satisfaction score.",
+      "headline": "Next session, focus on pacing down, listening fully, and tailoring the value pitch to the student's specific AI/GenAI career goals instead of leading with generic IIT credibility."
+    },
+    "rubric": [
+      {
+        "key": "rapport",
+        "label": "Rapport & Opening",
+        "weight": 10,
+        "score": 1,
+        "level": "Poor",
+        "justification": "Opens with 'Hey, hi IT' (wrong, garbled name) and shows no awareness of the student before speaking; the disjointed start and the later Urdu-script gibberish in turn 4 ('اوکے میں نو مطلب انڈائریکٹلی کہ') match the anchor for breaking trust and a confused opening."
+      },
+      {
+        "key": "discovery",
+        "label": "Needs Discovery",
+        "weight": 15,
+        "score": 2,
+        "level": "Developing",
+        "justification": "Covers work status, goal, and a superficial 'why now', but never probes the student's current package vs expected, the family/salary context, or the GenAI/automation specifics she mentioned, falling short of the standard qualification checklist anchor (3) and closer to surface-level."
+      },
+      {
+        "key": "presentation",
+        "label": "Programme Presentation",
+        "weight": 15,
+        "score": 2,
+        "level": "Developing",
+        "justification": "No curriculum walkthrough, no module list, no project/placement detail — only a credential reassurance ('IIT faculty... IIT Roorkee certificate') and a part-time feasibility check; the student explicitly said she has almost no information, and the counsellor still did not give an overview, approaching anchor 1 territory."
+      },
+      {
+        "key": "objections",
+        "label": "Objection Handling",
+        "weight": 20,
+        "score": 3,
+        "level": "Competent",
+        "justification": "No objections were actually raised by the student (tracked count = 0) and the counsellor did not pre-empt any, so he neither reacted nor anticipated; score reflects that he did not mishandle anything because nothing was raised, matching the 'only reacts' midpoint behaviour."
+      },
+      {
+        "key": "knowledge",
+        "label": "Product Knowledge & Accuracy",
+        "weight": 15,
+        "score": 3,
+        "level": "Competent",
+        "justification": "The IIT Roorkee tie-up, certificate claim, and 7-month duration are stated correctly, but no fee, EMI, seat-block, qualifier test, or module information is offered for verification, so accuracy beyond the basics is untested."
+      },
+      {
+        "key": "closing",
+        "label": "Closing & Payment Ask",
+        "weight": 10,
+        "score": 1,
+        "level": "Poor",
+        "justification": "No payment ask was made (tracked: payment asked = false), no follow-up was anchored, and the call effectively ends after turn 16 with a timing question still open, well short of even a plain timely ask."
+      },
+      {
+        "key": "communication",
+        "label": "Communication & Empathy",
+        "weight": 10,
+        "score": 2,
+        "level": "Developing",
+        "justification": "Polite and not overtly rude, but turn 10 ('a lot of people are similar to you... they are fearing the AI, like, will AI get their jobs') is dismissive of the student's stated motivation, and there is no validation of her situation — closer to flat than to empathetic."
+      },
+      {
+        "key": "voice_delivery",
+        "label": "Voice Delivery",
+        "weight": 5,
+        "score": 2,
+        "level": "Developing",
+        "justification": "Pace and tone are generally intelligible (turn 2 at 134wpm is steady), but turn 4 is a disfluent, untranslated Urdu/Hindi fragment that breaks flow, and energy variance stays at 0.00 throughout, sitting below the 'clear and steady' anchor (3) due to the disjointed moment."
+      }
+    ],
+    "phaseBreakdown": [
+      {
+        "phase": 1,
+        "name": "Opening",
+        "summary": "Opening misfires with a garbled name ('hi IT'), no acknowledgment of the student, and an unintelligible Urdu-script line in turn 4, immediately eroding trust.",
+        "didWell": "Confirmed he is from Masai and asked for an introduction.",
+        "toImprove": "Use the student's correct name, deliver a clean professional opener, and never let an untranslated language fragment appear in the first minute."
+      },
+      {
+        "phase": 2,
+        "name": "Discovery",
+        "summary": "Discovery touched on work, goal, and timing but stayed at surface level; the GenAI/automation goal was acknowledged but not unpacked, and no package or family context was explored.",
+        "didWell": "Asked a reasonable 'why now' and an end-goal question that surfaced the student's desire for clarity on value.",
+        "toImprove": "Probe current vs target compensation, the specific AI roles she wants, her current tech stack, and any family/financial context driving the switch."
+      },
+      {
+        "phase": 3,
+        "name": "Presentation",
+        "summary": "Presentation was reduced to an IIT credential reassurance and a part-time feasibility question — no modules, projects, tools, or fee structure were shared, despite the student admitting she barely knows the program.",
+        "didWell": "Correctly stated the 7-month duration and IIT Roorkee certificate association.",
+        "toImprove": "Walk through the 8 modules, capstone, and tie each back to her GenAI/automation goal; introduce fee, seat-block, and the qualifier test only after value is established."
+      },
+      {
+        "phase": 4,
+        "name": "Objections & Negotiation",
+        "summary": "No objections were raised and none were pre-empted; the counsellor missed clear openings to surface timing, fee-sensitivity, or employer-sponsored learning concerns that a working professional typically has.",
+        "didWell": "Did not mishandle any objection because none occurred.",
+        "toImprove": "Pre-empt common working-professional objections (weekend schedule, fee vs salary, time-to-completion, employer support) and invite them explicitly."
+      },
+      {
+        "phase": 5,
+        "name": "Close",
+        "summary": "Close is absent — no payment ask, no seat-block proposal, no follow-up time was anchored; the call trails off after a class-timing question.",
+        "didWell": "Asked whether part-time would work, opening the door for a schedule answer.",
+        "toImprove": "Anchor a specific follow-up time, introduce the ₹4,000 seat-block with a clear next step, and aim the payment ask near the 78% mark of the call."
+      }
+    ],
+    "strengths": [
+      {
+        "point": "Opened with a clear introduction and immediately set a discovery-first agenda by asking for the student's full background.",
+        "quote": "may I know your full introduction?"
+      },
+      {
+        "point": "Asked a strong 'why now' question to surface the underlying motivation, which is essential when the student is already employed and risk-averse.",
+        "quote": "So why now? I mean, you are already doing a job and all. Why do you want to shift your career now?"
+      },
+      {
+        "point": "Confirmed the end goal of the session before pitching, which shows some structure around objectives.",
+        "quote": "So what do you want from this counseling session as an end goal?"
+      }
+    ],
+    "improvements": [
+      {
+        "point": "Speaking pace was too fast and inconsistent across turns (134–176 wpm), and the session jumped from greeting to heavy IIT-credibility pitch in under 90 seconds, which made Adithi feel processed rather than heard.",
+        "quote": "we at Masai are 100% giving you credibility that your program will be held by the faculties of IIT faculty only",
+        "suggestion": "Slow delivery to ~110–120 wpm, add 1–2 second pauses after each student answer, and hold back the credential pitch until needs are fully uncovered. A good rule: 70% listening, 30% talking in the first 10 minutes."
+      },
+      {
+        "point": "The counsellor spoke in Urdu/Hindi mid-session ('اوکے میں نو مطلب انڈائریکٹلی کہ') and used a dismissive framing of the student's AI anxiety, which risks alienating a professional who is taking a real career risk.",
+        "quote": "Yeah, it seems like a lot of people are similar to you. They are fearing the AI, like, will AI get their jobs or something like that.",
+        "suggestion": "Stay in the customer's primary language and validate the concern before redirecting: 'That fear is very real and actually a smart signal that you're reading the market right. Let's talk about what specifically would make this move worth it for you.'"
+      },
+      {
+        "point": "The value pitch ignored the student's stated interest in GenAI/automation and led with generic IIT branding instead of mapping curriculum modules, projects, or outcomes to her AI-driven target roles.",
+        "quote": "I want clarity, sir, on the actual value—what I'll gain from this course.",
+        "suggestion": "Mirror her goal: 'Since you're targeting GenAI and automation, let me show you exactly which modules cover LLMs, RAG, and deployment, and what kind of capstone you'd build.' Always tie one feature to one of her stated goals before moving on."
+      }
+    ],
+    "keyMoments": [
+      {
+        "turn": 7,
+        "type": "miss",
+        "note": "Student explicitly named 'AI-driven roles… GenAI or automation' as her target, but the counsellor never revisited this thread — a critical miss given the program is called 'New Age Software Engineering' and should be sold on this exact fit."
+      },
+      {
+        "turn": 10,
+        "type": "miss",
+        "note": "Counsellor reduced a legitimate career anxiety to a generic 'everyone fears AI' comment instead of empathising, which likely contributed to the mid-range 50/100 satisfaction score from a working professional who needed to feel understood."
+      },
+      {
+        "turn": 13,
+        "type": "best",
+        "note": "Student asked for 'clarity on actual value' — a textbook buying signal. The counsellor should have leaned in here with a tailored value stack, but instead jumped to 'what do you know about this program?', resetting rapport."
+      },
+      {
+        "turn": 17,
+        "type": "miss",
+        "note": "Student raised a practical, decision-blocking question on class timings (crucial for a working professional considering part-time study), and this is where the transcript ends — the counsellor must always close the loop on logistics before discussing price or commitment."
+      }
+    ],
+    "drills": [
+      {
+        "title": "First 90 Seconds: Warm Opener with Personalization",
+        "focusCriterion": "rapport",
+        "objectionCategory": "trust_legitimacy",
+        "instruction": "Open 10 mock calls with a scripted 90-second warm opener that (a) uses the prospect's name twice, (b) references one specific detail they shared (e.g., 'Adithi from Shimla, 1.5 years in software dev'), and (c) asks a low-stakes personal question before pitching (e.g., 'Before I dive in, how's the weather in Shimla treating you?'). Record yourself, then score yourself on: name usage, personalization hook, question asked before product mention, and tone warmth. Target: opener should consume at least 4 conversational turns before any programme mention."
+      },
+      {
+        "title": "Pain-Digging Discovery Loop (5-Why Style)",
+        "focusCriterion": "discovery",
+        "objectionCategory": "course_fit_relevance",
+        "instruction": "Run 5 discovery rounds with a working-professional persona who gives surface answers like 'I want to move into AI.' For each round, you must ask at least 3 follow-up 'why' or 'tell me more' questions before pitching anything, surfacing: (1) specific daily tasks they want to escape, (2) measurable income/role goal with a timeline, (3) skills gap they've already self-identified, (4) what 'success' looks like 6 months post-programme. After each round, self-score: did I uncover a number, a timeline, an emotion, and a stake? If any is missing, redo the round."
+      },
+      {
+        "title": "Assumptive Close with Two Options",
+        "focusCriterion": "closing",
+        "objectionCategory": "emi_affordability",
+        "instruction": "Practice 8 mock closes where, after summarizing the prospect's stated goals back to them, you MUST end with an assumptive two-option close (e.g., 'Adithi, based on what you've shared — moving into GenAI roles within 6 months — would you like to start with the EMI option at ₹X/month, or the one-shot payment with the early-bird discount?'). If the prospect hesitates, your next line must be a micro-close addressing the hesitation (e.g., 'What would need to be true for one of these to feel right for you today?'). Record every attempt and mark pass/fail on: (a) clear summary, (b) two named options, (c) silence held for 5 seconds after the ask, (d) graceful handling of 'I'll think about it' with a follow-up commitment ask (date and time of next call)."
+      }
+    ]
   }
 ]

@@ -61,9 +61,9 @@ function sampleSession(overrides = {}) {
   };
 }
 
-test("S2: realtime prompt is under the 8000-char budget", () => {
+test("S2: realtime prompt is under the 9500-char budget", () => {
   const out = buildRealtimeInstructions(sampleSession());
-  assert.ok(out.length < 8000, `expected < 8000 chars, got ${out.length}`);
+  assert.ok(out.length < 9500, `expected < 9500 chars, got ${out.length}`);
   assert.ok(out.length > 1000, "prompt should not be empty/degenerate");
 });
 
@@ -81,7 +81,7 @@ test("S2: realtime prompt carries the C6 language policy + VOICE DELIVERY block"
   assert.ok(out.includes(LANGUAGE_POLICY), "language policy must appear verbatim");
   assert.ok(out.includes("VOICE DELIVERY"), "VOICE DELIVERY block must be present");
   // Real numbers from the research doc, baked in (not read at runtime).
-  assert.ok(out.includes("125–155 WPM"), "VOICE DELIVERY should carry the WPM band");
+  assert.ok(out.includes("125-155 WPM"), "VOICE DELIVERY should carry the WPM band");
 });
 
 test("S2: the eight required sections are present and ordered", () => {
@@ -105,10 +105,31 @@ test("S2: the eight required sections are present and ordered", () => {
   }
 });
 
-test("S2: turn-length 5-15 words + no-emotion-label rules are present", () => {
+test("S2: turn-length 10-30 words + no-emotion-label rules are present", () => {
   const out = buildRealtimeInstructions(sampleSession());
-  assert.ok(/5 to 15/.test(out), "should state the 5-15 word target");
+  assert.ok(/10 to 30/.test(out), "should state the 10-30 word target");
   assert.ok(/NO emotion labels/i.test(out), "should forbid emotion labels in speech");
+});
+
+test("S2: HOW YOU SOUND injects >= 5 exemplar lines for the phase", () => {
+  const out = buildRealtimeInstructions(sampleSession());
+  assert.ok(out.includes("HOW YOU SOUND"), "HOW YOU SOUND section must be present");
+  // Count bulleted exemplar lines inside the HOW YOU SOUND block (before the
+  // antiPatterns "NEVER do these" sub-list).
+  const idx = out.indexOf("HOW YOU SOUND");
+  const block = out.slice(idx, out.indexOf("CONVERSATION RULES"));
+  const head = block.split("NEVER do these")[0];
+  const exemplarCount = (head.match(/^- "/gm) || []).length;
+  assert.ok(exemplarCount >= 5, `expected >= 5 exemplar lines, got ${exemplarCount}`);
+});
+
+test("S2: ma'am address renders in HOW YOU SOUND when session.counsellorAddress is ma'am", () => {
+  const out = buildRealtimeInstructions(sampleSession({ counsellorAddress: "ma'am" }));
+  const idx = out.indexOf("HOW YOU SOUND");
+  const block = out.slice(idx, out.indexOf("CONVERSATION RULES"));
+  const head = block.split("NEVER do these")[0];
+  assert.ok(/ma'am/i.test(head), "exemplar lines should render the ma'am address term");
+  assert.ok(!/\bsir\b/i.test(head), "no standalone 'sir' should survive ma'am rendering");
 });
 
 test("S2: open + answered objections steer the prompt with banned phrasing", () => {

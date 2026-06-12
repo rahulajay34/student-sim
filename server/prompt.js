@@ -19,14 +19,34 @@ import { renderPersonalitySection, DEFAULT_PERSONALITY, rollSessionFlavour } fro
 import { voiceBankFor, registerStatsFor } from "./register.js";
 import { summarizeForPrompt } from "./objections.js";
 import { computeDisposition, renderDispositionSection, stageToLegacyHint } from "./disposition.js";
+import { exemplarsFor, renderAddress } from "./styleExemplars.js";
 
 export { fmtINR };
 
+// Resolve a session's counsellor-address term, fail-soft for old sessions that
+// predate the field (missing/invalid -> null = "listen and use sir or ma'am").
+function addressTermOf(session) {
+  const a = session?.counsellorAddress;
+  return (a === "sir" || a === "ma'am") ? a : null;
+}
+
+// The behaviour line telling the student how to address the counsellor, plus the
+// "switch immediately if corrected" rule. Threaded into the prompt's behaviour
+// section. null term -> "listen and use sir or ma'am accordingly".
+function buildAddressSection(addressTerm) {
+  if (addressTerm) {
+    return `HOW YOU ADDRESS THE COUNSELLOR:\n- Address the counsellor as "${addressTerm}" every second or third sentence (matching the exemplar lines). If they ever correct you on sir/ma'am, switch immediately and naturally without making a fuss.`;
+  }
+  return `HOW YOU ADDRESS THE COUNSELLOR:\n- You do not yet know whether the counsellor is "sir" or "ma'am" — listen for how they sound and use the right one accordingly. If they correct you, switch immediately and naturally without making a fuss.`;
+}
+
 // Contract C6 — the SINGLE source of truth for the language policy, used verbatim
-// everywhere a language rule appears in the student prompt. Natural Indian English;
-// a light Hindi word only occasionally; never full Hindi sentences unless the
-// counsellor themselves speaks full Hindi sentences repeatedly.
-export const LANGUAGE_POLICY = "Speak natural Indian English. At most one light Hindi word every few turns; never full Hindi sentences unless the counsellor themselves speaks full Hindi sentences repeatedly.";
+// everywhere a language rule appears in the student prompt. Calibrated dial:
+// natural Indian English with a LIGHT Hindi PARTICLE woven in roughly once every
+// couple of turns (particles only — haan, thoda, achha, matlab, sentence-final
+// 'na'); never full Hindi sentences or verb phrases unless the counsellor
+// themselves speaks full Hindi sentences repeatedly.
+export const LANGUAGE_POLICY = "Speak natural Indian English. Weave in a light Hindi particle (haan, thoda, achha, matlab, sentence-final 'na') roughly once every couple of turns — particles only, never full Hindi sentences or Hindi verb phrases, unless the counsellor themselves speaks full Hindi sentences repeatedly.";
 
 const DEFAULT_BOOKING = "₹4,000";
 
@@ -330,26 +350,46 @@ function buildVerbositySection(cfg, currentPhase, flavour) {
 // just a self-intro) and Close (phase 5). The Hinglish backchannel block is
 // dropped — it pushed the register the wrong way and added little. Renders ""
 // when no artifacts exist (fail-soft).
-function buildRegisterReferenceSection(cfg, persona, currentPhase) {
-  if (currentPhase < 2 || currentPhase > 4) return "";
+// PHASES 2-4 mix the mined voice-bank lines with the owner-calibrated style
+// exemplars for that phase (address-term rendered), deduped, still small: up to 3
+// voice-bank stage lines + up to 3 style-exemplar lines. Phase 5 (Close) now also
+// gets a couple of style-exemplar close lines (the voice bank stays gated to 2-4).
+function buildRegisterReferenceSection(cfg, persona, currentPhase, seed = "", addressTerm = null) {
+  if (currentPhase < 2 || currentPhase > 5) return "";
   const category = persona?.category || "graduate";
-  const bank = voiceBankFor(category, currentPhase, 6)
-    .map((e) => (typeof e === "string" ? e : e?.text))
-    .filter(Boolean);
 
-  // Dedup while preserving rotation order; cap the stage lines at 3.
   const seen = new Set();
+  const take = (line, into, cap) => {
+    if (into.length >= cap) return;
+    const t = typeof line === "string" ? line.trim() : "";
+    if (!t) return;
+    const k = t.toLowerCase();
+    if (seen.has(k)) return;
+    seen.add(k);
+    into.push(t);
+  };
+
+  // Mined voice-bank lines (phases 2-4 only — the bank is not gated for phase 5).
   const stageLines = [];
-  for (const t of bank) {
-    const k = t.trim().toLowerCase();
-    if (k && !seen.has(k)) { seen.add(k); stageLines.push(t.trim()); }
-    if (stageLines.length >= 3) break;
+  if (currentPhase >= 2 && currentPhase <= 4) {
+    const bank = voiceBankFor(category, currentPhase, 6)
+      .map((e) => (typeof e === "string" ? e : e?.text))
+      .filter(Boolean);
+    for (const t of bank) take(t, stageLines, 3);
   }
 
-  if (!stageLines.length) return "";
+  // Owner-calibrated style exemplars for this phase (address-rendered, deduped
+  // against the voice-bank lines above).
+  const styleLines = [];
+  for (const l of exemplarsFor(currentPhase, 3, seed)) {
+    take(renderAddress(l, addressTerm), styleLines, 3);
+  }
+
+  const all = [...stageLines, ...styleLines];
+  if (!all.length) return "";
 
   return `${cfg.registerRefIntro}
-${stageLines.map((t) => `- "${t}"`).join("\n")}`;
+${all.map((t) => `- "${t}"`).join("\n")}`;
 }
 
 // NATURAL TANGENTS — only rendered when mood is distracted/chatty AND the phase
@@ -428,7 +468,11 @@ export function buildSystemPrompt(persona, scenario, currentPhase, satisfactionS
   const naturalSpeechSection = buildNaturalSpeechSection(cfg);
   const fewShotSection = buildFewShotSection(cfg);
   const verbositySection = buildVerbositySection(cfg, currentPhase, resolvedFlavour);
-  const registerRefSection = buildRegisterReferenceSection(cfg, persona, currentPhase);
+  // Style exemplars rotate by the session id; the address term decides sir/ma'am.
+  const seed = dispositionSession.id || "";
+  const addressTerm = addressTermOf(session);
+  const addressSection = buildAddressSection(addressTerm);
+  const registerRefSection = buildRegisterReferenceSection(cfg, persona, currentPhase, seed, addressTerm);
   const tangentSection = buildTangentSection(cfg, currentPhase, resolvedFlavour);
 
   const identityLine = persona.voiceName
@@ -456,6 +500,8 @@ YOUR PERSONA-SPECIFIC BEHAVIOUR BY PHASE:
 ${persona.behaviourPrompt}
 
 ${cfg.behaviourRules}
+
+${addressSection}
 
 ${cfg.registerNote}
 

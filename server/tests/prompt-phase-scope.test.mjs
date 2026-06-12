@@ -93,9 +93,14 @@ test("non-final phases include a single next-phase pointer; phase 5 does not", (
 
 // ── Register exemplars only in middle phases (2-4) ───────────────────────────
 
-test("register exemplars appear only in phases 2-4 (skipped in 1 and 5)", () => {
+test("register exemplars appear in phases 2-5 (skipped only in 1)", () => {
+  // Phase 1 (just a self-intro) still skips the register reference; phases 2-5 now
+  // carry it — phases 2-4 mix mined voice-bank lines with style exemplars, and
+  // phase 5 (Close) surfaces the close-response style exemplars.
   assert.equal(prompt(1).includes(REGREF_MARKER), false, "phase 1 skips register ref");
-  assert.equal(prompt(5).includes(REGREF_MARKER), false, "phase 5 skips register ref");
+  for (const phase of [2, 3, 4, 5]) {
+    assert.equal(prompt(phase).includes(REGREF_MARKER), true, `phase ${phase} includes register ref`);
+  }
 });
 
 // ── Coherence: every phase prompt still ends with the emotion-tag instruction ─
