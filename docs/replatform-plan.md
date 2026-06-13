@@ -60,4 +60,7 @@ ProtectedRoute accepts role arrays; session routes allow `["counsellor","admin"]
 - Class-end report burst (50×3 LLM calls) → worker isolation now; pgmq queue if provider 429s.
 
 ## Verification
-`node --test server/tests/*.mjs` · client `npm run lint` + `npm run build` · live voice session transcript recount (fillers ≤ ~1/3 turns; no fee re-raise after pivot) · smoke-api.mjs (rewritten) against deployed stack · 401/403 authz assertions · report generation e2e incl. sweeper recovery.
+`node --test server/tests/*.mjs` (188) · client `npm run lint` + `npm run build` · `node scripts/smoke-edge.mjs` (deployed-stack e2e: domain-restricted signup, JWT auth, 401/403, practice session, live Sonnet turns, /end + report worker) · `node scripts/check-edge-bindings.mjs` (static import-binding sweep) · live voice session transcript recount (fillers ≤ ~1/3 turns; no fee re-raise after pivot).
+
+## Load test (2026-06-13, against the live production stack)
+`node scripts/loadtest-edge.mjs <N>` — fires N concurrent text-mode practice sessions × 3 turns (the heaviest path: 2 Claude calls/turn + DB lease cycle). Results: **10/25/50 sessions all 100% success, zero errors, zero 429s**; turn latency p50 ~5.5s and p95 8.5→9.4s — **flat across a 5× load increase**, i.e. nowhere near saturation (per-turn time is Claude generation, not stack contention). Anthropic key is on a high tier (10k RPM / 10M ITPM); 50 sessions ≈ 2% of token limit. Voice (the production use) is lighter on our infra than this text test — audio is browser↔OpenAI direct, we do 1 background /observe scoring call per turn pair. Conclusion: **50 concurrent counselling sessions validated.** Prompt-cache activation (currently inert) only matters as a cost lever well beyond this.
