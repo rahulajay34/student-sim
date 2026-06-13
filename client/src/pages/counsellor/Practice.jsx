@@ -135,7 +135,12 @@ export default function Practice() {
   function handleSubmit(e) {
     e.preventDefault();
     setTouched(true);
-    if (!personaId) return;
+    if (!personaId) {
+      // The persona field can be scrolled far above the button — bring it
+      // into view so the blocked submit is never a silent no-op.
+      document.getElementById("practice-persona")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
 
     navigate("/app/session/new", {
       state: {
@@ -221,7 +226,7 @@ export default function Practice() {
             {courses.length > 0 && <div className="h-px bg-line" />}
 
             {/* Persona */}
-            <div className="space-y-3">
+            <div id="practice-persona" className="space-y-3">
               <Select
                 label="Student persona"
                 placeholder="Select a persona…"
@@ -335,7 +340,13 @@ export default function Practice() {
 
             <div className="flex flex-col-reverse items-stretch gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
               <p className="flex items-center gap-2 text-xs text-muted">
-                <span>Self-directed practice — a full report is saved when you finish.</span>
+                {personaMissing ? (
+                  <span role="alert" className="font-medium text-danger">
+                    Choose a student persona above to start.
+                  </span>
+                ) : (
+                  <span>Self-directed practice — a full report is saved when you finish.</span>
+                )}
                 {selectedPersona && <DifficultyBadge level={difficulty} />}
               </p>
               <Button type="submit" className="sm:min-w-[10rem]">
