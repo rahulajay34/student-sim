@@ -2,9 +2,10 @@
 // CHANGES:
 //   - Import paths updated to local lib modules.
 //   - chat/extractJson/DETERMINISTIC_SAMPLING imported from ./llm.js.
-//   - No process.env usage — no change needed.
+//   - getEnv from ../env.js for REPORT_CALL_TIMEOUT_MS / REPORT_EFFORT knobs.
 
 import { chat as realChat, DETERMINISTIC_SAMPLING, extractJson } from "./llm.js";
+import { getEnv } from "../env.js";
 import { BENCHMARKS, STRUCTURE } from "./grounding.js";
 
 let _chat = realChat;
@@ -229,9 +230,13 @@ function sanitizeObjectionCategory(raw) {
   return "other";
 }
 
-// 100s per attempt: Call A (rubric, reasoning mode + large schema) was observed
-// hovering around 60s in production — 60s caused spurious fallback reports.
-const CALL_TIMEOUT_MS = 100_000;
+// Per-call timeout + effort, env-tunable (REPORT_CALL_TIMEOUT_MS / REPORT_EFFORT).
+// Defaults sized so long transcripts (e.g. a 175-turn voice call) still finish
+// inside the edge function wall-clock cap: effort "low" keeps Call A (rubric
+// grading) reliably ~35s — "medium" was observed exceeding 100s on long
+// transcripts and falling back to a neutral placeholder report.
+const CALL_TIMEOUT_MS = Number(getEnv("REPORT_CALL_TIMEOUT_MS")) || 90_000;
+const REPORT_EFFORT = getEnv("REPORT_EFFORT") || "low";
 
 const REPORT_A_SCHEMA = {
   type: "object",
@@ -346,7 +351,7 @@ async function runCall(label, prompt, jsonSchema) {
     // effort medium: high-effort report calls exceeded the edge function
     // wall-clock cap (A+B then C at ~90s each). Medium fits with margin and
     // adaptive thinking still engages on hard grading.
-    effort: "medium",
+    effort: REPORT_EFFORT,
     timeoutMs: CALL_TIMEOUT_MS,
     maxRetries: 0,
     jsonSchema,

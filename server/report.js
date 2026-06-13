@@ -266,10 +266,13 @@ function sanitizeObjectionCategory(raw) {
 }
 
 // ─── LLM call options ───────────────────────────────────────────────────────
-// Each fan-out call uses mode:"reasoning" for quality, with a 100s timeout.
-// Two retry attempts; both use reasoning mode. (100s: Call A was observed
-// hovering around 60s in production — 60s caused spurious fallback reports.)
-const CALL_TIMEOUT_MS = 100_000;
+// Each fan-out call uses mode:"reasoning", with a per-call timeout and effort
+// that are env-tunable. Defaults chosen so long transcripts (e.g. 175-turn
+// voice calls) still finish inside the edge function wall-clock cap: effort
+// "low" keeps Call A (rubric grading) reliably fast — medium was observed
+// exceeding 100s on long transcripts and falling back to a neutral report.
+const CALL_TIMEOUT_MS = Number(process.env.REPORT_CALL_TIMEOUT_MS) || 90_000;
+const REPORT_EFFORT = process.env.REPORT_EFFORT || "low";
 
 // ─── JSON schemas for structured output ─────────────────────────────────────
 // Call A: rubric grading + phase breakdown.
@@ -390,10 +393,7 @@ async function runCall(label, prompt, jsonSchema) {
   const callOpts = {
     ...DETERMINISTIC_SAMPLING,
     mode: "reasoning",
-    // effort medium: keeps report fan-out latency well under the edge
-    // function wall-clock cap (mirrors the _shared port); adaptive thinking
-    // still engages on hard grading.
-    effort: "medium",
+    effort: REPORT_EFFORT,
     timeoutMs: CALL_TIMEOUT_MS,
     maxRetries: 0,
     jsonSchema,
