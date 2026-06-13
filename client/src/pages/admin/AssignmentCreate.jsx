@@ -176,7 +176,7 @@ export default function AssignmentCreate() {
     setProfileId(id);
     // Pre-fill the situation text box with the selected profile's description.
     const prof = profileChoices.find((p) => p.id === id) || null;
-    setSituation(prof ? prof.description : "");
+    setSituation((prof && prof.description) || "");
   }
 
   function handleReshuffle() {

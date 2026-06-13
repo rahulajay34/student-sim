@@ -438,15 +438,14 @@ app.delete("/rubric-templates/:id", wrap(async (c) => {
 app.get("/lead-profiles", wrap(async (c) => {
   const origin = getOrigin(c.req.raw);
   await authenticate(c.req.raw);
-  const db = getSupabaseAdmin();
-  let q = db.from("lead_profiles").select("id, category, name, gender, age, occupation, education, city, label, data");
+  // Through the store mapper so legacy extras (description, …) are restored
+  // to top-level — the clients read profile.description directly.
+  let profiles = await store.getAll("leadProfiles");
   const categoryFilter = c.req.query("category");
   if (categoryFilter) {
-    q = q.eq("category", categoryFilter);
+    profiles = profiles.filter((p) => p.category === categoryFilter);
   }
-  const { data, error } = await q;
-  if (error) throw new Error(`lead_profiles query failed: ${error.message}`);
-  return jsonResponse(data || [], 200, origin);
+  return jsonResponse(profiles, 200, origin);
 }));
 
 // ─────────────────────────────────────────────────────────────────────────────

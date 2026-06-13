@@ -199,9 +199,21 @@ function personaToRow(obj) {
 // ─────────────────────────────────────────────────────────────────────────────
 // COURSES mapper
 // ─────────────────────────────────────────────────────────────────────────────
+// Promoted course columns (legacy camelCase names). Everything else on the
+// legacy Course object (curriculum, outcomes, eligibility, usps, batchInfo,
+// sourceUrl, scrapedAt, faqQuestions, …) lives in the `data` jsonb.
+const COURSE_COLUMN_KEYS = new Set([
+  "id", "slug", "name", "category", "institute", "partner", "duration",
+  "format", "feeTotal", "feeBooking", "feeNote", "emiNote", "active",
+  "createdAt", "updatedAt", "data",
+]);
 function courseFromRow(row) {
   if (!row) return null;
   return {
+    // Restore the legacy extras to top-level (the legacy Course shape has no
+    // `data` wrapper — buildKnowledgeBounds & the UI read curriculum/
+    // faqQuestions/etc. directly). Promoted columns win on key conflicts.
+    ...(row.data ?? {}),
     id: row.id,
     slug: row.slug ?? null,
     name: row.name,
@@ -215,7 +227,6 @@ function courseFromRow(row) {
     feeNote: row.fee_note ?? null,
     emiNote: row.emi_note ?? null,
     active: row.active,
-    data: row.data ?? {},
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -235,7 +246,18 @@ function courseToRow(obj) {
   if (obj.feeNote !== undefined) r.fee_note = obj.feeNote;
   if (obj.emiNote !== undefined) r.emi_note = obj.emiNote;
   if (obj.active !== undefined) r.active = obj.active;
-  if (obj.data !== undefined) r.data = obj.data;
+  // Re-bury legacy extras into the data jsonb. Full rebuild when extras are
+  // present (admin course PUTs send the complete legacy object); an explicit
+  // obj.data wins for callers that already use the row shape.
+  if (obj.data !== undefined) {
+    r.data = obj.data;
+  } else {
+    const extras = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (!COURSE_COLUMN_KEYS.has(k)) extras[k] = v;
+    }
+    if (Object.keys(extras).length) r.data = extras;
+  }
   return r;
 }
 
@@ -267,9 +289,17 @@ function rubricTemplateToRow(obj) {
 // ─────────────────────────────────────────────────────────────────────────────
 // LEAD PROFILES mapper (minimal camel conversion needed)
 // ─────────────────────────────────────────────────────────────────────────────
+const LEAD_PROFILE_COLUMN_KEYS = new Set([
+  "id", "category", "name", "gender", "age", "occupation", "education",
+  "city", "label", "data",
+]);
 function leadProfileFromRow(row) {
   if (!row) return null;
   return {
+    // Restore legacy extras (description, …) to top-level — the legacy shape
+    // has description as a first-class field (Practice prefill, lead cards,
+    // assignment picker all read profile.description directly).
+    ...(row.data ?? {}),
     id: row.id,
     category: row.category,
     name: row.name ?? null,
@@ -279,7 +309,6 @@ function leadProfileFromRow(row) {
     education: row.education ?? null,
     city: row.city ?? null,
     label: row.label ?? null,
-    data: row.data ?? {},
   };
 }
 function leadProfileToRow(obj) {
@@ -293,7 +322,15 @@ function leadProfileToRow(obj) {
   if (obj.education !== undefined) r.education = obj.education;
   if (obj.city !== undefined) r.city = obj.city;
   if (obj.label !== undefined) r.label = obj.label;
-  if (obj.data !== undefined) r.data = obj.data;
+  if (obj.data !== undefined) {
+    r.data = obj.data;
+  } else {
+    const extras = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (!LEAD_PROFILE_COLUMN_KEYS.has(k)) extras[k] = v;
+    }
+    if (Object.keys(extras).length) r.data = extras;
+  }
   return r;
 }
 
