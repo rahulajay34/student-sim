@@ -104,6 +104,10 @@ Session   { id, assignmentId|null, counsellorId, mode:"assigned"|"practice",
             transcript:[{role:"counsellor"|"student", text, phase, scoreAfter, ts,
                          turnType?, scoreReason?, deliveryMetrics?,  // counsellor entries
                          emotion? }],                                  // student entries
+            integrityProbe:{id,category,question,groundTruth}|null,
+            //   snapshot of the admin-assigned integrity trap (one per session, deterministic pick via FNV-1a
+            //   hash of session id over active probes). Admin-only: stripped from GET /sessions/:id for
+            //   non-admins (groundTruth must never reach the counsellor being graded).
             status:"active"|"ended", startedAt, endedAt|null }
 Report    { id, sessionId, assignmentId|null, counsellorId, counsellorName, personaName, scenarioTitle,
             status:"generating"|"ready"|"fallback",  // "generating" while the background LLM job runs;
@@ -136,9 +140,15 @@ Report    { id, sessionId, assignmentId|null, counsellorId, counsellorName, pers
             scoreArc:[{turn,score}],
             transcript: (copy of session.transcript — persisted immediately in the stub),
             finalScore: number|null,        // session.satisfactionScore at end time — persisted in the stub
+            integrityCheck: { probeId, category, question, raised:boolean,
+                              verdict:"honest"|"evasive"|"overpromised"|"lied"|"not_raised",
+                              severity:0|1|2|3, evidenceQuote:string, explanation:string } | null,
+            //   Admin/superadmin-only verdict from Call E (independent LLM call, mode:"reasoning", parallel with A/B).
+            //   severity: 0 none … 3 clear false assurance / liability risk. absent (undefined) for old sessions/reports.
+            //   Stripped for non-admins at edge: deleted from GET /reports and GET /reports/:id responses.
             generatedAt }
-            // Report generation: LLM calls A (rubric + phaseBreakdown), B (narrative + keyMoments), C (drills), D (personaAddressed)
-            //   run concurrently via Promise.allSettled. Fail-soft: A fail → fallback; B/C/D fail → partial:true + section defaults.
+            // Report generation: LLM calls A (rubric + phaseBreakdown), B (narrative + keyMoments), C (drills), D (personaAddressed), E (integrityCheck)
+            //   run concurrently via Promise.allSettled. Fail-soft: A fail → fallback; B/C/D/E fail → partial:true + section defaults.
             // Legacy reports (pre-v2, no rubricSnapshot) use the fixed 6-criterion rubric:
             //   rapport(15), discovery(20), objections(25), knowledge(15), closing(15), communication(10).
 ```
@@ -155,6 +165,9 @@ Legacy reports without a `rubricSnapshot` use the fixed 6-criterion list noted a
 - `0007_profile_gender.sql` — adds `profiles.gender` column.
 - `0008_report_persona.sql` — adds `reports.persona_addressed` (jsonb), `reports.persona_card` (jsonb),
   `sessions.pay_ask_count` (smallint); updates `commit_report` and `commit_session_turn` RPCs accordingly.
+- `0009_integrity_check.sql` — adds `reports.integrity_check` (jsonb); extends `commit_report` RPC to
+  accept `integrity_check` in the patch; seeds the 14 default integrity probes into `app_config` key
+  `integrityProbes` via `insert … on conflict do nothing`.
 
 ---
 
@@ -195,6 +208,8 @@ Legacy reports without a `rubricSnapshot` use the fixed 6-criterion list noted a
 | PUT | `/config/prompts` | prompt-config object | merged prompt-config (persisted; loaders fail soft to defaults) |
 | GET | `/config/scoring` | — | scoring-config (`scoring-config.json` over built-in defaults) |
 | PUT | `/config/scoring` | scoring-config object | persisted scoring-config (coerced) |
+| GET | `/integrity-probes` | — | **admin-only** — `{ probes:[{id,category,question,groundTruth,active}], guidelines:[] }` merged over 14 seeded defaults; stored in `app_config` key `integrityProbes`. 403 for counsellors. |
+| PUT | `/integrity-probes` | `{ probes:[{id,category,question,groundTruth,active}], guidelines:[] }` | **admin-only** — persists whole-list save (mirrors prompt-config pattern); returns merged result. 403 for counsellors. |
 | GET | `/leaderboard?metric=&board=` | — | Leaderboard (see shape below) — stub/generating reports excluded |
 
 Server owns the transcript: `/sessions/:id/message` appends to the stored session; the client
@@ -202,7 +217,7 @@ does NOT send history. `start` for `mode:"assigned"` derives persona+scenario fr
 and flips assignment status to `in_progress`; `end` generates the report and sets `reportId` +
 status `completed`.
 
-**Ownership guard** (dummy-auth grade): session routes (`GET /sessions/:id`, `/message`, `/observe`, `/end`, `/realtime/openai-token`) and `GET /reports/:id` check the `X-User-Id` request header. Non-admin counsellors are 403'd if the resource belongs to another counsellor. Absent header → back-compat allow (curl/smoke/old clients). `hasReport` on enriched assignments verifies the report record still exists (stale `reportId` after a delete would show a broken link).
+**Ownership guard** (dummy-auth grade): session routes (`GET /sessions/:id`, `/message`, `/observe`, `/end`, `/realtime/openai-token`) and `GET /reports/:id` check the `X-User-Id` request header. Non-admin counsellors are 403'd if the resource belongs to another counsellor. Absent header → back-compat allow (curl/smoke/old clients). `hasReport` on enriched assignments verifies the report record still exists (stale `reportId` after a delete would show a broken link). **Admin-only field stripping**: `GET /sessions/:id` strips `session.integrityProbe` for non-admins (contains `groundTruth` — the "correct answer" the counsellor must not see); `GET /reports/:id` and `GET /reports` strip `report.integrityCheck` for non-admins (verdict is liability-sensitive). The `/integrity-probes` GET/PUT endpoints 403 for non-admin roles.
 
 **Per-turn pipeline** (`/sessions/:id/message`): 409 ended-session guard FIRST → classify the
 counsellor message into `turnType` (`statement`|`question`|`invite`) → push the counsellor
@@ -218,7 +233,7 @@ student's new objection (`advancePhase` category / `detectObjectionCategory` →
 persist `objectionState` → compute the instant counsellor `cue` (`instantCue`, zero-LLM; receives
 the cue v2 context `lastCounsellorAdjustment` + `lastCounsellorScoreReason` + live `objectionState`).
 
-**Scoring policy invariants:** (a) the scorer never penalizes incorrect, mispronounced, or misspelled names or proper nouns — these are treated as STT transcription noise; (b) the FIRST pay-ask (payment/commitment request) is never penalized; only repeated pushy pressure beyond the first is penalized, gated by `session.payAskCount`.
+**Scoring policy invariants:** (a) the scorer never penalizes incorrect, mispronounced, or misspelled names or proper nouns — these are treated as STT transcription noise; (b) the FIRST pay-ask (payment/commitment request) is never penalized; only repeated pushy pressure beyond the first is penalized, gated by `session.payAskCount`; (c) garbled or incoherent counsellor turns (STT noise — short fragments, phonetic gibberish, or turns that fail the coherence gate as clearly garbled) are scored neutral (adjustment `0`) and do not reduce the satisfaction score — extending rule (a) to whole-turn noise.
 
 Backchannel acknowledgements (`isBackchannel`) skip the scoring LLM (adjustment 0). The student
 reply passes a coherence gate (structural screen + near-deterministic VALID/INVALID check, fails
@@ -314,6 +329,7 @@ endpoint, e.g. `api.login(email,password)`, `api.getPersonas()`, `api.createPers
 `api.getReports(counsellorId?,sessionId?)`, `api.getReport(id)`, `api.getLeadProfiles(category?)`,
 `api.getAdminAnalytics()`, `api.getCounsellorAnalytics(id)`,
 `api.getPromptConfig()`, `api.updatePromptConfig(data)`, `api.getScoringConfig()`, `api.updateScoringConfig(data)`,
+`api.getIntegrityProbes()`, `api.updateIntegrityProbes(data)`,
 `api.getSessionPrompts(id)`, `api.getLeaderboard(metric?, board?)`, `api.patchUser(id, {gender})`.
 Each throws `Error(data.error)` on non-2xx.
 
@@ -324,7 +340,8 @@ Each throws `Error(data.error)` on non-2xx.
 Public: `/login`.
 Admin (role `admin`, `AdminLayout`): `/admin` dashboard, `/admin/counsellors`, `/admin/personas`,
 `/admin/courses`, `/admin/assignments`, `/admin/assignments/new`, `/admin/reports`, `/admin/reports/:id`,
-`/admin/leaderboard`.
+`/admin/leaderboard`, `/admin/integrity-probes` (admin-only probe library — list/add/edit/disable probes).
+Admin sidebar order: Dashboard → Reports (directly under Dashboard) → Counsellors → Personas → Courses → Assignments → Leaderboard → Integrity Probes.
 Superadmin-only (role `superadmin`): `/superadmin/rubrics` (rubric templates), `/superadmin/templates`,
 `/superadmin/prompts` (Prompts & Scoring). These were formerly under `/admin/*` and are now restricted to superadmin.
 Counsellor (role `counsellor`, `CounsellorLayout`): `/app` dashboard, `/app/mocks`, `/app/practice`,
