@@ -74,6 +74,135 @@ function canonicalObjectionKey(cat) {
   return cat;
 }
 
+// ---------------------------------------------------------------------------
+// Leaderboard (issue 5)
+// ---------------------------------------------------------------------------
+
+const PERSONA_CATEGORIES = ["studying", "same-field", "diff-field", "non-working"];
+
+function reportMetricValue(report, metric) {
+  if (!Number.isFinite(report?.overall?.percent)) return null;
+  if (metric === "satisfaction") {
+    const v = report.finalScore;
+    return typeof v === "number" && Number.isFinite(v) ? v : null;
+  }
+  const v = report.overall.percent;
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
+}
+
+function categoryForSession(session, profileCategoryById) {
+  if (!session) return "other";
+  const pid = session.leadCard?.profileId;
+  if (pid && profileCategoryById.has(pid)) return profileCategoryById.get(pid);
+  const snap = session.personaSnapshot?.category || session.leadCard?.category;
+  if (snap && PERSONA_CATEGORIES.includes(snap)) return snap;
+  return "other";
+}
+
+function rankAndGate(entries, viewer, isAdmin) {
+  const sorted = [...entries].sort((a, b) => b.value - a.value);
+  sorted.forEach((e, i) => { e.rank = i + 1; });
+
+  const viewerRow = viewer ? sorted.find((e) => e.counsellorId === viewer.id) : null;
+  const viewerRank = viewerRow ? viewerRow.rank : null;
+
+  if (isAdmin) {
+    return { rows: sorted, truncated: false, viewerRank };
+  }
+
+  const truncated = sorted.length > 10;
+  const rows = sorted.slice(0, 10);
+  if (truncated && viewerRow && !rows.some((r) => r.counsellorId === viewer.id)) {
+    rows.push(viewerRow);
+  }
+  return { rows, truncated, viewerRank };
+}
+
+function entriesFor(reportsSlice, metric, reduce, userById, counsellorCode) {
+  const byCounsellor = new Map();
+  for (const r of reportsSlice) {
+    const v = reportMetricValue(r, metric);
+    if (v == null) continue;
+    if (!byCounsellor.has(r.counsellorId)) byCounsellor.set(r.counsellorId, []);
+    byCounsellor.get(r.counsellorId).push(v);
+  }
+  const entries = [];
+  for (const [counsellorId, values] of byCounsellor.entries()) {
+    if (values.length === 0) continue;
+    const user = userById.get(counsellorId);
+    if (!user) continue;
+    const value =
+      reduce === "high"
+        ? Math.max(...values)
+        : Math.round((values.reduce((s, x) => s + x, 0) / values.length) * 10) / 10;
+    entries.push({
+      counsellorId,
+      name: user.name || "",
+      code: counsellorCode ? counsellorCode(user) : null,
+      value,
+      sessions: values.length,
+    });
+  }
+  return entries;
+}
+
+export function buildLeaderboard(
+  { reports, sessions, users, leadProfiles },
+  { metric = "percent", board = "average", viewer = null, counsellorCode } = {},
+) {
+  reports = reports || [];
+  sessions = sessions || [];
+  users = users || [];
+  leadProfiles = leadProfiles || [];
+
+  metric = metric === "satisfaction" ? "satisfaction" : "percent";
+  const isAdmin = viewer?.role === "admin" || viewer?.role === "superadmin";
+
+  const userById = new Map(users.map((u) => [u.id, u]));
+  const reduce = board === "high" ? "high" : "average";
+
+  if (board === "byPersona") {
+    const profileCategoryById = new Map(leadProfiles.map((p) => [p.id, p.category]));
+    const sessionById = new Map(sessions.map((s) => [s.id, s]));
+
+    const buckets = new Map();
+    for (const cat of PERSONA_CATEGORIES) buckets.set(cat, []);
+    for (const r of reports) {
+      if (reportMetricValue(r, metric) == null) continue;
+      const cat = categoryForSession(sessionById.get(r.sessionId), profileCategoryById);
+      if (!buckets.has(cat)) buckets.set(cat, []);
+      buckets.get(cat).push(r);
+    }
+
+    const categories = {};
+    for (const [cat, slice] of buckets.entries()) {
+      const entries = entriesFor(slice, metric, "average", userById, counsellorCode);
+      categories[cat] = rankAndGate(entries, viewer, isAdmin);
+    }
+
+    return {
+      metric,
+      board: "byPersona",
+      top: 10,
+      isAdmin,
+      categories,
+    };
+  }
+
+  const entries = entriesFor(reports, metric, reduce, userById, counsellorCode);
+  const { rows, truncated, viewerRank } = rankAndGate(entries, viewer, isAdmin);
+
+  return {
+    metric,
+    board: reduce,
+    top: 10,
+    isAdmin,
+    rows,
+    truncated,
+    viewerRank,
+  };
+}
+
 export function buildAdminAnalytics({ reports, assignments, users }) {
   reports = reports || [];
   assignments = assignments || [];

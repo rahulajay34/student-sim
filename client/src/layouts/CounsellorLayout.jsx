@@ -10,12 +10,16 @@ const NAV = [
   { to: "/app/mocks", label: "My Mocks", icon: "mocks" },
   { to: "/app/practice", label: "Practice", icon: "practice" },
   { to: "/app/reports", label: "Reports", icon: "reports" },
+  { to: "/app/leaderboard", label: "Leaderboard", icon: "leaderboard" },
+  { to: "/app/profile", label: "Profile", icon: "profile" },
 ];
 
 function titleFor(path) {
   if (path.startsWith("/app/mocks")) return "My Mocks";
   if (path.startsWith("/app/practice")) return "Practice";
   if (path.startsWith("/app/reports")) return "Reports";
+  if (path.startsWith("/app/leaderboard")) return "Leaderboard";
+  if (path.startsWith("/app/profile")) return "Profile";
   return "Dashboard";
 }
 

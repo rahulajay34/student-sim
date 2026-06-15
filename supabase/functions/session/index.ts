@@ -242,6 +242,7 @@ function turnPatch(session, extra) {
     objection_state: session.objectionState,
     score_history: session.scoreHistory,
     transcript: session.transcript,
+    pay_ask_count: session.payAskCount ?? 0,
   };
   // last_turn_verbosity is rolled per /message turn (always 'open'|'short' there).
   // Include the key on /message so the RPC writes it; omit on /observe so the column
@@ -404,7 +405,7 @@ app.post("/sessions/:id/message", async (c) => {
       ? Promise.resolve({ adjustment: 0, reason: "Backchannel acknowledgement", addressedObjection: null })
       : scoreMessage(message, {
           recentTurns, phase: session.currentPhase, turnType, courseName: session.courseSnapshot?.name,
-          openObjections: openObjForScore,
+          openObjections: openObjForScore, session,
         }, undefined, {}, cfg);
 
     const replyPromise = (async () => {
@@ -632,7 +633,7 @@ app.post("/sessions/:id/observe", async (c) => {
       } else {
         scored = await scoreObserveTurn(cText, {
           recentTurns, phase: session.currentPhase, turnType,
-          courseName: session.courseSnapshot?.name, openObjections: openObjForScore,
+          courseName: session.courseSnapshot?.name, openObjections: openObjForScore, session,
         }, cfg);
       }
       reason = scored.reason;

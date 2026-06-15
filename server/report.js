@@ -4,13 +4,16 @@
 //
 // Contract decisions:
 //   - Model: Claude Sonnet 4.6 via ./llm.js (./ollama.js shim).
-//   - Parallel fan-out: Call A (rubric + 5-phase phaseBreakdown) and Call B
-//     (strengths/improvements/keyMoments + overall.headline) run via Promise.all;
-//     Call C (drills) runs after A because it needs A's weakest criteria.
+//   - Parallel fan-out: ALL independent LLM calls dispatch concurrently via a
+//     single Promise.allSettled — Call A (rubric + 5-phase phaseBreakdown),
+//     Call B (strengths/improvements/keyMoments + overall.headline), Call C
+//     (drills) and Call D (persona-addressed). Call C is decoupled from A: its
+//     prompt takes only the criterion keys+labels and picks the weakest itself,
+//     so it no longer waits on A's graded scores.
 //   - All calls use mode:"reasoning" for report quality.
 //   - Per-call retry: attempt 1 (60s); attempt 2 (60s). Both reasoning mode.
 //   - If Call A fails entirely → neutral fallback report (fallback:true,
-//     regenerable:true). If only B or C fails → assemble what succeeded, mark
+//     regenerable:true). If only B, C or D fails → assemble what succeeded, mark
 //     report.partial = true and leave that section to minimal defaults.
 //   - Exported needsRegeneration(report): true when report.fallback === true.
 //   - Exported reportPromptForInspection(session): the Call A prompt text.
@@ -217,33 +220,89 @@ Be specific and ground every point in the transcript. Do not output anything exc
 }
 
 // ─── Call C prompt: drills ───────────────────────────────────────────────────
-// Focused: receives only criteria keys+labels+scores (NOT full anchor text) so
-// it can target the weakest areas.
-function buildDrillsPrompt(session, gradedRubric) {
-  const sorted = [...gradedRubric].sort((a, b) => a.score - b.score);
-  const weakest = sorted.slice(0, 3);
-  const scoreLines = gradedRubric
-    .map((r) => `- ${r.key} (${r.label}): scored ${r.score}/10`)
+// DECOUPLED from Call A: receives only the criterion keys+labels (NOT graded
+// scores) and reads the transcript to pick the weakest areas itself, so it can
+// run concurrently with A instead of waiting for A's rubric scores.
+function buildDrillsPrompt(session, criteria) {
+  const criterionLines = criteria
+    .map((c) => `- ${c.key} (${c.label})`)
     .join("\n");
-  const weakestKeys = weakest.map((r) => r.key).join(", ") || "(none)";
 
   return `You are a senior sales-training coach prescribing practice drills after a mock counselling call. ${courseHeader(session)}
 
 ${metaHeader(session)}
 
-RUBRIC SCORES (1-10, already graded — target the weakest):
-${scoreLines}
-
-The weakest criteria are: ${weakestKeys}.
+RUBRIC CRITERIA (judge the transcript yourself and target the counsellor's weakest areas):
+${criterionLines}
 
 FULL TRANSCRIPT (turns are numbered):
 ${transcriptText(session.transcript)}
 
-Prescribe 2-3 targeted practice drills, each tied to one of the weakest criteria.
+Read the transcript, decide which criteria the counsellor handled WORST, and prescribe 2-3 targeted practice drills, each tied to one of those weakest criteria.
 
 Return ONLY a JSON object with this exact shape:
 {
-  "drills": [ { "title": "...", "focusCriterion": "<one of the weakest criterion keys>", "objectionCategory": "<EXACTLY one of: fee|emi_affordability|parents_family|time_commitment|competing_priorities|trust_legitimacy|job_guarantee_placement|course_fit_relevance|language_english|tech_access|other>", "instruction": "one concrete practice instruction" } ]  // 2-3
+  "drills": [ { "title": "...", "focusCriterion": "<one of the criterion keys above>", "objectionCategory": "<EXACTLY one of: fee|emi_affordability|parents_family|time_commitment|competing_priorities|trust_legitimacy|job_guarantee_placement|course_fit_relevance|language_english|tech_access|other>", "instruction": "one concrete practice instruction" } ]  // 2-3
+}
+Do not output anything except the JSON object.`;
+}
+
+// ─── Call D prompt: persona-addressed (issue 2) ──────────────────────────────
+// Evaluates whether the counsellor surfaced this specific persona's concerns and
+// related each one back to the course. Fed the persona snapshot + scenario
+// (incl. pushiness/hesitancy) + course context + transcript.
+function buildPersonaAddressedPrompt(session) {
+  const p = session.personaSnapshot || {};
+  const sc = session.scenarioSnapshot || {};
+  const c = session.courseSnapshot;
+  const personalitySrc = p.personality || p.traits || {};
+
+  const personaLines = [
+    `LABEL: ${p.label || "n/a"}`,
+    `CATEGORY: ${p.category || "n/a"}`,
+    p.coreAnxiety ? `CORE ANXIETY: ${p.coreAnxiety}` : null,
+    p.description ? `DESCRIPTION: ${p.description}` : null,
+  ].filter(Boolean).join("\n");
+
+  const scenarioLines = [
+    `TITLE: ${sc.title || "n/a"}`,
+    `DIFFICULTY: ${sc.difficulty ?? "n/a"}`,
+    `PUSHINESS (1-5): ${sc.pushiness ?? "n/a"}`,
+    `HESITANCY (1-5): ${sc.hesitancy ?? "n/a"}`,
+    sc.description ? `SCENARIO NOTE: ${sc.description}` : null,
+  ].filter(Boolean).join("\n");
+
+  const traitLines = `PERSONALITY (1-5): talkativeness=${personalitySrc.talkativeness ?? "n/a"}, humour=${personalitySrc.humour ?? "n/a"}, skepticism=${personalitySrc.skepticism ?? "n/a"}, formality=${personalitySrc.formality ?? "n/a"}`;
+
+  const courseFacts = c ? `
+COURSE CONTEXT (what the counsellor could have related concerns back to):
+- Name: ${c.name}; Duration: ${c.duration}; Format: ${c.format}
+- Fee: ${c.feeTotal ? `₹${c.feeTotal}` : "not published"}; seat-block: ${c.feeBooking ? `₹${c.feeBooking}` : "₹4,000"}
+- Curriculum: ${(c.curriculum || []).join("; ")}
+- USPs/outcomes: ${[...(c.usps || []), ...(c.outcomes || [])].join("; ") || "n/a"}
+` : "";
+
+  return `You are a senior sales-training coach assessing how well a counsellor surfaced and ADDRESSED this specific prospective student's personal concerns, and whether each concern was related back to the course's actual value. ${courseHeader(session)}
+
+${metaHeader(session)}
+
+STUDENT PERSONA:
+${personaLines}
+${traitLines}
+
+SCENARIO:
+${scenarioLines}
+${courseFacts}
+FULL TRANSCRIPT (turns are numbered):
+${transcriptText(session.transcript)}
+
+Identify the concrete concerns THIS persona/scenario would carry (their core anxiety, the scenario's tension, anything they actually voiced). For each, judge whether the counsellor addressed it AND tied it to the course. Cover 0-5 of the most important concerns (fewer is fine; empty if none surfaced).
+
+Return ONLY a JSON object with this exact shape:
+{
+  "concerns": [ { "concern": "the student's specific concern", "addressed": "fully"|"partially"|"not_addressed", "howRelatedToCourse": "how the counsellor linked (or could have linked) it to the course", "evidence": "short transcript quote or turn reference", "comment": "one coaching note" } ],   // 0-5
+  "summary": "2-3 sentence overall on how well persona-specific concerns were handled",
+  "score": 1-10   // overall persona-concern handling, 1 worst 10 best
 }
 Do not output anything except the JSON object.`;
 }
@@ -386,6 +445,32 @@ const REPORT_C_SCHEMA = {
   additionalProperties: false,
 };
 
+// Call D: persona-addressed.
+const REPORT_D_SCHEMA = {
+  type: "object",
+  properties: {
+    concerns: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          concern: { type: "string" },
+          addressed: { type: "string" },
+          howRelatedToCourse: { type: "string" },
+          evidence: { type: "string" },
+          comment: { type: "string" },
+        },
+        required: ["concern", "addressed", "howRelatedToCourse", "evidence", "comment"],
+        additionalProperties: false,
+      },
+    },
+    summary: { type: "string" },
+    score: { type: "number" },
+  },
+  required: ["concerns", "summary", "score"],
+  additionalProperties: false,
+};
+
 // ─── Per-call runner with 2-attempt retry ────────────────────────────────────
 // Attempt 1 and 2: both use mode:"reasoning", 60s timeout.
 // Returns { ok:true, value } or { ok:false, error }.
@@ -411,6 +496,44 @@ async function runCall(label, prompt, jsonSchema) {
   }
   return { ok: false, error: lastError };
 }
+
+// ─── Persona card (issue 9) ──────────────────────────────────────────────────
+// Snapshot-only (no LLM): the persona identity + personality traits + scenario
+// difficulty sliders, available instantly at /end. Exposed on the stub, the full
+// report, and the fallback so ReportDetail can render it immediately.
+const numOrNull = (v) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+
+export function personaCard(session) {
+  const p = session.personaSnapshot || {};
+  const sc = session.scenarioSnapshot || {};
+  const lead = session.leadCard || {};
+  const traits = p.personality || p.traits || {};
+
+  const name = lead.name || p.voiceName || p.name || "Student";
+
+  return {
+    name,
+    label: p.label ?? null,
+    category: p.category ?? null,
+    coreAnxiety: p.coreAnxiety ?? null,
+    traits: {
+      talkativeness: numOrNull(traits.talkativeness),
+      humour: numOrNull(traits.humour),
+      skepticism: numOrNull(traits.skepticism),
+      formality: numOrNull(traits.formality),
+      quirks: Array.isArray(traits.quirks) ? traits.quirks : [],
+    },
+    scenario: {
+      title: sc.title ?? null,
+      difficulty: sc.difficulty ?? null,
+      pushiness: numOrNull(sc.pushiness),
+      hesitancy: numOrNull(sc.hesitancy),
+    },
+  };
+}
+
+// Default persona-addressed payload (D-failure / fallback).
+const DEFAULT_PERSONA_ADDRESSED = () => ({ concerns: [], summary: "", score: 7 });
 
 // ─── Neutral fallback builder ────────────────────────────────────────────────
 // Builds a full rubric-v2-shaped report with neutral mid-band scores.
@@ -459,6 +582,8 @@ export function buildFallbackReport(session) {
     drills: [],
     benchmarks: buildBenchmarks(session, sessionMinutes),
     scoreArc: (session.scoreHistory || []).map((h) => ({ turn: h.turn, score: h.score })),
+    personaCard: personaCard(session),
+    personaAddressed: DEFAULT_PERSONA_ADDRESSED(),
     fallback: true,
     regenerable: true,
   };
@@ -491,6 +616,7 @@ export function stubReportSections(session) {
     scoreArc: (session.scoreHistory || []).map((h) => ({ turn: h.turn, score: h.score })),
     benchmarks: buildBenchmarks(session, sessionMinutes),
     transcript: session.transcript,
+    personaCard: personaCard(session),
     ...(delayedTurns > 0 ? { delayedTurns } : {}),
   };
 }
@@ -544,6 +670,24 @@ function assembleDrills(rawC) {
   }));
 }
 
+// ─── Assemble the persona-addressed section from Call D (issue 2) ─────────────
+const ADDRESSED_ENUM = new Set(["fully", "partially", "not_addressed"]);
+function assemblePersonaAddressed(rawD) {
+  if (!rawD || typeof rawD !== "object") return DEFAULT_PERSONA_ADDRESSED();
+  const concerns = (Array.isArray(rawD.concerns) ? rawD.concerns : []).slice(0, 5).map((c) => ({
+    concern: typeof c.concern === "string" ? c.concern : "",
+    addressed: ADDRESSED_ENUM.has(c.addressed) ? c.addressed : "not_addressed",
+    howRelatedToCourse: typeof c.howRelatedToCourse === "string" ? c.howRelatedToCourse : "",
+    evidence: typeof c.evidence === "string" ? c.evidence : "",
+    comment: typeof c.comment === "string" ? c.comment : "",
+  }));
+  return {
+    concerns,
+    summary: typeof rawD.summary === "string" ? rawD.summary : "",
+    score: clamp(rawD.score ?? 7, 1, 10),
+  };
+}
+
 // ─── Public: report prompt for inspection endpoint ───────────────────────────
 /**
  * reportPromptForInspection(session)
@@ -570,33 +714,41 @@ export function needsRegeneration(report) {
 /**
  * generateReport(session, {counsellorName?})
  *
- * Parallel fan-out:
- *   - Call A (rubric + phaseBreakdown) and Call B (narrative + headline) run
- *     concurrently via Promise.all.
- *   - Call C (drills) runs after A because it needs A's weakest criteria scores.
+ * Fully-parallel fan-out: Call A (rubric + phaseBreakdown), Call B (narrative +
+ * headline), Call C (drills — decoupled, picks the weakest criteria itself) and
+ * Call D (persona-addressed) all dispatch concurrently via a single
+ * Promise.allSettled.
  *
- * All calls run in mode:"reasoning" (adaptive thinking + high effort) with
- * structured-output schemas. Each call retries once; both attempts identical,
- * 60s timeout each.
+ * All calls run in mode:"reasoning" with structured-output schemas. Each call
+ * retries once; both attempts identical, 90s timeout each.
  *
  * If Call A fails entirely → neutral fallback report (fallback:true,
- * regenerable:true). If only B or C fails → assemble what succeeded and mark
- * report.partial = true (missing sections default to empty arrays / "").
+ * regenerable:true). If only B, C or D fails → assemble what succeeded and mark
+ * report.partial = true (missing sections default to empty arrays / "" / the
+ * neutral persona-addressed default).
  *
  * Assembled shape is identical to the prior monolithic report PLUS
- * overall.headline.
+ * overall.headline, personaCard and personaAddressed.
  */
 export async function generateReport(session) {
   const { criteria } = effectiveCriteria(session);
 
   const rubricPrompt = buildRubricPrompt(session, criteria);
   const narrativePrompt = buildNarrativePrompt(session);
+  const drillsPrompt = buildDrillsPrompt(session, criteria);   // decoupled from A
+  const personaPrompt = buildPersonaAddressedPrompt(session);
 
-  // A and B are independent → run in parallel.
-  const [resultA, resultB] = await Promise.all([
+  // All four calls are independent → dispatch them together. runCall never
+  // rejects (it returns {ok:false} on failure), so each settled result carries
+  // the {ok,...} object in .value.
+  const settled = await Promise.allSettled([
     runCall("Call A (rubric)", rubricPrompt, REPORT_A_SCHEMA),
     runCall("Call B (narrative)", narrativePrompt, REPORT_B_SCHEMA),
+    runCall("Call C (drills)", drillsPrompt, REPORT_C_SCHEMA),
+    runCall("Call D (persona)", personaPrompt, REPORT_D_SCHEMA),
   ]);
+  const unwrap = (s) => (s.status === "fulfilled" ? s.value : { ok: false, error: s.reason });
+  const [resultA, resultB, resultC, resultD] = settled.map(unwrap);
 
   // Call A is the spine of the report. If it failed entirely → fallback.
   if (!resultA.ok) {
@@ -606,9 +758,6 @@ export async function generateReport(session) {
 
   const { rubric, percent, phaseBreakdown } = assembleRubric(session, resultA.value, criteria);
 
-  // Call C depends on A's graded rubric (weakest criteria), so it runs after A.
-  const resultC = await runCall("Call C (drills)", buildDrillsPrompt(session, rubric), REPORT_C_SCHEMA);
-
   let partial = false;
   const narrative = resultB.ok
     ? assembleNarrative(session, resultB.value)
@@ -616,6 +765,9 @@ export async function generateReport(session) {
   const drills = resultC.ok
     ? assembleDrills(resultC.value)
     : (partial = true, []);
+  const personaAddressed = resultD.ok
+    ? assemblePersonaAddressed(resultD.value)
+    : (partial = true, DEFAULT_PERSONA_ADDRESSED());
 
   const sessionMinutes = session.startedAt
     ? Math.round((Date.now() - new Date(session.startedAt).getTime()) / 60000 * 10) / 10
@@ -635,6 +787,8 @@ export async function generateReport(session) {
     drills,
     benchmarks: buildBenchmarks(session, sessionMinutes),
     scoreArc: (session.scoreHistory || []).map((h) => ({ turn: h.turn, score: h.score })),
+    personaCard: personaCard(session),
+    personaAddressed,
   };
   if (partial) report.partial = true;
   return report;

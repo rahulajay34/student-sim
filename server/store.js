@@ -84,6 +84,27 @@ export function remove(name, id) {
   return all.length !== next.length;
 }
 
+// Counsellor code -----------------------------------------------------------
+// Deterministic, stable, human-readable short code derived purely from the user
+// id — no DB column. FNV-1a over the id, folded to 16 bits, rendered as 4 upper
+// hex chars: "MAS-C-1A2B". Same id always yields the same code; distinct ids
+// collide only at the ~16-bit birthday rate. Returns null for an id-less user.
+export function counsellorCode(user) {
+  const id = user?.id;
+  if (!id) return null;
+  // FNV-1a 32-bit hash.
+  let h = 0x811c9dc5;
+  const s = String(id);
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  // Fold 32 bits down to 16 (XOR the halves) so the printed code stays 4 hex chars.
+  const folded = ((h >>> 16) ^ (h & 0xffff)) & 0xffff;
+  const hex = folded.toString(16).toUpperCase().padStart(4, "0");
+  return `MAS-C-${hex}`;
+}
+
 // Domain-specific lookups ---------------------------------------------------
 export const findUserByEmail = (email) =>
   read("users").find((u) => u.email?.toLowerCase() === String(email).toLowerCase()) || null;

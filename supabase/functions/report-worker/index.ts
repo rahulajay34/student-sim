@@ -63,7 +63,8 @@ function validateServiceKey(req) {
 // Patch contract keys (from 0004_rpcs.sql commit_report):
 //   status, partial, overall_percent, overall_band, overall_outcome,
 //   final_score, generated_at, overall, rubric, phase_breakdown,
-//   strengths, improvements, key_moments, drills, benchmarks, score_arc
+//   strengths, improvements, key_moments, drills, benchmarks, score_arc,
+//   persona_addressed, persona_card
 // ---------------------------------------------------------------------------
 
 function buildCommitPatch(report, reportRow) {
@@ -84,6 +85,10 @@ function buildCommitPatch(report, reportRow) {
     drills: report.drills || [],
     benchmarks: report.benchmarks || {},
     score_arc: report.scoreArc || [],
+    // Issue 2 + 9 — persona-addressed evaluation and snapshot persona card.
+    // snake_case keys match the 0008 migration columns + store.js mapping.
+    persona_addressed: report.personaAddressed || { concerns: [], summary: "", score: 7 },
+    persona_card: report.personaCard || null,
   };
 
   // Promoted hot columns

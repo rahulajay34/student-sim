@@ -396,13 +396,20 @@ export default function AssignmentCreate() {
                   setCounsellorId(e.target.value);
                   setErrors((prev) => ({ ...prev, counsellorId: undefined }));
                 }}
-                options={counsellors.map((c) => ({ value: c.id, label: c.name }))}
+                options={counsellors.map((c) => ({ value: c.id, label: c.code ? `${c.name} · ${c.code}` : c.name }))}
               />
               {selectedCounsellor && (
                 <div className="flex items-center gap-3 rounded-xl border border-line bg-canvas px-3.5 py-3">
                   <Avatar name={selectedCounsellor.name} color={selectedCounsellor.avatarColor} size="sm" />
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-medium text-ink">{selectedCounsellor.name}</div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="truncate text-sm font-medium text-ink">{selectedCounsellor.name}</div>
+                      {selectedCounsellor.code && (
+                        <span className="shrink-0 rounded-md bg-white border border-line px-1.5 py-0.5 font-mono text-xs text-muted">
+                          {selectedCounsellor.code}
+                        </span>
+                      )}
+                    </div>
                     {selectedCounsellor.email && (
                       <div className="truncate text-xs text-muted">{selectedCounsellor.email}</div>
                     )}

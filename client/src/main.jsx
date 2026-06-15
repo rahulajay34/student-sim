@@ -26,8 +26,10 @@ import MyMocks from "./pages/counsellor/MyMocks.jsx";
 import Practice from "./pages/counsellor/Practice.jsx";
 import Session from "./pages/counsellor/Session.jsx";
 import Reports from "./pages/counsellor/Reports.jsx";
+import Profile from "./pages/counsellor/Profile.jsx";
 
 import ReportDetail from "./pages/shared/ReportDetail.jsx";
+import Leaderboard from "./pages/shared/Leaderboard.jsx";
 import UserManagement from "./pages/superadmin/UserManagement.jsx";
 
 function RootRedirect() {
@@ -51,6 +53,9 @@ function App() {
           }
         >
           <Route path="/superadmin" element={<UserManagement />} />
+          <Route path="/superadmin/rubrics" element={<Rubrics />} />
+          <Route path="/superadmin/templates" element={<Templates />} />
+          <Route path="/superadmin/prompts" element={<Prompts />} />
         </Route>
 
         {/* Admin */}
@@ -69,10 +74,9 @@ function App() {
           <Route path="/admin/assignments/new" element={<AssignmentCreate />} />
           <Route path="/admin/templates" element={<Templates />} />
           <Route path="/admin/practice" element={<Practice />} />
-          <Route path="/admin/rubrics" element={<Rubrics />} />
           <Route path="/admin/reports" element={<AdminReports />} />
           <Route path="/admin/reports/:id" element={<ReportDetail backTo="/admin/reports" />} />
-          <Route path="/admin/prompts" element={<Prompts />} />
+          <Route path="/admin/leaderboard" element={<Leaderboard />} />
         </Route>
 
         {/* Counsellor */}
@@ -88,6 +92,8 @@ function App() {
           <Route path="/app/practice" element={<Practice />} />
           <Route path="/app/reports" element={<Reports />} />
           <Route path="/app/reports/:id" element={<ReportDetail backTo="/app/reports" />} />
+          <Route path="/app/leaderboard" element={<Leaderboard />} />
+          <Route path="/app/profile" element={<Profile />} />
         </Route>
 
         {/* Session routes run full-bleed (their own chrome) — both admin and counsellor */}

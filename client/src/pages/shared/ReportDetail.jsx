@@ -190,6 +190,194 @@ function HeroPercent({ percent, animate }) {
   );
 }
 
+// ─── Mini bar for 1-5 trait values ────────────────────────────────────────────
+function TraitBar({ label, value }) {
+  const v = typeof value === "number" && value >= 1 && value <= 5 ? value : null;
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-24 shrink-0 text-xs text-muted capitalize">{label}</span>
+      <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+        {v != null && (
+          <div
+            className="h-full rounded-full bg-brand-600 transition-all duration-500"
+            style={{ width: `${(v / 5) * 100}%` }}
+          />
+        )}
+      </div>
+      <span className="w-4 shrink-0 text-right text-xs tabular-nums text-ink">
+        {v != null ? v : "—"}
+      </span>
+    </div>
+  );
+}
+
+// ─── Persona card (issue 9) ────────────────────────────────────────────────────
+// Shown near the top of the report; snapshotted at session start so it's
+// available even before LLM grading finishes.
+function PersonaCardSection({ card }) {
+  if (!card) return null;
+  const { name, label, category, coreAnxiety, traits = {}, scenario = {} } = card;
+  const { talkativeness, humour, skepticism, formality, quirks = [] } = traits;
+  const { title: scenTitle, difficulty, pushiness, hesitancy } = scenario;
+
+  // Colour a 1-5 slider: 1-2 green, 3 amber, 4-5 red
+  function sliderColor(val) {
+    if (val == null) return "text-muted";
+    if (val <= 2) return "text-success";
+    if (val === 3) return "text-warn";
+    return "text-danger";
+  }
+
+  return (
+    <Card className="p-6">
+      <CardHeader title="Student persona" subtitle="Who you were speaking to in this session" />
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-8">
+        {/* Left: identity */}
+        <div className="min-w-0 flex-1 space-y-2">
+          <p className="text-base font-semibold text-ink">{name || "—"}</p>
+          <div className="flex flex-wrap gap-1.5">
+            {label && <Badge color="brand">{label}</Badge>}
+            {category && <Badge color="slate">{category}</Badge>}
+            {difficulty && (
+              <Badge color={difficulty === "hard" ? "danger" : difficulty === "easy" ? "success" : "warn"}>
+                {difficulty}
+              </Badge>
+            )}
+          </div>
+          {coreAnxiety && (
+            <p className="text-sm text-muted">
+              <span className="font-medium text-ink">Core anxiety: </span>
+              {coreAnxiety}
+            </p>
+          )}
+          {scenTitle && (
+            <p className="text-sm text-muted">
+              <span className="font-medium text-ink">Scenario: </span>
+              {scenTitle}
+            </p>
+          )}
+          {quirks.length > 0 && (
+            <p className="text-sm text-muted">
+              <span className="font-medium text-ink">Quirks: </span>
+              {quirks.join(", ")}
+            </p>
+          )}
+        </div>
+
+        {/* Center: trait bars */}
+        <div className="min-w-0 flex-1 space-y-2">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Personality (1–5)</p>
+          <TraitBar label="Talkativeness" value={talkativeness} />
+          <TraitBar label="Humour" value={humour} />
+          <TraitBar label="Skepticism" value={skepticism} />
+          <TraitBar label="Formality" value={formality} />
+        </div>
+
+        {/* Right: scenario difficulty sliders (prominent) */}
+        <div className="shrink-0 space-y-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Session difficulty</p>
+          <div className="flex gap-6">
+            <div className="text-center">
+              <div className={`text-3xl font-extrabold tabular-nums ${sliderColor(pushiness)}`}>
+                {pushiness != null ? pushiness : "—"}
+                {pushiness != null && <span className="text-base font-semibold text-muted">/5</span>}
+              </div>
+              <div className="mt-1 text-xs font-medium uppercase tracking-wide text-muted">Pushiness</div>
+            </div>
+            <div className="text-center">
+              <div className={`text-3xl font-extrabold tabular-nums ${sliderColor(hesitancy)}`}>
+                {hesitancy != null ? hesitancy : "—"}
+                {hesitancy != null && <span className="text-base font-semibold text-muted">/5</span>}
+              </div>
+              <div className="mt-1 text-xs font-medium uppercase tracking-wide text-muted">Hesitancy</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+// ─── Persona concerns addressed (issue 2) ─────────────────────────────────────
+function PersonaAddressedSection({ data, generating }) {
+  if (!data && !generating) return null;
+
+  function addressedColor(status) {
+    if (status === "fully") return "success";
+    if (status === "partially") return "warn";
+    return "danger";
+  }
+  function addressedLabel(status) {
+    if (status === "fully") return "Fully addressed";
+    if (status === "partially") return "Partially addressed";
+    return "Not addressed";
+  }
+
+  return (
+    <Card className="p-6">
+      <CardHeader
+        title="Persona concerns addressed"
+        subtitle="Did you relate this student's specific concerns back to the course?"
+        action={
+          !generating && data?.score != null ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted">Score</span>
+              <ScoreMeter score={(data.score / 10) * 100} className="w-24" />
+              <span className="text-sm font-semibold tabular-nums text-ink">{data.score}/10</span>
+            </div>
+          ) : null
+        }
+      />
+      {generating ? (
+        <SkeletonBlock rows={3} />
+      ) : (
+        <div className="animate-fadeup space-y-4">
+          {data?.summary && (
+            <p className="text-sm text-muted">{data.summary}</p>
+          )}
+          {Array.isArray(data?.concerns) && data.concerns.length > 0 ? (
+            <ul className="space-y-4">
+              {data.concerns.map((item, i) => (
+                <li
+                  key={i}
+                  className="rounded-xl border border-line bg-canvas/60 p-4"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <p className="text-sm font-medium text-ink">{item.concern}</p>
+                    <Badge color={addressedColor(item.addressed)}>
+                      {addressedLabel(item.addressed)}
+                    </Badge>
+                  </div>
+                  {item.howRelatedToCourse && (
+                    <p className="mt-2 text-sm text-ink/80">
+                      <span className="font-medium text-ink">Course link: </span>
+                      {item.howRelatedToCourse}
+                    </p>
+                  )}
+                  {item.evidence && (
+                    <p className="mt-1.5 text-sm italic text-muted">"{item.evidence}"</p>
+                  )}
+                  {item.comment && (
+                    <p className="mt-2 flex items-start gap-1.5 text-sm">
+                      <span className="shrink-0 text-warn">•</span>
+                      <span className="text-ink/80">{item.comment}</span>
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState
+              title="No concerns tracked"
+              hint="The LLM found no persona-specific concerns to evaluate."
+            />
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export default function ReportDetail({ backTo = "/app/reports" }) {
   const { id } = useParams();
   const { user } = useAuth();
@@ -350,6 +538,8 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
     personaName,
     scenarioTitle,
     generatedAt,
+    personaCard: pc,
+    personaAddressed: pa,
   } = report;
 
   const converted = overall.outcome === "Converted";
@@ -531,6 +721,9 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
           )}
         </div>
       </Card>
+
+      {/* PERSONA CARD (issue 9) */}
+      <PersonaCardSection card={pc} />
 
       {/* RUBRIC */}
       <Card className="p-6">
@@ -796,6 +989,9 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
           </div>
         </Card>
       ) : null}
+
+      {/* PERSONA CONCERNS ADDRESSED (issue 2) */}
+      <PersonaAddressedSection data={pa} generating={generating} />
 
       {/* SCORE ARC */}
       <Card className="p-6">

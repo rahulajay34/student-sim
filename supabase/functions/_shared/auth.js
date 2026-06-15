@@ -63,7 +63,7 @@ export async function authenticate(req) {
   // Fetch the profile row for role + display name.
   const { data: profile, error: profErr } = await db
     .from("profiles")
-    .select("id, email, name, role, avatar_color")
+    .select("id, email, name, role, avatar_color, gender")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -76,6 +76,7 @@ export async function authenticate(req) {
     name: profile.name,
     role: profile.role,
     avatarColor: profile.avatar_color,
+    gender: profile.gender ?? null,
   };
 }
 

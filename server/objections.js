@@ -343,11 +343,34 @@ export function summarizeForPrompt(state) {
   return `Concerns you have raised so far: ${parts.join(", ")}.${closingNote}`;
 }
 
-// steeringSummary(state) — a compact, plain-text summary (1-4 lines) for the
-// realtime mid-call steering block (contract C2). Lists the OPEN concerns and the
-// ANSWERED concerns, quoting each one's banned phrasing so the voice model does
-// not recycle the exact same sentence. Returns "" when nothing has been raised.
-export function steeringSummary(state) {
+// Varied accent-reminder lines for the mid-call steering block. The standing
+// voice prompt sets the Indian-English accent, but over a long call that
+// instruction fades from context and the accent drifts to neutral — so a short
+// reminder rides along on every steering injection. Phrasing is rotated so it
+// never reads as a stuck loop. Rotation is deterministic (no Date.now/random):
+// the caller passes a turn-ish index; we mod into the list.
+const ACCENT_REMINDERS = [
+  "Stay in your natural Indian English accent — syllable-timed, with the light Hinglish rhythm; don't let it drift to neutral.",
+  "Keep your Indian-English accent and Hinglish cadence going strong, exactly as you sounded at the start of the call.",
+  "Quick reminder: hold your authentic Indian English accent and the occasional Hindi particle — don't flatten out.",
+  "Stay grounded in your Indian-English voice and rhythm; pull back to it if you've started sounding neutral.",
+];
+
+export function accentReminderLine(seed = 0) {
+  const i = Math.abs(Math.trunc(Number(seed) || 0)) % ACCENT_REMINDERS.length;
+  return ACCENT_REMINDERS[i];
+}
+
+// steeringSummary(state, turn?) — a compact, plain-text summary (1-5 lines) for
+// the realtime mid-call steering block (contract C2). Lists the OPEN concerns and
+// the ANSWERED concerns, quoting each one's banned phrasing so the voice model
+// does not recycle the exact same sentence, and (when there is steering content)
+// appends a short, varied Indian-English accent reminder so the accent — which
+// fades over a long call — is restated every few turns mid-call. `turn`
+// deterministically rotates the accent phrasing; it falls soft to a count
+// derived from the state so callers that omit it still vary. Returns "" when
+// nothing has been raised (there is then nothing to inject).
+export function steeringSummary(state, turn) {
   const arr = Array.isArray(state) ? state : [];
   if (!arr.length) return "";
 
@@ -366,7 +389,7 @@ export function steeringSummary(state) {
     // the call back to the same point. This is what gets injected mid-call.
     for (const o of open) {
       if (o.timesRaised >= 2) {
-        lines.push(`You have raised ${labelFor(o.category)} ${o.timesRaised} times — stop returning to it; if the counsellor changed the subject, follow their lead and do not bring it up again unless they invite it.`);
+        lines.push(`You have raised ${labelFor(o.category)} ${o.timesRaised} times — stop returning to it; if the counsellor changed the subject, follow their lead and engage the new topic, and do not bring it up again unless they invite it.`);
       }
     }
   }
@@ -377,6 +400,13 @@ export function steeringSummary(state) {
     });
     lines.push(`Answered concerns: ${items.join("; ")}.`);
   }
+
+  // Accent reminder — always included so it is restated every few turns mid-call.
+  // Seed defaults to the total raise activity so it still rotates without a turn.
+  const seed = Number.isFinite(Number(turn))
+    ? Number(turn)
+    : arr.reduce((n, o) => n + (o.timesRaised || 0), 0);
+  lines.push(accentReminderLine(seed));
 
   return lines.join("\n");
 }

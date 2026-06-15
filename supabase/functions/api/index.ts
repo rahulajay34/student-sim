@@ -11,7 +11,7 @@ import { authenticate, assertAdmin, assertSuperadmin, assertOwnerOrAdmin, httpEr
 import { getEnv } from "../_shared/env.js";
 import * as store from "../_shared/store.js";
 import { getSupabaseAdmin } from "../_shared/supabaseAdmin.js";
-import { buildAdminAnalytics, buildCounsellorAnalytics } from "../_shared/lib/analytics.js";
+import { buildAdminAnalytics, buildCounsellorAnalytics, buildLeaderboard } from "../_shared/lib/analytics.js";
 import { pickStudentVoice, inferGenderFromName } from "../_shared/lib/voices.js";
 import { rollSessionFlavour, DEFAULT_PERSONALITY } from "../_shared/lib/personality.js";
 import { composeForInspection } from "../_shared/lib/prompt.js";
@@ -58,7 +58,15 @@ function wrap(fn) {
 // Public user shape for counsellor list
 function publicUser(u) {
   if (!u) return null;
-  return { id: u.id, name: u.name, email: u.email, role: u.role, avatarColor: u.avatarColor };
+  return {
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    avatarColor: u.avatarColor,
+    gender: u.gender === "male" || u.gender === "female" ? u.gender : null,
+    code: store.counsellorCode(u),
+  };
 }
 
 // Normalize session mode from request body
@@ -735,9 +743,13 @@ app.post("/sessions/start", wrap(async (c) => {
   const persona = await store.getById("personas", personaId2);
   if (!persona) throw httpError(404, "Persona not found");
 
-  // Resolve the counsellor's address term from the caller's profile name
+  // Resolve the counsellor's address term: prefer the stored gender (explicit
+  // profile setting) over heuristic name inference.
   const counsellorUser = await store.getById("users", ctx.id).catch(() => null);
-  const counsellorGender = inferGenderFromName(counsellorUser && counsellorUser.name);
+  const counsellorGender =
+    counsellorUser && (counsellorUser.gender === "male" || counsellorUser.gender === "female")
+      ? counsellorUser.gender
+      : inferGenderFromName(counsellorUser && counsellorUser.name);
   const counsellorAddress = counsellorGender === "female" ? "ma'am"
     : counsellorGender === "male" ? "sir"
     : null;
@@ -1224,6 +1236,63 @@ app.put("/users/:id/role", wrap(async (c) => {
   if (!existing) throw httpError(404, "User not found");
   const updated = await store.update("users", id, { role });
   return jsonResponse(publicUser(updated), 200, origin);
+}));
+
+// PATCH /users/:id — update editable profile fields (currently gender). A user
+// may edit only their own profile; admin/superadmin may edit anyone. Mirrors
+// server/index.js semantics: 400 on invalid gender, 404 when not found.
+app.patch("/users/:id", wrap(async (c) => {
+  const origin = getOrigin(c.req.raw);
+  const ctx = await authenticate(c.req.raw);
+  const id = c.req.param("id");
+  const isPrivileged = ctx.role === "admin" || ctx.role === "superadmin";
+  if (!isPrivileged && ctx.id !== id) {
+    throw httpError(403, "You can only edit your own profile.");
+  }
+  const existing = await store.getById("users", id).catch(() => null);
+  if (!existing) throw httpError(404, "User not found");
+
+  const body = await c.req.json().catch(() => ({}));
+  const patch = {};
+  if (body && "gender" in body) {
+    const g = body.gender;
+    if (g !== "male" && g !== "female" && g !== null) {
+      throw httpError(400, "gender must be 'male', 'female', or null");
+    }
+    patch.gender = g;
+  }
+  const updated = await store.update("users", id, patch);
+  return jsonResponse(publicUser(updated), 200, origin);
+}));
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LEADERBOARD (issue 5)
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /leaderboard?metric=percent|satisfaction&board=average|high|byPersona
+// Counsellors see the top 10 (+ their own row when outside it); admin/superadmin
+// see the full list. Practice reports are excluded (matching analytics).
+app.get("/leaderboard", wrap(async (c) => {
+  const origin = getOrigin(c.req.raw);
+  const ctx = await authenticate(c.req.raw);
+  const q = new URL(c.req.raw.url).searchParams;
+  const metric = q.get("metric") === "satisfaction" ? "satisfaction" : "percent";
+  const board = ["average", "high", "byPersona"].includes(q.get("board")) ? q.get("board") : "average";
+
+  const [allReports, allUsers, allSessions, leadProfiles] = await Promise.all([
+    store.getAll("reports"),
+    store.getAll("users"),
+    store.getAll("sessions"),
+    store.getAll("leadProfiles"),
+  ]);
+  const practiceSessions = new Set(allSessions.filter((s) => s.isPractice).map((s) => s.id));
+  const reports = allReports.filter((r) => !practiceSessions.has(r.sessionId));
+
+  const viewer = { id: ctx.id, role: ctx.role };
+  const lb = buildLeaderboard(
+    { reports, sessions: allSessions, users: allUsers, leadProfiles },
+    { metric, board, viewer, counsellorCode: store.counsellorCode },
+  );
+  return jsonResponse(lb, 200, origin);
 }));
 
 // ─────────────────────────────────────────────────────────────────────────────

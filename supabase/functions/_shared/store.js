@@ -82,6 +82,7 @@
 // ║   objection_state   ↔ objectionState                                    ║
 // ║   score_history     ↔ scoreHistory                                      ║
 // ║   transcript jsonb  ↔ transcript                                        ║
+// ║   pay_ask_count     ↔ payAskCount                                       ║
 // ╠══════════════════════════════════════════════════════════════════════════╣
 // ║ TABLE: reports                                                          ║
 // ║   session_id        ↔ sessionId                                         ║
@@ -98,6 +99,8 @@
 // ║   phase_breakdown   ↔ phaseBreakdown                                    ║
 // ║   key_moments       ↔ keyMoments                                        ║
 // ║   score_arc         ↔ scoreArc                                          ║
+// ║   persona_addressed ↔ personaAddressed                                  ║
+// ║   persona_card      ↔ personaCard                                       ║
 // ╠══════════════════════════════════════════════════════════════════════════╣
 // ║ TABLE: app_config (collection: "appConfig")                             ║
 // ║   updated_at        ↔ updatedAt                                         ║
@@ -150,6 +153,7 @@ function profileFromRow(row) {
     name: row.name,
     role: row.role,
     avatarColor: row.avatar_color,
+    gender: row.gender ?? null,
     teamId: row.team_id ?? null,
     createdAt: row.created_at,
   };
@@ -161,6 +165,7 @@ function profileToRow(obj) {
   if (obj.name !== undefined) r.name = obj.name;
   if (obj.role !== undefined) r.role = obj.role;
   if (obj.avatarColor !== undefined) r.avatar_color = obj.avatarColor;
+  if (obj.gender !== undefined) r.gender = obj.gender;
   if (obj.teamId !== undefined) r.team_id = obj.teamId;
   return r;
 }
@@ -456,6 +461,7 @@ function sessionFromRow(row) {
     objectionState: row.objection_state ?? [],
     scoreHistory: row.score_history ?? [],
     transcript: row.transcript ?? [],
+    payAskCount: row.pay_ask_count ?? 0,
   };
   return session;
 }
@@ -480,6 +486,7 @@ function sessionToRow(obj) {
   if (obj.objectionState !== undefined) r.objection_state = obj.objectionState;
   if (obj.scoreHistory !== undefined) r.score_history = obj.scoreHistory;
   if (obj.transcript !== undefined) r.transcript = obj.transcript;
+  if (obj.payAskCount !== undefined) r.pay_ask_count = obj.payAskCount;
 
   // Pack snapshot fields into the snapshots jsonb. Only include it in the row
   // if at least one snapshot key is present in the source object.
@@ -535,6 +542,8 @@ function reportFromRow(row) {
     benchmarks: row.benchmarks ?? {},
     scoreArc: row.score_arc ?? [],
     transcript: row.transcript ?? [],
+    personaAddressed: row.persona_addressed ?? null,
+    personaCard: row.persona_card ?? null,
   };
 }
 
@@ -567,6 +576,8 @@ function reportToRow(obj) {
   if (obj.benchmarks !== undefined) r.benchmarks = obj.benchmarks;
   if (obj.scoreArc !== undefined) r.score_arc = obj.scoreArc;
   if (obj.transcript !== undefined) r.transcript = obj.transcript;
+  if (obj.personaAddressed !== undefined) r.persona_addressed = obj.personaAddressed;
+  if (obj.personaCard !== undefined) r.persona_card = obj.personaCard;
   return r;
 }
 
@@ -783,4 +794,21 @@ export function newId() {
   const arr = new Uint8Array(6);
   globalThis.crypto.getRandomValues(arr);
   return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// counsellorCode — deterministic, stable, human-readable short code derived
+// purely from the user id (mirrors server/store.js counsellorCode). FNV-1a over
+// the id folded to 16 bits → "MAS-C-1A2B". Returns null for an id-less user.
+export function counsellorCode(user) {
+  const id = user?.id;
+  if (!id) return null;
+  let h = 0x811c9dc5;
+  const s = String(id);
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  const folded = ((h >>> 16) ^ (h & 0xffff)) & 0xffff;
+  const hex = folded.toString(16).toUpperCase().padStart(4, "0");
+  return `MAS-C-${hex}`;
 }

@@ -149,4 +149,16 @@ export const api = {
   deleteAssignmentTemplate: (id) => req(`/assignment-templates/${id}`, { method: "DELETE" }),
   assignTemplate: (id, counsellorIds) =>
     req(`/assignment-templates/${id}/assign`, { method: "POST", body: { counsellorIds } }),
+
+  // profile
+  updateProfile: (id, data) => req(`/users/${id}`, { method: "PATCH", body: data }),
+
+  // leaderboard
+  getLeaderboard: ({ metric, board } = {}) => {
+    const params = new URLSearchParams();
+    if (metric) params.set("metric", metric);
+    if (board) params.set("board", board);
+    const q = params.toString();
+    return req(`/leaderboard${q ? "?" + q : ""}`);
+  },
 };

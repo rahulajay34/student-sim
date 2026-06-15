@@ -7,9 +7,15 @@ import { initials } from "../lib/format.js";
 
 const NAV = [
   { to: "/superadmin", label: "User Management", icon: "counsellors", end: true },
+  { to: "/superadmin/rubrics", label: "Rubrics", icon: "rubrics" },
+  { to: "/superadmin/templates", label: "Rubric Templates", icon: "templates" },
+  { to: "/superadmin/prompts", label: "Prompts & Scoring", icon: "prompts" },
 ];
 
 function titleFor(path) {
+  if (path.startsWith("/superadmin/rubrics")) return "Rubrics";
+  if (path.startsWith("/superadmin/templates")) return "Rubric Templates";
+  if (path.startsWith("/superadmin/prompts")) return "Prompts & Scoring";
   if (path.startsWith("/superadmin")) return "User Management";
   return "Super Admin";
 }

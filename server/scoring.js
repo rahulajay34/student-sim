@@ -209,6 +209,19 @@ export function saveScoringConfig(next) {
   return coerced;
 }
 
+// ---------------------------------------------------------------------------
+// isPayAsk — deterministic regex-based pay/commitment-ask detector.
+// No LLM, no side effects. Returns true when the counsellor is asking the
+// student to pay, register, block a seat, or otherwise commit financially.
+// Used by scoreMessage to gate the first-vs-subsequent ask guidance.
+// ---------------------------------------------------------------------------
+const PAY_ASK_RE = /(?:\b(?:pay(?:ing|ment)?|fee|fees|amount|rupees?|rs\.?|inr|₹)\b|\bblock(?:ing)?\s+(?:your\s+)?seat\b|\bsecure\s+(?:your\s+)?seat\b|\bseat[\s-]block\b|\bregister(?:ing|ed|ation)?\b|\benroll(?:ing|ed|ment)?\b|\badmission\b|\bupi\s+(?:link|id|transfer|payment)\b|\bpayment\s+link\b|\bsend(?:ing)?\s+(?:you\s+)?the\s+(?:link|upi)\b|\bconfirm\s+(?:your\s+)?(?:seat|enrollment|registration|admission|booking)\b|\bgo\s+ahead\s+and\s+(?:pay|register|enroll)\b|\bproceed\s+(?:to\s+)?(?:pay|register|enroll)\b)/i;
+
+export function isPayAsk(text) {
+  if (!text || typeof text !== "string") return false;
+  return PAY_ASK_RE.test(text);
+}
+
 // ---- deterministic backchannel short-circuit ----
 // 1-4 words, every word from the configured ack set -> conversational glue, 0.
 export function isBackchannel(text, config = loadScoringConfig()) {
@@ -279,9 +292,19 @@ function counterMoveSection(config) {
   return lines.length ? "\n" + lines.join("\n") + "\n" : "";
 }
 
+// Returns a pay-ask context clause for the scoring prompt, given the
+// payAskCount BEFORE this turn's increment.
+function payAskGuidance(payAskCountBefore) {
+  if (typeof payAskCountBefore !== "number" || !Number.isFinite(payAskCountBefore)) return "";
+  if (payAskCountBefore === 0) {
+    return `\nPAY-ASK CONTEXT: This is the FIRST time the counsellor has asked for payment/commitment on this call. A first ask is a normal, expected selling move — do NOT penalize it. Score it 0 or slightly positive if well-timed and well-framed.\n`;
+  }
+  return `\nPAY-ASK CONTEXT: The counsellor has already asked for payment/commitment ${payAskCountBefore} time(s) on this call. If the student has deflected, has open unresolved objections, or the counsellor is repeating the ask without addressing the objection first, treat this as pushy repetition — penalize it (-2..-5 depending on severity). If the student signalled readiness or the objection was genuinely resolved since the last ask, a follow-up ask is fine (0).\n`;
+}
+
 // Builds the exact scoring prompt. Exported (via scoringPromptForInspection)
 // for the /api/sessions/:id/prompt transparency endpoint.
-function buildScoringPrompt({ message, recentTurns = [], phase = 1, turnType, courseName, openObjections = [] } = {}, config = loadScoringConfig()) {
+function buildScoringPrompt({ message, recentTurns = [], phase = 1, turnType, courseName, openObjections = [], payAskCountBefore } = {}, config = loadScoringConfig()) {
   const pk = phaseKey(phase, config);
   const phaseText = config.phaseExpectations[pk] || config.phaseExpectations["1"];
   const tt = turnType ? ` (${turnType})` : "";
@@ -306,7 +329,8 @@ ${absenceRule}
 - 0 is for genuinely ordinary turns. But do NOT default a turn to 0 when the counsellor actually answered the student's question or worked their objection — reward it (+2 for a concrete relevant answer, +3..+4 for substantively addressing a raised concern with specifics/empathy, +5..+7 for an outstanding move). Persistence and addressing concerns MUST move the meter up.
 - Plain explaining in the Presentation phase and short factual answers when nothing was asked are 0, not negative.
 - Backchannels and routine acknowledgements are neutral (0).
-${counterMoveSection(config)}
+- STT TRANSCRIPTION NOISE: Do NOT penalize incorrect, mispronounced, or misspelled names or proper nouns (student names, place names, institute names, programme names, etc.). These are speech-to-text transcription artefacts, not counsellor errors. Score the substance, not the spelling.
+${payAskGuidance(payAskCountBefore)}${counterMoveSection(config)}
 CALIBRATION ANCHOR (from a real call): the student said "I'm not comfortable paying yet; I still need clarity on the refund policy if the program doesn't lead to a job." The counsellor answered "this 4000 rupees that you will be paying is fully refundable within 7 days if you change your mind, and regarding [placement]...". That is a concrete, correct, relevant answer to the refund concern the student raised — score it +2..+3 (it directly addresses the refund/affordability objection). It is NOT a 0. Use this as your benchmark for what the positive bands look like.
 
 OBJECTION DETECTION — also report whether this turn addressed an objection. "Addressed" means: the counsellor gave a substantive, specific response to a concern the student has raised THIS call (it appears in the CONVERSATION SO FAR above). A dismissal, a brush-off, fake urgency, or merely restating policy without engaging the substance does NOT count as addressed. Valid objection categories (use the KEY, lowercase, exactly):
@@ -403,6 +427,7 @@ function normalizeOpts(opts, legacyCourseName) {
       turnType: opts.turnType,
       courseName: opts.courseName,
       openObjections: Array.isArray(opts.openObjections) ? opts.openObjections : [],
+      session: opts.session || null,
     };
   }
   // Legacy: opts is the last student message (string|null), build a 1-turn window.
@@ -413,6 +438,7 @@ function normalizeOpts(opts, legacyCourseName) {
     turnType: undefined,
     courseName: legacyCourseName,
     openObjections: [],
+    session: null,
   };
 }
 
@@ -424,7 +450,20 @@ export async function scoreMessage(message, opts, legacyCourseName, chatOpts = {
   }
 
   const norm = normalizeOpts(opts, legacyCourseName);
-  const prompt = buildScoringPrompt({ message, ...norm }, config);
+
+  // ── Issue 11: pay-ask tracking ──────────────────────────────────────────────
+  // Mutate session.payAskCount in-place (caller persists the session object).
+  // Capture the count BEFORE incrementing — that's what drives the prompt guidance.
+  const session = norm.session;
+  if (session && typeof session === "object") {
+    if (!Number.isFinite(session.payAskCount)) session.payAskCount = 0;
+  }
+  const payAskCountBefore = session ? (session.payAskCount || 0) : undefined;
+  if (session && isPayAsk(message)) {
+    session.payAskCount = (session.payAskCount || 0) + 1;
+  }
+
+  const prompt = buildScoringPrompt({ message, ...norm, payAskCountBefore }, config);
 
   // Run breakdown concurrently for info-heavy messages (no-op for short ones).
   const breakdownPromise = scoreBreakdown({

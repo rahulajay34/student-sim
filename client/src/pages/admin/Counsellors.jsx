@@ -113,7 +113,14 @@ export default function Counsellors() {
                 <div className="flex items-center gap-3.5">
                   <Avatar name={c.name} color={c.avatarColor} size="lg" />
                   <div className="min-w-0">
-                    <div className="truncate text-base font-semibold text-ink">{c.name}</div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="truncate text-base font-semibold text-ink">{c.name}</div>
+                      {c.code && (
+                        <span className="shrink-0 rounded-md bg-canvas border border-line px-1.5 py-0.5 font-mono text-xs text-muted">
+                          {c.code}
+                        </span>
+                      )}
+                    </div>
                     <div className="truncate text-sm text-muted">{c.email}</div>
                   </div>
                 </div>

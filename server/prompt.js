@@ -170,8 +170,14 @@ function buildObjectionStateSection(cfg, objectionState) {
   const summary = summarizeForPrompt(objectionState);
   if (!summary) return "";
   const header = cfg.objectionStateHeader || "YOUR CONCERNS SO FAR (track these — do NOT loop):";
+  // PIVOTS TAKE: once you have pushed back on a point ONCE and the counsellor
+  // redirects to a new topic, ENGAGE the new topic — answer what they now ask,
+  // react to what they now say. Do NOT loop back to re-raise the old concern; you
+  // have already made that point, so let it rest unless they reopen it themselves.
+  const pivotRule = "PIVOTS TAKE: once you have raised a concern ONCE and the counsellor moves to a new topic, engage the new topic and do NOT circle back to re-raise the old concern unless they reopen it.";
   return `${header}
-${summary}`;
+${summary}
+${pivotRule}`;
 }
 
 function buildScenarioSection(scenario) {

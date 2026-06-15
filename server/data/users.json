@@ -5,7 +5,8 @@
     "email": "admin@masai.com",
     "password": "admin123",
     "role": "admin",
-    "avatarColor": "#4F46E5"
+    "avatarColor": "#4F46E5",
+    "gender": "male"
   },
   {
     "id": "counsellor-1",
@@ -13,7 +14,8 @@
     "email": "priya@masai.com",
     "password": "priya123",
     "role": "counsellor",
-    "avatarColor": "#0EA5E9"
+    "avatarColor": "#0EA5E9",
+    "gender": "female"
   },
   {
     "id": "counsellor-2",
@@ -21,6 +23,7 @@
     "email": "rohan@masai.com",
     "password": "rohan123",
     "role": "counsellor",
-    "avatarColor": "#10B981"
+    "avatarColor": "#10B981",
+    "gender": "male"
   }
 ]

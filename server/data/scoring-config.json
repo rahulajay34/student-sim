@@ -151,6 +151,8 @@
     "Phase context matters: Discovery is where the student answers questions; Presentation is a listening phase where short student acks are normal and plain counsellor explaining is fine; Objections is where pushback concentrates and empathy + specifics matter most.",
     "Backchannel words (ok, hmm, haan, ji, theek hai, achha...) are conversational glue. A 1-4 word turn made entirely of these is skipped before the LLM and scores 0.",
     "Edit phaseExpectations to retune what 'good' looks like per phase. Edit severityBands to widen or tighten how far a single turn can move the meter. Keep '0' as the modal band.",
-    "counterMoves.reward / counterMoves.penalize are grounded in real converting vs. losing calls — these are the moves worth nudging the score on. Add or remove with care."
+    "counterMoves.reward / counterMoves.penalize are grounded in real converting vs. losing calls — these are the moves worth nudging the score on. Add or remove with care.",
+    "STT TRANSCRIPTION NOISE (Issue 7): Do NOT penalize incorrect, mispronounced, or misspelled names or proper nouns (student names, place names, institute names, programme names). These are speech-to-text artefacts, not counsellor errors. Score the substance, not the spelling. This rule is hardcoded in the scoring prompt and cannot be overridden here.",
+    "PAY-ASK POLICY (Issue 11): The FIRST time a counsellor asks for payment/commitment is a normal selling move — never penalize it. Only penalize pushy repetition: badgering after the student deflected without resolving their objection (-2..-5). isPayAsk() is the deterministic detector; payAskCount is tracked on the session object and incremented before the LLM call so the correct before-value drives the scoring prompt guidance."
   ]
 }

@@ -284,6 +284,8 @@ export default function AdminDashboard() {
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
   const [loadKey, setLoadKey] = useState(0);
+  // Fallback: when analytics returns no recentReports, fetch via api.getReports()
+  const [fallbackReports, setFallbackReports] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -291,9 +293,36 @@ export default function AdminDashboard() {
     (async () => {
       setLoading(true);
       setError("");
+      setFallbackReports(null);
       try {
         const d = await api.getAdminAnalytics();
-        if (alive) setData(d);
+        if (!alive) return;
+        setData(d);
+        // If the analytics payload has no recent reports, fetch the full list
+        // and build the recent slice client-side (admin sees all reports).
+        if (!Array.isArray(d?.recentReports) || d.recentReports.length === 0) {
+          try {
+            const all = await api.getReports();
+            if (!alive) return;
+            // Mirror analytics.js: only scored reports; most recent 6.
+            const scored = (all || [])
+              .filter((r) => r.overall && Number.isFinite(r.overall?.percent))
+              .sort((a, b) => (a.generatedAt < b.generatedAt ? 1 : -1))
+              .slice(0, 6)
+              .map((r) => ({
+                id: r.id,
+                counsellorName: r.counsellorName || "",
+                personaName: r.personaName || "",
+                percent: r.overall?.percent,
+                band: r.overall?.band,
+                outcome: r.overall?.outcome,
+                generatedAt: r.generatedAt,
+              }));
+            setFallbackReports(scored);
+          } catch {
+            // Fallback failed silently — empty state will display instead.
+          }
+        }
       } catch (e) {
         if (alive) setError(e.message || "Failed to load dashboard.");
       } finally {
@@ -310,7 +339,9 @@ export default function AdminDashboard() {
   const weeklyTrend = data?.weeklyTrend ?? [];
   const objections = data?.objectionPerformance ?? [];
   const counsellors = data?.counsellors ?? [];
-  const recentReports = data?.recentReports ?? [];
+  // Prefer analytics payload; fall back to the direct-fetch slice.
+  const analyticsReports = data?.recentReports ?? [];
+  const recentReports = analyticsReports.length > 0 ? analyticsReports : (fallbackReports ?? []);
 
   // Counsellors table columns
   const counsellorColumns = [
@@ -405,7 +436,53 @@ export default function AdminDashboard() {
         </Card>
       )}
 
-      {/* KPI stat row */}
+      {/* RECENT REPORTS — top of dashboard (issue 4) */}
+      <Card className="p-6">
+        <CardHeader
+          title="Recent reports"
+          subtitle="Latest completed mock sessions across all counsellors"
+          action={
+            <Button as={Link} to="/admin/reports" variant="ghost" size="sm">
+              View all
+            </Button>
+          }
+        />
+        {recentReports.length === 0 ? (
+          <EmptyState
+            title="No reports yet"
+            hint="Completed mock sessions will appear here once reports are generated."
+          />
+        ) : (
+          <ul className="divide-y divide-line">
+            {recentReports.map((r) => (
+              <li key={r.id}>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/admin/reports/${r.id}`)}
+                  className="group -mx-2 flex w-full items-center gap-3 rounded-xl px-2 py-3 text-left transition-colors hover:bg-canvas"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-ink">{r.counsellorName || "—"}</p>
+                    <p className="truncate text-xs text-muted">
+                      {[r.personaName, relativeDate(r.generatedAt)].filter(Boolean).join(" · ")}
+                    </p>
+                  </div>
+                  <span className="tabular-nums text-sm font-semibold text-ink">
+                    {r.percent != null ? `${Math.round(r.percent)}%` : "—"}
+                  </span>
+                  {r.band && <Badge color={bandColor(r.band)}>{r.band}</Badge>}
+                  {r.outcome && <Badge color={outcomeColor(r.outcome)}>{r.outcome}</Badge>}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5">
+                    <path d="M9 18l6-6-6-6" />
+                  </svg>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      {/* KPI stat row (issue 12) */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           label="Mocks completed"
@@ -484,52 +561,6 @@ export default function AdminDashboard() {
           />
         ) : (
           <Table columns={counsellorColumns} rows={counsellors} />
-        )}
-      </Card>
-
-      {/* Recent reports */}
-      <Card className="p-6">
-        <CardHeader
-          title="Recent reports"
-          subtitle="Latest completed mock sessions"
-          action={
-            <Button as={Link} to="/admin/reports" variant="ghost" size="sm">
-              View all
-            </Button>
-          }
-        />
-        {recentReports.length === 0 ? (
-          <EmptyState
-            title="No reports yet"
-            hint="Not enough data yet — completed mocks will appear here."
-          />
-        ) : (
-          <ul className="divide-y divide-line">
-            {recentReports.map((r) => (
-              <li key={r.id}>
-                <button
-                  type="button"
-                  onClick={() => navigate(`/admin/reports/${r.id}`)}
-                  className="group -mx-2 flex w-full items-center gap-3 rounded-xl px-2 py-3 text-left transition-colors hover:bg-canvas"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-ink">{r.counsellorName}</p>
-                    <p className="truncate text-xs text-muted">
-                      {r.personaName} · {relativeDate(r.generatedAt)}
-                    </p>
-                  </div>
-                  <span className="tabular-nums text-sm font-semibold text-ink">
-                    {r.percent != null ? `${r.percent}%` : "—"}
-                  </span>
-                  {r.band && <Badge color={bandColor(r.band)}>{r.band}</Badge>}
-                  {r.outcome && <Badge color={outcomeColor(r.outcome)}>{r.outcome}</Badge>}
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5">
-                    <path d="M9 18l6-6-6-6" />
-                  </svg>
-                </button>
-              </li>
-            ))}
-          </ul>
         )}
       </Card>
     </div>

@@ -14,7 +14,7 @@ import { instantCue, llmCue } from "./cues.js";
 import { getFirstMessage, getStudentReply, getStudentReplyStream } from "./engine.js";
 import { scoreMessage, isBackchannel, loadScoringConfig, saveScoringConfig, scoringPromptForInspection } from "./scoring.js";
 import { generateReport, needsRegeneration, reportPromptForInspection, stubReportSections, buildFallbackReport } from "./report.js";
-import { buildAdminAnalytics, buildCounsellorAnalytics } from "./analytics.js";
+import { buildAdminAnalytics, buildCounsellorAnalytics, buildLeaderboard } from "./analytics.js";
 import { classifyCounsellorTurn } from "./classify.js";
 import { getPromptConfig, invalidatePromptConfigCache } from "./promptConfig.js";
 import { composeForInspection } from "./prompt.js";
@@ -45,7 +45,16 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const publicUser = (u) => u && { id: u.id, name: u.name, email: u.email, role: u.role, avatarColor: u.avatarColor };
+const publicUser = (u) =>
+  u && {
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    avatarColor: u.avatarColor,
+    gender: u.gender === "male" || u.gender === "female" ? u.gender : null,
+    code: store.counsellorCode(u),
+  };
 
 // --- Per-session serialization lock (#7 data-loss) -------------------------
 // The store does a full-object write at the end of each turn, so two overlapping
@@ -219,6 +228,32 @@ app.put("/api/users/:id/role", (req, res) => {
   const existing = store.getById("users", req.params.id);
   if (!existing) return res.status(404).json({ error: "User not found" });
   const updated = store.update("users", req.params.id, { role });
+  res.json(publicUser(updated));
+});
+
+// PATCH /api/users/:id — update a user's editable profile fields (currently
+// gender). A user may edit only their own profile; admin/superadmin may edit
+// anyone. 400 on an invalid gender, 404 when the user does not exist.
+app.patch("/api/users/:id", (req, res) => {
+  const requester = requesterFor(req);
+  const isPrivileged = requester && (requester.role === "admin" || requester.role === "superadmin");
+  // Self-edit allowed; privileged roles may edit anyone. Missing header (curl/
+  // smoke) is back-compat allow, matching the rest of the ownership guards.
+  if (requester && !isPrivileged && requester.id !== req.params.id) {
+    return res.status(403).json({ error: "You can only edit your own profile." });
+  }
+  const existing = store.getById("users", req.params.id);
+  if (!existing) return res.status(404).json({ error: "User not found" });
+
+  const patch = {};
+  if ("gender" in (req.body || {})) {
+    const g = req.body.gender;
+    if (g !== "male" && g !== "female" && g !== null) {
+      return res.status(400).json({ error: "gender must be 'male', 'female', or null" });
+    }
+    patch.gender = g;
+  }
+  const updated = store.update("users", req.params.id, patch);
   res.json(publicUser(updated));
 });
 
@@ -605,7 +640,12 @@ async function startSessionHandler(req, res) {
     // student then listens for how the counsellor sounds). Persisted so the call and
     // resumes stay consistent.
     const counsellorUser = store.getById("users", counsellorId);
-    const counsellorGender = inferGenderFromName(counsellorUser?.name);
+    // Prefer the counsellor's stored gender (explicit profile setting) over name
+    // inference, which is heuristic and wrong for ambiguous/uncommon names.
+    const counsellorGender =
+      counsellorUser?.gender === "male" || counsellorUser?.gender === "female"
+        ? counsellorUser.gender
+        : inferGenderFromName(counsellorUser?.name);
     const counsellorAddress = counsellorGender === "female" ? "ma'am"
       : counsellorGender === "male" ? "sir"
       : null;
@@ -879,7 +919,7 @@ app.post("/api/sessions/:id/message", lockedHandler(async (req, res) => {
       ? Promise.resolve({ adjustment: 0, reason: "Backchannel acknowledgement", addressedObjection: null })
       : scoreMessage(message, {
           recentTurns, phase: session.currentPhase, turnType, courseName: session.courseSnapshot?.name,
-          openObjections: openObjForScore,
+          openObjections: openObjForScore, session,
         });
 
     // Reply: streaming generator for SSE, plain await otherwise. Both go through
@@ -1163,7 +1203,7 @@ app.post("/api/sessions/:id/observe", lockedHandler(async (req, res) => {
       } else {
         scored = await scoreObserveTurn(cText, {
           recentTurns, phase: session.currentPhase, turnType,
-          courseName: session.courseSnapshot?.name, openObjections: openObjForScore,
+          courseName: session.courseSnapshot?.name, openObjections: openObjForScore, session,
         });
       }
       reason = scored.reason;
@@ -1635,6 +1675,31 @@ app.get("/api/analytics/counsellor/:id", (req, res) => {
   const assignments = store.getAll("assignments");
   const users = store.getAll("users");
   res.json(buildCounsellorAnalytics(req.params.id, { reports, assignments, users }));
+});
+
+// --- Leaderboard (issue 5) -------------------------------------------------
+// GET /api/leaderboard?metric=percent|satisfaction&board=average|high|byPersona
+// Visibility is role-derived from the X-User-Id requester: counsellors see the
+// top 10 (+ their own row when outside it); admin/superadmin see the full list.
+app.get("/api/leaderboard", (req, res) => {
+  const metric = req.query.metric === "satisfaction" ? "satisfaction" : "percent";
+  const board = ["average", "high", "byPersona"].includes(req.query.board) ? req.query.board : "average";
+  const requester = requesterFor(req);
+  // Back-compat: a missing X-User-Id header (curl/smoke) is treated as admin so
+  // the full ranking is returned, matching the other guards' allow-on-absence.
+  const viewer = requester
+    ? { id: requester.id, role: requester.role }
+    : { id: null, role: "admin" };
+  const reports = store.getAll("reports");
+  const sessions = store.getAll("sessions");
+  const users = store.getAll("users");
+  const leadProfiles = loadLeadProfiles() || [];
+  res.json(
+    buildLeaderboard(
+      { reports, sessions, users, leadProfiles },
+      { metric, board, viewer, counsellorCode: store.counsellorCode },
+    ),
+  );
 });
 
 // JSON error responses for body-parser failures — without this, an oversized or

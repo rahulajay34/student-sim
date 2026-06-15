@@ -25,3 +25,5 @@ __pycache__/
 voice-samples/requirements.txt
 
 requirements.txt
+
+.vercel/

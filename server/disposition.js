@@ -233,7 +233,10 @@ function buildNarrative(session, ev) {
   // 3) What is still in the way (the strongest open concern).
   if (open.length) {
     const o = open[open.length - 1];
-    sentences.push(`Nobody has fully settled ${categoryPhrase(o.category)} yet, so it still feels unsettled and you would want it addressed before you commit — though you are open to hearing about other things in the meantime rather than blocking on it.`);
+    const looped = (o.timesRaised ?? 1) >= 2
+      ? " You have already raised this once, so do not keep circling back to it — if the counsellor has pivoted to a new point, follow them there and engage it instead of re-opening this."
+      : "";
+    sentences.push(`Nobody has fully settled ${categoryPhrase(o.category)} yet, so it still feels unsettled and you would want it addressed before you commit — though you are open to hearing about other things in the meantime rather than blocking on it.${looped}`);
   }
 
   // 4) Stage-specific closer — the crucial "ready" behavior preserved here.

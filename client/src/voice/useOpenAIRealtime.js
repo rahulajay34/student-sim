@@ -41,6 +41,17 @@ function micConstraints(deviceId) {
 // Exposes a `voice`-like surface compatible with CallStage (enabled/status/
 // loadPct/error/enable/disable/getAnalyser) plus realtime extras (changeVoice,
 // muted/setMuted, sendText, sendSteering).
+//
+// Periodic accent reminder (issue 1c): re-injected every ~4 completed student
+// turns. Wording rotates so it does not read as a stuck loop. Cheap + non-
+// destructive — rides the same system-injection path as steering.
+const ACCENT_REMINDER_EVERY = 4;
+const ACCENT_REMINDER_LINES = [
+  "Keep your natural Indian English accent — syllable-timed, with the light Hinglish rhythm; do not let it drift to neutral.",
+  "Quick reminder: hold your authentic Indian English accent and the occasional Hindi particle, exactly as at the start of the call.",
+  "Stay in your Indian-English voice and rhythm; if you have started sounding neutral, pull straight back to it.",
+  "Keep that Indian English accent strong and natural — don't flatten out as the call runs long.",
+];
 
 const SDP_URL = "https://api.openai.com/v1/realtime/calls";
 
@@ -94,6 +105,15 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
   const steerSeqRef = useRef(0); // client event_id sequence for steering sends
   const steerWarnedRef = useRef(false);
   const sendSteeringRawRef = useRef(null); // points at sendSteeringRaw (set below; lets handleEvent re-send)
+
+  // Periodic accent reminder (issue 1c): the standing voice instructions set the
+  // Indian-English accent at connect time, but over a long call that fades from
+  // context and the accent drifts to neutral. Every ~4 completed student turns we
+  // re-inject a short, varied "keep your natural Indian English accent" nudge
+  // through the same non-destructive system-injection path as steering. Wording
+  // rotates so it never reads as a stuck loop.
+  const studentTurnCountRef = useRef(0);
+  const accentReminderSeqRef = useRef(0);
 
   const onTranscriptRef = useRef(onTranscript);
   const onErrorRef = useRef(onError);
@@ -313,10 +333,17 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
       case "response.done":
         if (enabledRef.current && statusRef.current === "speaking") setStatusBoth("idle");
         break;
-      // The student's spoken reply, transcribed.
+      // The student's spoken reply, transcribed — marks a completed turn pair.
       case "response.output_audio_transcript.done": {
         const text = (evt.transcript || "").trim();
         if (text) onTranscriptRef.current?.({ role: "student", text });
+        // Periodic accent reminder: every ~4 completed student turns, nudge the
+        // accent back to home base through the non-destructive injection path.
+        studentTurnCountRef.current += 1;
+        if (studentTurnCountRef.current % ACCENT_REMINDER_EVERY === 0) {
+          const line = ACCENT_REMINDER_LINES[accentReminderSeqRef.current++ % ACCENT_REMINDER_LINES.length];
+          sendSteeringRawRef.current?.(line);
+        }
         break;
       }
       case "error": {
@@ -362,6 +389,10 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
     const gen = ++connectGenRef.current;
     const sid = sessionIdRef.current;
     if (!sid) throw new Error("No session id for realtime connection.");
+
+    // Fresh peer connection — restart the periodic accent-reminder cadence so a
+    // reconnect (e.g. live voice swap) does not fire one immediately or skip it.
+    studentTurnCountRef.current = 0;
 
     // Clean up only this invocation's local allocations when it has been superseded.
     const bailIfStale = (pc, micStream, micCtx, audioEl) => {
