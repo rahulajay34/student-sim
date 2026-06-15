@@ -338,7 +338,7 @@ const NEW_REPORT_PARAMS = [
 const NEW_REPORT_ANCHORS = `1. rapport_opening (Rapport & Opening)
    0 no greeting/rapport; abrupt; doesn't confirm who they're speaking to · 1 bare robotic greeting, no warmth ·
    2 greets+introduces self but generic, no agenda · 3 warm greeting+intro+basic agenda/audibility check, inconsistent ·
-   4 warm personalised open (uses name), checks audibility/sets agenda, minor gaps · 5 excellent personalised warm opening, clear agenda, learner at ease
+   4 warm personalised open (uses name), checks audibility/sets agenda, minor gaps · 5 excellent personalised warm opening, clear agenda, learner at ease Getting the learner's name wrong, or a slightly scripted open, is a minor deduction, NOT an automatic drop below 3 if a real greeting + framing happened.
 2. needs_discovery (Needs Discovery)
    0 no discovery; pitches immediately · 1 one/two generic questions, ignores answers · 2 some questions but pitches before understanding ·
    3 discovers background/goal but misses constraints (time/fee/family) · 4 uncovers background, goal & most constraints and tailors, minor gaps ·
@@ -362,13 +362,36 @@ const NEW_REPORT_ANCHORS = `1. rapport_opening (Rapport & Opening)
 7. communication_empathy (Communication & Empathy)
    0 confusing/rude/dismissive, talks over learner · 1 hard to follow, monologues, little empathy · 2 understandable but mechanical, limited empathy ·
    3 clear and polite, some empathy, occasional rambling/missed cues · 4 clear, structured, empathetic, responds well, minor lapses ·
-   5 excellent: clear, warm, well-paced, genuinely empathetic and responsive throughout
+   5 excellent: clear, warm, well-paced, genuinely empathetic and responsive throughout Fast pace, some monologuing, or filler words are minor; only score <=2 when poor communication genuinely obstructed the learner or empathy was clearly absent/dismissive.
 8. personalised_experience (Personalised Experience)
    0 fully generic script, ignores who the learner is · 1 token nod but pitch is generic · 2 slight tailoring, mostly one-size-fits-all ·
    3 some genuine tailoring to background/goal, inconsistent · 4 pitch clearly mapped to this learner's background/goals, minor generic parts ·
    5 deeply personalised — every key point tied to this learner's profile, goals and constraints`;
 
-const NEW_REPORT_SYSTEM = `You are a strict, experienced Masai mock-counselling grader. Score the COUNSELLOR on eight categories using the exact 0-5 anchors. Be calibrated and strict (most real scores are 2-4; 5 = meets expectations, not superhuman; 0 = absent). For each category also write ONE short sentence, specific to THIS call, explaining the score. Return ONLY a JSON object.`;
+const NEW_REPORT_SYSTEM = `You are an experienced Masai mock-counselling grader. Score the COUNSELLOR on eight categories using the exact 0-5 anchors provided. Calibrate to how Masai's EXPERT HUMAN graders score — they are fair, not harsh: a competent counsellor typically averages about 3.3-3.6 out of 5 per category. Use the full 0-5 range, write one short call-specific sentence per category explaining the score, and return ONLY a JSON object.`;
+
+const NEW_REPORT_SCALE = `Score EACH category 0-5, matching expert human graders (who score a typical competent call around 3.3-3.6 per category, ~65-75% overall). Anchor to this:
+  5 = done well and consistently throughout (ALLOWED — not reserved for the superhuman).
+  4 = done well, clearly above adequate.
+  3 = handled competently / adequately. THIS IS THE DEFAULT for a normal call. Minor flaws — a mispronounced name, some monologuing, a fast pace, small wording slips — do NOT pull a category below 3 if the substance was handled.
+  2 = clearly below par on this category (a real gap), not merely imperfect.
+  1 = barely attempted or mostly wrong.
+  0 = absent / not attempted at all.
+Do NOT cluster scores at 2. Reserve 0-2 for genuine weakness or absence. Your scores should land close to a human grader's, NOT systematically lower — if you find yourself giving mostly 2s, you are being too harsh; competent-but-flawed execution is a 3.`;
+
+const NEW_REPORT_CALIBRATION = `CALIBRATION — three real calls graded by Masai's expert human graders. Match this strictness. Notice that competent execution scores 3-4, a 5 is given for a genuinely strong dimension, and only real failures get 1-2; graders do NOT cluster at 2.
+
+EXAMPLE A — a strong call (human total 80%):
+  rapport_opening 5, needs_discovery 3, programme_presentation 4, objection_handling 4, product_knowledge 4, closing_payment_ask 4, communication_empathy 4, personalised_experience 4
+  Grader note: "Overall good performance; well aware of the student's needs and effectively explained the course benefits and value proposition." (A solid call is mostly 4s, with a 5 for excellent rapport and a 3 where discovery was lighter — not a wall of 2s.)
+
+EXAMPLE B — an average call (human total 60%):
+  rapport_opening 3, needs_discovery 3, programme_presentation 3, objection_handling 3, product_knowledge 3, closing_payment_ask 4, communication_empathy 3, personalised_experience 2
+  Grader note: "Good product knowledge; needs to connect the programme to the student's persona better; couldn't fully convince on doubts; good intro but needs to connect better." (A merely-okay call with real gaps still scores mostly 3s.)
+
+EXAMPLE C — a weak call (human total 45%):
+  rapport_opening 2, needs_discovery 3, programme_presentation 2, objection_handling 3, product_knowledge 1, closing_payment_ask 2, communication_empathy 3, personalised_experience 2
+  Grader note: "Didn't understand the persona; weak rapport; started selling immediately; shaky course knowledge (unsure on dates/EMI/placement); pushing the lead rather than understanding." (Genuine weakness earns 1-2 on the failed dimensions — but competent ones, like discovery and communication here, still get a 3.)`;
 
 function buildNewReportPrompt(session) {
   const p = session.personaSnapshot || {};
@@ -388,12 +411,17 @@ function buildNewReportPrompt(session) {
 
   const user = `${callContext}
 
-${learnerLines}
+${NEW_REPORT_SCALE}
 
 THE 8 PARAMETERS WITH THEIR EXACT 0-5 ANCHORS:
 ${NEW_REPORT_ANCHORS}
 
-Now read the full transcript and score each category 0-5 with a one-line summary.
+${NEW_REPORT_CALIBRATION}
+
+THIS CALL — learner persona:
+${learnerLines}
+
+Now read the full transcript and score each category 0-5 with a one-line, call-specific summary.
 === TRANSCRIPT START ===
 ${transcriptText(session.transcript)}
 === TRANSCRIPT END ===
