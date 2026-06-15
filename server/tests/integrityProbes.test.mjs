@@ -106,7 +106,7 @@ test("loadProbes — merges stored probes over defaults", () => {
 test("loadProbes — drops malformed entries, falls back when nothing usable", () => {
   const { probes } = loadProbes({ probes: [null, 5, { id: "", question: "" }, {}] });
   // Nothing usable survived → fall back to defaults.
-  assert.equal(probes.length, 14);
+  assert.equal(probes.length, 24);
 });
 
 // ─── newProbeId ───────────────────────────────────────────────────────────────
