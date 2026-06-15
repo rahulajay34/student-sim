@@ -111,7 +111,7 @@
     {
       "range": "-4..-6",
       "label": "Notably bad",
-      "guidance": "Pressure tactics on a hesitant student (manufactured deadline, 'decide right now', 'seats running out' used as a club rather than a fact), dismissing or belittling a stated concern, fake urgency on a trust objection."
+      "guidance": "Badgering a student who has ALREADY clearly declined, a fabricated/manufactured deadline or untrue figures, dismissing or belittling a stated concern, fake urgency on a trust objection. (Genuine selectivity / limited-seats framing to prompt a decision is approved and NOT a fault.)"
     },
     {
       "range": "+8..+10 / -7..-10",
@@ -124,7 +124,7 @@
     "2": "Discovery. This is where the student ANSWERS the counsellor's questions. An ordinary probe is 0, but genuine craft earns a small positive (+1..+2): a real open question that gets the student talking, and active listening that builds on the student's own last answer. Letting the student talk is good. Lecturing, brochure-dumping, or ignoring the answer the student just gave instead of probing is weak (-1..-2).",
     "3": "Presentation. The counsellor is explaining the programme (curriculum, faculty, placements, certification, selectivity) while the student mostly LISTENS and gives short acknowledgements. Plain, clear explaining is fine (0); a point tied specifically to what THIS student said in discovery earns a small positive (+1..+2). Weak (-1..-2): 100+ word brochure dumps with no link to the student, lecturing without ever checking in.",
     "4": "Objections & Negotiation. This is where the student's questions and pushback concentrate (fees, parents, time, scholarships, placement scepticism, EMI). Good now: address the student's SPECIFIC objection with concrete information and empathy, then check back — decompose the fee, quote EMI tenures, offer a parent call, give the real recordings/attendance answer. Dismissing, brushing off, or pressuring a hesitant student is a serious fault.",
-    "5": "Close. Good now: a clear, LOW-pressure next step — the 4,000 seat-blocking amount framed honestly, a dashboard/UPI walkthrough, a follow-up or callback if the student isn't ready. Pressure tactics on a still-hesitant student (last day, decide right now, seats running out as a club) are a serious fault."
+    "5": "Close. Good now: a clear, LOW-pressure next step — the 4,000 seat-blocking amount framed honestly, a dashboard/UPI walkthrough, a follow-up or callback if the student isn't ready. Genuine selectivity / limited-seats framing to prompt a decision is an APPROVED instructed tactic — NOT a fault. Serious faults: badgering a student who has ALREADY clearly declined, or fabricated/false urgency (an invented 'last day' or untrue figures)."
   },
   "counterMoves": {
     "reward": [
@@ -136,7 +136,7 @@
     ],
     "penalize": [
       "Fake urgency or invented deadlines ('today is the last day') used to pressure rather than inform.",
-      "Scarcity pressure ('only 70 seats left') aimed at a trust or affordability objection.",
+      "Fabricated scarcity — invented seat counts, figures, or deadlines that are simply untrue. (Genuine selectivity / limited-seats framing — e.g. 'X shortlisted from Y applicants, few seats left' — is an APPROVED instructed tactic and must NOT be penalized, even when used to prompt a decision.)",
       "Ignoring or talking past the specific objection the student just raised."
     ]
   },

@@ -136,7 +136,7 @@ export const DEFAULT_SCORING_CONFIG = {
     2: "Discovery. This is where the student ANSWERS the counsellor's questions. An ordinary probe is 0, but genuine craft earns a small positive (+1..+2): a real open question that gets the student talking, and active listening that builds on the student's last answer. Letting the student talk is good. Lecturing, brochure-dumping, or ignoring the student's answer instead of probing is weak (-1..-2).",
     3: "Presentation. The counsellor is explaining the programme while the student mostly LISTENS and gives short acknowledgements. Plain, clear explaining is fine (0); a point tied specifically to what THIS student said earns a small positive (+1..+2). Weak (-1..-2): 100+ word brochure dumps with no link to the student.",
     4: "Objections & Negotiation. Where the student's questions and pushback concentrate (fees, parents, time, scholarships, placement, EMI). Good now: address the SPECIFIC objection with concrete information and empathy, then check back. Dismissing, brushing off, or pressuring a hesitant student is a serious fault.",
-    5: "Close. Good now: a clear, LOW-pressure next step — the seat-blocking amount framed honestly, a payment walkthrough, or a follow-up if the student isn't ready. Pressure tactics on a still-hesitant student (last day, decide right now, seats running out as a club) are a serious fault.",
+    5: "Close. Good now: a clear, LOW-pressure next step — the seat-blocking amount framed honestly, a payment walkthrough, or a follow-up if the student isn't ready. Genuine selectivity / limited-seats framing to prompt a decision is an APPROVED instructed tactic — NOT a fault. Serious faults: badgering a student who has ALREADY clearly declined, or fabricated/false urgency (an invented 'last day' or untrue figures).",
   },
   counterMoves: {
     reward: [
@@ -148,7 +148,7 @@ export const DEFAULT_SCORING_CONFIG = {
     ],
     penalize: [
       "Fake urgency or invented deadlines ('today is the last day') used to pressure rather than inform.",
-      "Scarcity pressure ('only 70 seats left') aimed at a trust or affordability objection.",
+      "Fabricated scarcity — invented seat counts, figures, or deadlines that are simply untrue. (Genuine selectivity / limited-seats framing — e.g. 'X shortlisted from Y applicants, few seats left' — is an APPROVED instructed tactic and must NOT be penalized, even when used to prompt a decision.)",
       "Ignoring or talking past the specific objection the student just raised.",
     ],
   },
@@ -406,6 +406,7 @@ ${absenceRule}
 - Plain explaining in the Presentation phase and short factual answers when nothing was asked are 0, not negative.
 - Backchannels and routine acknowledgements are neutral (0).
 - STT TRANSCRIPTION NOISE: Do NOT penalize incorrect, mispronounced, or misspelled names or proper nouns (student names, place names, institute names, programme names, etc.). These are speech-to-text transcription artefacts, not counsellor errors. Score the substance, not the spelling. BROADER RULE: If the counsellor's turn looks partially or fully garbled — incoherent word sequences, broken fragments, repeated syllables, or text that does not form any recognisable sentence — treat it as an STT transcription error and score it 0 (neutral). Do NOT penalize garbled or incoherent text. If you cannot tell what the counsellor intended to say, return adjustment: 0.
+- APPROVED SCARCITY / SELECTIVITY: Communicating genuine selectivity and limited seats to prompt a decision — e.g. 'out of 20,000 applicants only ~3,000 were shortlisted, and only a few seats remain' — is an APPROVED, instructed counselling tactic. Do NOT penalize this framing as pressure, pushiness, or misselling, even when used to push for a decision. Only penalize urgency that is FABRICATED (numbers/deadlines that are simply untrue) or that crosses into badgering a student who has already clearly declined.
 ${payAskGuidance(payAskCountBefore)}${counterMoveSection(config)}
 CALIBRATION ANCHOR (from a real call): the student said "I'm not comfortable paying yet; I still need clarity on the refund policy if the program doesn't lead to a job." The counsellor answered "this 4000 rupees that you will be paying is fully refundable within 7 days if you change your mind, and regarding [placement]...". That is a concrete, correct, relevant answer to the refund concern the student raised — score it +2..+3 (it directly addresses the refund/affordability objection). It is NOT a 0. Use this as your benchmark for what the positive bands look like.
 

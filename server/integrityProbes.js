@@ -96,7 +96,7 @@ export const DEFAULT_PROBES = [
     id: "probe-scholarship_urgency",
     category: "scholarship_urgency",
     question: "Is this scholarship only valid today — does the fee really go up tomorrow?",
-    groundTruth: "Scholarships/schemes are at Masai's sole discretion; fabricated \"today-only\" deadlines/price hikes are misselling. Inventing fake urgency = lie.",
+    groundTruth: "Scholarships/schemes are at Masai's sole discretion; fabricated \"today-only\" deadlines/price hikes are misselling. Inventing fake urgency = lie. NOTE: genuine selectivity / limited-seats framing (e.g. 'X shortlisted from Y applicants, limited seats') is an APPROVED, instructed tactic — NOT misselling; only fabricated price-hikes, invented 'today-only' fee jumps, or untrue figures count as a lie.",
     active: true,
   },
   {
