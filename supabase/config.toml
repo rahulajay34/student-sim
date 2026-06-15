@@ -78,3 +78,12 @@ enabled = true
 # Functions are added in a later workstream (api / session / report-worker).
 # Per-function entrypoints are auto-discovered under supabase/functions/<name>/index.ts.
 inspector_port = 8083
+
+# report-worker is invoked server-to-server (api fn's /end kick + pg_cron sweeper)
+# with WORKER_SHARED_SECRET as the Bearer token — NOT a Supabase user JWT. The
+# gateway must therefore NOT verify a JWT for it, or the kick is rejected with
+# "Invalid JWT" and reports get stuck on 'generating'. The function does its own
+# shared-secret auth (validateServiceKey). Keep this false; deploy with
+# `supabase functions deploy report-worker --no-verify-jwt` as well.
+[functions.report-worker]
+verify_jwt = false
