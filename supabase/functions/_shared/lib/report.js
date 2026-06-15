@@ -319,6 +319,89 @@ Return ONLY a JSON object with this exact shape:
 Do not output anything except the JSON object.`;
 }
 
+// ─── New Report Section prompt: 8-parameter strict re-scoring (additive) ──────
+// An INDEPENDENT extra call that re-grades the COUNSELLOR on 8 parameters, each
+// 0-5, with a one-line per-parameter summary specific to THIS call. Additive —
+// does not touch any existing scoring/metric logic. Failure is non-fatal
+// (report.partial; report.newReport left undefined).
+const NEW_REPORT_PARAMS = [
+  { key: "rapport_opening", label: "Rapport & Opening" },
+  { key: "needs_discovery", label: "Needs Discovery" },
+  { key: "programme_presentation", label: "Programme Presentation" },
+  { key: "objection_handling", label: "Objection Handling" },
+  { key: "product_knowledge", label: "Product Knowledge & Accuracy" },
+  { key: "closing_payment_ask", label: "Closing & Payment Ask" },
+  { key: "communication_empathy", label: "Communication & Empathy" },
+  { key: "personalised_experience", label: "Personalised Experience" },
+];
+
+const NEW_REPORT_ANCHORS = `1. rapport_opening (Rapport & Opening)
+   0 no greeting/rapport; abrupt; doesn't confirm who they're speaking to · 1 bare robotic greeting, no warmth ·
+   2 greets+introduces self but generic, no agenda · 3 warm greeting+intro+basic agenda/audibility check, inconsistent ·
+   4 warm personalised open (uses name), checks audibility/sets agenda, minor gaps · 5 excellent personalised warm opening, clear agenda, learner at ease
+2. needs_discovery (Needs Discovery)
+   0 no discovery; pitches immediately · 1 one/two generic questions, ignores answers · 2 some questions but pitches before understanding ·
+   3 discovers background/goal but misses constraints (time/fee/family) · 4 uncovers background, goal & most constraints and tailors, minor gaps ·
+   5 thorough discovery (background, goal, constraints, motivation) that clearly shapes the pitch
+3. programme_presentation (Programme Presentation)
+   0 no real presentation / wrong / confusing · 1 vague mention, no structure · 2 lists features but generic brochure-dump ·
+   3 clear on curriculum/format/fees but partly generic/missing pieces · 4 structured, clear, mostly relevant, tied to learner, minor gaps ·
+   5 crisp, structured, fully relevant, tailored to the learner's goal
+4. objection_handling (Objection Handling)
+   0 ignored/dismissed the concern · 1 acknowledged but barely addressed (no details) · 2 answered with no specifics (vague reassurance) ·
+   3 answered partially but reasonably, some specifics, not fully resolved · 4 resolved most concerns with concrete specifics + empathy, minor gaps ·
+   5 fully resolved each concern with specific facts/data/proof + workable alternatives; confident, no pressure
+5. product_knowledge (Product Knowledge & Accuracy)
+   0 major errors / fabricated / misselling (false guarantees) · 1 very shaky; doesn't know basics (fees/EMI/dates) or wrong info ·
+   2 knows some facts but clear gaps/uncertainty · 3 mostly accurate, main facts, a few gaps/hedges · 4 strong accurate knowledge, minor gaps, no false claims ·
+   5 complete, accurate, confident command of all details; no misselling
+6. closing_payment_ask (Closing & Payment Ask)
+   0 no close/next step · 1 vague "let me know", no ask · 2 mentions a next step but unclear/weak, no concrete ask ·
+   3 asks for seat-block/next step but tentative/mistimed · 4 clear low-pressure ask, secures follow-up/near-decision, minor gaps ·
+   5 confident, well-timed, low-pressure close securing a concrete decision or firm next step
+7. communication_empathy (Communication & Empathy)
+   0 confusing/rude/dismissive, talks over learner · 1 hard to follow, monologues, little empathy · 2 understandable but mechanical, limited empathy ·
+   3 clear and polite, some empathy, occasional rambling/missed cues · 4 clear, structured, empathetic, responds well, minor lapses ·
+   5 excellent: clear, warm, well-paced, genuinely empathetic and responsive throughout
+8. personalised_experience (Personalised Experience)
+   0 fully generic script, ignores who the learner is · 1 token nod but pitch is generic · 2 slight tailoring, mostly one-size-fits-all ·
+   3 some genuine tailoring to background/goal, inconsistent · 4 pitch clearly mapped to this learner's background/goals, minor generic parts ·
+   5 deeply personalised — every key point tied to this learner's profile, goals and constraints`;
+
+const NEW_REPORT_SYSTEM = `You are a strict, experienced Masai mock-counselling grader. Score the COUNSELLOR on eight categories using the exact 0-5 anchors. Be calibrated and strict (most real scores are 2-4; 5 = meets expectations, not superhuman; 0 = absent). For each category also write ONE short sentence, specific to THIS call, explaining the score. Return ONLY a JSON object.`;
+
+function buildNewReportPrompt(session) {
+  const p = session.personaSnapshot || {};
+  const lead = session.leadCard || null;
+
+  const callContext = `CALL CONTEXT: This is a Masai admissions counselling call. The counsellor is selling an admissions programme: a small seat-block (~₹4,000) blocks the seat, with EMI options for the rest of the fee. Placement support is ASSISTANCE, not a guaranteed job. The credential is a certificate, NOT a degree. Grade ONLY the counsellor.`;
+
+  const learnerLines = [
+    `THE LEARNER FOR THIS CALL:`,
+    `NAME: ${p.name || lead?.name || "(unnamed)"}`,
+    `LABEL: ${p.label || "n/a"}`,
+    p.coreAnxiety ? `CORE ANXIETY: ${p.coreAnxiety}` : null,
+    lead ? `LEAD CARD: ${[lead.name, lead.gender, lead.summary, lead.note].filter(Boolean).join(" · ")}` : null,
+  ].filter(Boolean).join("\n");
+
+  const schemaLine = `Output schema: { "parameters": [ {"key": "<one of: ${NEW_REPORT_PARAMS.map((x) => x.key).join(", ")}>", "score": <int 0-5>, "summary": "<one sentence specific to this call>"} ] } — exactly 8 entries, one per key.`;
+
+  const user = `${callContext}
+
+${learnerLines}
+
+THE 8 PARAMETERS WITH THEIR EXACT 0-5 ANCHORS:
+${NEW_REPORT_ANCHORS}
+
+Now read the full transcript and score each category 0-5 with a one-line summary.
+=== TRANSCRIPT START ===
+${transcriptText(session.transcript)}
+=== TRANSCRIPT END ===
+${schemaLine}`;
+
+  return { system: NEW_REPORT_SYSTEM, user };
+}
+
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, Math.round(Number(n) || 0)));
 
 // ─── Integrity check enum + sanitizer ────────────────────────────────────────
@@ -507,7 +590,29 @@ const INTEGRITY_SCHEMA = {
   additionalProperties: false,
 };
 
-async function runCall(label, prompt, jsonSchema) {
+// New Report Section: 8-parameter strict re-scoring (additive, admin-only).
+const NEW_REPORT_SCHEMA = {
+  type: "object",
+  properties: {
+    parameters: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          key: { type: "string" },
+          score: { type: "number" },
+          summary: { type: "string" },
+        },
+        required: ["key", "score", "summary"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["parameters"],
+  additionalProperties: false,
+};
+
+async function runCall(label, prompt, jsonSchema, system) {
   const callOpts = {
     ...DETERMINISTIC_SAMPLING,
     mode: "reasoning",
@@ -519,11 +624,14 @@ async function runCall(label, prompt, jsonSchema) {
     maxRetries: 0,
     jsonSchema,
   };
+  const messages = system
+    ? [{ role: "system", content: system }, { role: "user", content: prompt }]
+    : [{ role: "user", content: prompt }];
   const attempts = [callOpts, callOpts];
   let lastError;
   for (let i = 0; i < attempts.length; i++) {
     try {
-      const text = await _chat([{ role: "user", content: prompt }], attempts[i]);
+      const text = await _chat(messages, attempts[i]);
       return { ok: true, value: extractJson(text) };
     } catch (err) {
       lastError = err;
@@ -705,6 +813,25 @@ function assemblePersonaAddressed(rawD) {
   };
 }
 
+// ─── Assemble the New Report Section from its scoring call ────────────────────
+// 8 parameters in fixed order, each clamped 0-5, with the human label attached.
+// total = sum(scores) / 40 * 100, rounded to 1 decimal.
+function assembleNewReport(raw) {
+  const byKey = new Map((Array.isArray(raw?.parameters) ? raw.parameters : []).map((p) => [p.key, p]));
+  const parameters = NEW_REPORT_PARAMS.map(({ key, label }) => {
+    const p = byKey.get(key) || {};
+    return {
+      key,
+      label,
+      score: clamp(p.score ?? 0, 0, 5),
+      summary: typeof p.summary === "string" ? p.summary : "",
+    };
+  });
+  const sum = parameters.reduce((n, p) => n + p.score, 0);
+  const total = Math.round((sum / 40) * 100 * 10) / 10;
+  return { total, parameters };
+}
+
 export function reportPromptForInspection(session) {
   const { criteria } = effectiveCriteria(session);
   return buildRubricPrompt(session, criteria);
@@ -729,6 +856,11 @@ export async function generateReport(session) {
   const hasProbe = !!session.integrityProbe;
   const integrityPrompt = hasProbe ? buildIntegrityPrompt(session) : null;
 
+  // New Report Section: an INDEPENDENT 8-parameter strict re-scoring (additive).
+  // Rides the same parallel fan-out; failure is non-fatal (report.partial,
+  // report.newReport left undefined).
+  const newReportPrompt = buildNewReportPrompt(session);
+
   // All calls are independent → dispatch them together via allSettled.
   const settled = await Promise.allSettled([
     runCall("Call A (rubric)", rubricPrompt, REPORT_A_SCHEMA),
@@ -738,9 +870,10 @@ export async function generateReport(session) {
     hasProbe
       ? runCall("Call E (integrity)", integrityPrompt, INTEGRITY_SCHEMA)
       : Promise.resolve({ ok: false, skipped: true }),
+    runCall("Call F (new report)", newReportPrompt.user, NEW_REPORT_SCHEMA, newReportPrompt.system),
   ]);
   const unwrap = (s) => (s.status === "fulfilled" ? s.value : { ok: false, error: s.reason });
-  const [resultA, resultB, resultC, resultD, resultE] = settled.map(unwrap);
+  const [resultA, resultB, resultC, resultD, resultE, resultF] = settled.map(unwrap);
 
   if (!resultA.ok) {
     console.error("[report] Call A failed entirely; returning neutral fallback.", resultA.error?.message);
@@ -772,6 +905,15 @@ export async function generateReport(session) {
     }
   }
 
+  // New Report Section (additive). Non-fatal: on failure mark partial and leave
+  // report.newReport undefined.
+  let newReport;
+  if (resultF.ok) {
+    newReport = assembleNewReport(resultF.value);
+  } else {
+    partial = true;
+  }
+
   const sessionMinutes = session.startedAt
     ? Math.round((Date.now() - new Date(session.startedAt).getTime()) / 60000 * 10) / 10
     : null;
@@ -794,6 +936,7 @@ export async function generateReport(session) {
     personaAddressed,
   };
   if (integrityCheck) report.integrityCheck = integrityCheck;
+  if (newReport) report.newReport = newReport;
   if (partial) report.partial = true;
   return report;
 }

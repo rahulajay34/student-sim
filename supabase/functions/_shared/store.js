@@ -546,6 +546,7 @@ function reportFromRow(row) {
     personaAddressed: row.persona_addressed ?? null,
     personaCard: row.persona_card ?? null,
     integrityCheck: row.integrity_check ?? null,
+    newReport: row.new_report ?? null,
   };
 }
 
@@ -581,6 +582,7 @@ function reportToRow(obj) {
   if (obj.personaAddressed !== undefined) r.persona_addressed = obj.personaAddressed;
   if (obj.personaCard !== undefined) r.persona_card = obj.personaCard;
   if (obj.integrityCheck !== undefined) r.integrity_check = obj.integrityCheck;
+  if (obj.newReport !== undefined) r.new_report = obj.newReport;
   return r;
 }
 

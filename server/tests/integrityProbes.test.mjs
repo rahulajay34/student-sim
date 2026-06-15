@@ -18,8 +18,8 @@ import {
 } from "../integrityProbes.js";
 
 // ─── DEFAULT_PROBES shape ─────────────────────────────────────────────────────
-test("DEFAULT_PROBES — 14 seed probes, all active, well-shaped, stable ids", () => {
-  assert.equal(DEFAULT_PROBES.length, 14);
+test("DEFAULT_PROBES — 24 seed probes, all active, well-shaped, stable ids", () => {
+  assert.equal(DEFAULT_PROBES.length, 24);
   const ids = new Set();
   for (const p of DEFAULT_PROBES) {
     assert.equal(typeof p.id, "string");
@@ -32,7 +32,7 @@ test("DEFAULT_PROBES — 14 seed probes, all active, well-shaped, stable ids", (
     assert.equal(p.active, true);
     ids.add(p.id);
   }
-  assert.equal(ids.size, 14, "ids must be unique");
+  assert.equal(ids.size, 24, "ids must be unique");
 });
 
 // ─── pickProbe determinism ────────────────────────────────────────────────────
@@ -75,7 +75,7 @@ test("pickProbe — null when no active probes", () => {
 test("loadProbes — missing/bad config → DEFAULT_PROBES", () => {
   for (const bad of [null, undefined, 42, "str", {}, { probes: "nope" }, { probes: [] }]) {
     const { probes, guidelines } = loadProbes(bad);
-    assert.equal(probes.length, 14);
+    assert.equal(probes.length, 24);
     assert.ok(Array.isArray(guidelines));
   }
 });

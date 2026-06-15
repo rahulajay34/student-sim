@@ -18,7 +18,13 @@ import assert from "node:assert/strict";
 import { generateReport, stubReportSections, buildFallbackReport, _setChatForTests } from "../report.js";
 
 // ─── Classify which fan-out call a prompt belongs to ─────────────────────────
-function callKind(prompt) {
+function callKind(input) {
+  // Accept the raw messages array (system+user for Call F) or a single prompt
+  // string — join all message contents so the marker is found regardless of role.
+  const prompt = Array.isArray(input)
+    ? input.map((m) => m.content).join("\n")
+    : input;
+  if (prompt.includes("THE 8 PARAMETERS WITH THEIR EXACT 0-5 ANCHORS")) return "F";
   if (prompt.includes("ADDRESSED this specific")) return "D";
   if (prompt.includes("prescribing practice drills")) return "C";
   if (prompt.includes("Write the coaching narrative")) return "B";
@@ -74,6 +80,22 @@ const RESP_D = JSON.stringify({
   score: 12, // out of range → must clamp to 10
 });
 
+// Call F (New Report Section): 8 parameters, deliberately out-of-order + with an
+// out-of-range score (6 → clamp to 5) and a missing key (objection_handling) to
+// prove fixed-order assembly + 0-5 clamp + default-0 for an absent parameter.
+const RESP_F = JSON.stringify({
+  parameters: [
+    { key: "needs_discovery", score: 2, summary: "Asked a couple of questions but pitched early." },
+    { key: "rapport_opening", score: 6, summary: "Warm, used the learner's name." },           // 6 → clamp to 5
+    { key: "programme_presentation", score: 3, summary: "Covered curriculum and fees clearly." },
+    // objection_handling intentionally omitted → defaults to score 0, summary ""
+    { key: "product_knowledge", score: 4, summary: "Accurate on fees and EMI." },
+    { key: "closing_payment_ask", score: 3, summary: "Asked for the seat-block, a bit tentative." },
+    { key: "communication_empathy", score: 4, summary: "Clear and patient throughout." },
+    { key: "personalised_experience", score: 2, summary: "Some tailoring, mostly generic." },
+  ],
+});
+
 // ─── Minimal session (no rubricSnapshot → LEGACY_RUBRIC path) ─────────────────
 function makeSession(overrides = {}) {
   return {
@@ -119,23 +141,25 @@ test("A,B,C,D run in parallel; all sections assembled", async () => {
   const gate = new Promise((r) => { releaseAll = r; });
 
   _setChatForTests(async (messages) => {
-    const kind = callKind(messages[0].content);
+    const kind = callKind(messages);
     started.push(kind);
-    // Hold every call open until all four have started — proves a single
-    // concurrent dispatch (no call waits on another's result, incl. C on A).
-    if (started.length >= 4) releaseAll();
+    // Hold every call open until all five have started — proves a single
+    // concurrent dispatch (no call waits on another's result, incl. C on A and
+    // the additive Call F new-report scoring).
+    if (started.length >= 5) releaseAll();
     await gate;
     if (kind === "A") return RESP_A;
     if (kind === "B") return RESP_B;
     if (kind === "C") return RESP_C;
     if (kind === "D") return RESP_D;
+    if (kind === "F") return RESP_F;
     throw new Error("unexpected prompt kind: " + kind);
   });
 
   const report = await generateReport(makeSession());
 
-  // All four were dispatched before any resolved → fully parallel.
-  assert.deepEqual([...started].sort(), ["A", "B", "C", "D"]);
+  // All five were dispatched before any resolved → fully parallel (F included).
+  assert.deepEqual([...started].sort(), ["A", "B", "C", "D", "F"]);
 
   // Headline from Call B lands in overall.
   assert.equal(report.overall.headline, "Next session, focus on deeper needs discovery.");
@@ -172,6 +196,29 @@ test("A,B,C,D run in parallel; all sections assembled", async () => {
   assert.equal(pc.coreAnxiety, "Will this actually get me a job?");
   assert.deepEqual(pc.traits, { talkativeness: 4, humour: 2, skepticism: 5, formality: 3, quirks: ["over-researches"] });
   assert.deepEqual(pc.scenario, { title: "Fee objection", difficulty: "medium", pushiness: 2, hesitancy: 4 });
+
+  // Call F → newReport (additive 8-parameter section).
+  const nr = report.newReport;
+  assert.ok(nr, "newReport present");
+  assert.equal(nr.parameters.length, 8, "exactly 8 parameters");
+  // Fixed key order (matches the spec's NEW_REPORT_PARAMS).
+  assert.deepEqual(
+    nr.parameters.map((p) => p.key),
+    [
+      "rapport_opening", "needs_discovery", "programme_presentation", "objection_handling",
+      "product_knowledge", "closing_payment_ask", "communication_empathy", "personalised_experience",
+    ],
+  );
+  // Each entry carries its human label + clamped 0-5 score + summary.
+  const byKey = Object.fromEntries(nr.parameters.map((p) => [p.key, p]));
+  assert.equal(byKey.rapport_opening.label, "Rapport & Opening");
+  assert.equal(byKey.rapport_opening.score, 5, "out-of-range 6 clamps to 5");
+  assert.equal(byKey.objection_handling.score, 0, "omitted parameter defaults to 0");
+  assert.equal(byKey.objection_handling.summary, "", "omitted parameter summary defaults to ''");
+  assert.equal(byKey.needs_discovery.score, 2);
+  // total = sum(scores)/40*100, rounded to 1 decimal.
+  // scores: 5,2,3,0,4,3,4,2 = 23 → 23/40*100 = 57.5
+  assert.equal(nr.total, 57.5, "total = sum(scores)/40*100, 1 decimal");
 });
 
 // ============================================================================
@@ -185,7 +232,7 @@ test("Call C runs without A having resolved first", async () => {
   let cStarted = false;
 
   _setChatForTests(async (messages) => {
-    const kind = callKind(messages[0].content);
+    const kind = callKind(messages);
     if (kind === "A") {
       // Hold A until C has already started.
       await aGate;
@@ -200,6 +247,7 @@ test("Call C runs without A having resolved first", async () => {
     }
     if (kind === "B") return RESP_B;
     if (kind === "D") return RESP_D;
+    if (kind === "F") return RESP_F;
     throw new Error("unexpected");
   });
 
@@ -214,10 +262,11 @@ test("Call C runs without A having resolved first", async () => {
 // ============================================================================
 test("B failure yields a partial report with A, C, D intact", async () => {
   _setChatForTests(async (messages) => {
-    const kind = callKind(messages[0].content);
+    const kind = callKind(messages);
     if (kind === "A") return RESP_A;
     if (kind === "C") return RESP_C;
     if (kind === "D") return RESP_D;
+    if (kind === "F") return RESP_F;
     if (kind === "B") throw new Error("simulated Call B failure");
     throw new Error("unexpected");
   });
@@ -244,10 +293,11 @@ test("B failure yields a partial report with A, C, D intact", async () => {
 // ============================================================================
 test("C failure yields a partial report with empty drills", async () => {
   _setChatForTests(async (messages) => {
-    const kind = callKind(messages[0].content);
+    const kind = callKind(messages);
     if (kind === "A") return RESP_A;
     if (kind === "B") return RESP_B;
     if (kind === "D") return RESP_D;
+    if (kind === "F") return RESP_F;
     if (kind === "C") throw new Error("simulated Call C failure");
     throw new Error("unexpected");
   });
@@ -265,10 +315,11 @@ test("C failure yields a partial report with empty drills", async () => {
 // ============================================================================
 test("D failure yields a partial report with default personaAddressed", async () => {
   _setChatForTests(async (messages) => {
-    const kind = callKind(messages[0].content);
+    const kind = callKind(messages);
     if (kind === "A") return RESP_A;
     if (kind === "B") return RESP_B;
     if (kind === "C") return RESP_C;
+    if (kind === "F") return RESP_F;
     if (kind === "D") throw new Error("simulated Call D failure");
     throw new Error("unexpected");
   });
@@ -289,11 +340,12 @@ test("D failure yields a partial report with default personaAddressed", async ()
 // ============================================================================
 test("A failure produces the neutral fallback report", async () => {
   _setChatForTests(async (messages) => {
-    const kind = callKind(messages[0].content);
+    const kind = callKind(messages);
     if (kind === "A") throw new Error("simulated Call A failure");
     if (kind === "B") return RESP_B;
     if (kind === "C") return RESP_C;
     if (kind === "D") return RESP_D;
+    if (kind === "F") return RESP_F;
     throw new Error("unexpected");
   });
 
@@ -311,12 +363,72 @@ test("A failure produces the neutral fallback report", async () => {
 });
 
 // ============================================================================
+// F-failure → newReport is non-fatal: report is partial, newReport undefined,
+// every other section intact (additive section must never break the report)
+// ============================================================================
+test("F failure yields a partial report with newReport undefined", async () => {
+  _setChatForTests(async (messages) => {
+    const kind = callKind(messages);
+    if (kind === "A") return RESP_A;
+    if (kind === "B") return RESP_B;
+    if (kind === "C") return RESP_C;
+    if (kind === "D") return RESP_D;
+    if (kind === "F") throw new Error("simulated Call F failure");
+    throw new Error("unexpected");
+  });
+
+  const report = await generateReport(makeSession());
+  assert.equal(report.partial, true, "F failure marks the report partial");
+  assert.ok(!report.fallback, "F-failure must NOT degrade to a full fallback");
+  assert.equal(report.newReport, undefined, "newReport left undefined on F failure");
+  // Every other section intact.
+  assert.equal(report.rubric.length, 6);
+  assert.equal(report.drills.length, 1);
+  assert.equal(report.personaAddressed.concerns.length, 5);
+  assert.equal(report.overall.headline, "Next session, focus on deeper needs discovery.");
+});
+
+// ============================================================================
+// newReport total math + ordering on a clean all-success run (own session)
+// ============================================================================
+test("newReport total = sum(scores)/40*100 with 8 fixed-order parameters", async () => {
+  _setChatForTests(async (messages) => {
+    const kind = callKind(messages);
+    if (kind === "A") return RESP_A;
+    if (kind === "B") return RESP_B;
+    if (kind === "C") return RESP_C;
+    if (kind === "D") return RESP_D;
+    if (kind === "F") {
+      return JSON.stringify({
+        parameters: [
+          { key: "rapport_opening", score: 5, summary: "s" },
+          { key: "needs_discovery", score: 5, summary: "s" },
+          { key: "programme_presentation", score: 5, summary: "s" },
+          { key: "objection_handling", score: 5, summary: "s" },
+          { key: "product_knowledge", score: 5, summary: "s" },
+          { key: "closing_payment_ask", score: 5, summary: "s" },
+          { key: "communication_empathy", score: 5, summary: "s" },
+          { key: "personalised_experience", score: 5, summary: "s" },
+        ],
+      });
+    }
+    throw new Error("unexpected");
+  });
+
+  const report = await generateReport(makeSession());
+  // All 5s → 40/40*100 = 100.
+  assert.equal(report.newReport.total, 100);
+  assert.equal(report.newReport.parameters.length, 8);
+  assert.ok(report.newReport.parameters.every((p) => p.score === 5 && p.label && p.summary === "s"));
+});
+
+// ============================================================================
 // Each fan-out call retries once before failing (attempt 2 still tried)
 // ============================================================================
 test("a transient first-attempt failure is retried and succeeds", async () => {
   let aAttempts = 0;
   _setChatForTests(async (messages) => {
-    const kind = callKind(messages[0].content);
+    const kind = callKind(messages);
     if (kind === "A") {
       aAttempts += 1;
       if (aAttempts === 1) throw new Error("transient A failure");
@@ -325,6 +437,7 @@ test("a transient first-attempt failure is retried and succeeds", async () => {
     if (kind === "B") return RESP_B;
     if (kind === "C") return RESP_C;
     if (kind === "D") return RESP_D;
+    if (kind === "F") return RESP_F;
     throw new Error("unexpected");
   });
 

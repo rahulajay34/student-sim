@@ -117,6 +117,12 @@ function buildCommitPatch(report, reportRow) {
     patch.integrity_check = report.integrityCheck;
   }
 
+  // New Report Section (additive, admin-only). snake_case key matches the 0010
+  // migration column. Only present when the additive scoring call succeeded.
+  if (report.newReport) {
+    patch.new_report = report.newReport;
+  }
+
   // partial flag
   if (report.partial === true) {
     patch.partial = true;

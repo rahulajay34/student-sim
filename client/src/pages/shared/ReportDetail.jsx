@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../../lib/api";
-import { bandColor, formatDate } from "../../lib/format";
+import { bandColor, formatDate, TOKEN_HEX } from "../../lib/format";
 import { useAuth } from "../../lib/auth";
 import Card, { CardHeader } from "../../ui/Card";
 import Badge from "../../ui/Badge";
@@ -207,6 +207,42 @@ function TraitBar({ label, value }) {
       <span className="w-4 shrink-0 text-right text-xs tabular-nums text-ink">
         {v != null ? v : "—"}
       </span>
+    </div>
+  );
+}
+
+// ─── New param bar (0-5 scale; admin-only "New Report Section") ───────────────
+// Color mapping: <=2 → danger/red, 3 → warn/amber, >=4 → success/green.
+function newParamColor(score) {
+  if (score >= 4) return "success";
+  if (score === 3) return "warn";
+  return "danger";
+}
+
+function NewParamBar({ item }) {
+  if (!item) return null;
+  const { label, score, summary } = item;
+  const color = newParamColor(score);
+  const hex = TOKEN_HEX[color];
+  const pct = Math.max(0, Math.min(100, (score / 5) * 100));
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-medium text-ink">{label}</span>
+        <span className="text-sm font-semibold tabular-nums whitespace-nowrap" style={{ color: hex }}>
+          {score}/5
+        </span>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${pct}%`, backgroundColor: hex }}
+        />
+      </div>
+      {summary && (
+        <p className="text-sm text-muted">{summary}</p>
+      )}
     </div>
   );
 }
@@ -819,6 +855,54 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
 
       {/* PERSONA CARD (issue 9) */}
       <PersonaCardSection card={pc} />
+
+      {/* NEW REPORT SECTION — admin/superadmin only; present only when report.newReport is set */}
+      {isAdmin && report.newReport && (
+        <Card className="p-6 border-brand-200">
+          <CardHeader
+            title="New Report Section"
+            subtitle="8-parameter evaluation · admin only"
+            action={
+              <Badge color="slate" className="text-xs">
+                Admin only
+              </Badge>
+            }
+          />
+          {/* Overall score */}
+          <div className="mt-4 flex items-center gap-4">
+            <div className="shrink-0">
+              <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted">
+                Overall score
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-4xl font-bold tabular-nums text-ink">
+                  {report.newReport.total}
+                </span>
+                <span className="text-2xl font-semibold text-muted">%</span>
+              </div>
+            </div>
+            <div className="flex-1">
+              <ScoreMeter score={report.newReport.total} />
+            </div>
+          </div>
+          {/* 8-parameter bars */}
+          {Array.isArray(report.newReport.parameters) && report.newReport.parameters.length > 0 && (
+            <div className="mt-6 space-y-5">
+              {report.newReport.parameters.map((param) => (
+                <NewParamBar key={param.key} item={param} />
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* OLD REPORT SECTION label — divider before legacy rubric/scoring cards */}
+      <div className="flex items-center gap-3">
+        <span className="text-xs font-semibold uppercase tracking-widest text-muted">
+          Old Report Section
+        </span>
+        <div className="flex-1 border-t border-line" />
+      </div>
 
       {/* RUBRIC */}
       <Card className="p-6">
