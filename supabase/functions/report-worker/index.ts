@@ -64,7 +64,7 @@ function validateServiceKey(req) {
 //   status, partial, overall_percent, overall_band, overall_outcome,
 //   final_score, generated_at, overall, rubric, phase_breakdown,
 //   strengths, improvements, key_moments, drills, benchmarks, score_arc,
-//   persona_addressed, persona_card
+//   persona_addressed, persona_card, integrity_check
 // ---------------------------------------------------------------------------
 
 function buildCommitPatch(report, reportRow) {
@@ -109,6 +109,12 @@ function buildCommitPatch(report, reportRow) {
     : (typeof overall.finalScore === "number" ? overall.finalScore : null);
   if (finalScore != null) {
     patch.final_score = finalScore;
+  }
+
+  // Integrity check (admin-only misselling verdict) — only present when the
+  // session carried an assigned probe. snake_case key matches the 0009 column.
+  if (report.integrityCheck) {
+    patch.integrity_check = report.integrityCheck;
   }
 
   // partial flag

@@ -47,6 +47,25 @@ function write(name, data) {
   fs.renameSync(tmp, p);
 }
 
+// ── Key/value config store ──────────────────────────────────────────────────
+// Express parity for the edge `app_config` table (key/value jsonb). Backed by
+// data/app-config.json as a flat { key: value } object. Used for editable,
+// admin-managed scaffolding like the integrityProbes library. Async to match
+// the edge store.getConfigValue / store.upsertConfig signatures.
+function readConfigMap() {
+  const m = read("app-config");
+  return m && typeof m === "object" && !Array.isArray(m) ? m : {};
+}
+export async function getConfigValue(key) {
+  return readConfigMap()[key] ?? null;
+}
+export async function upsertConfig(key, value) {
+  const map = readConfigMap();
+  map[key] = value;
+  write("app-config", map);
+  return value;
+}
+
 // 12 hex chars = 48 bits. The old 8-char slice was 32 bits — ~1.2% birthday
 // collision odds by 10k records, and getById would silently serve the older
 // record forever on a collision.

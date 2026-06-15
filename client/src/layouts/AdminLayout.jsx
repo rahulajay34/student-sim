@@ -7,14 +7,15 @@ import { initials } from "../lib/format.js";
 
 const NAV = [
   { to: "/admin", label: "Dashboard", icon: "dashboard", end: true },
+  { to: "/admin/reports", label: "Reports", icon: "reports" },
   { to: "/admin/counsellors", label: "Counsellors", icon: "counsellors" },
   { to: "/admin/personas", label: "Personas", icon: "personas" },
   { to: "/admin/courses", label: "Courses", icon: "courses" },
   { to: "/admin/assignments", label: "Assignments", icon: "assignments" },
   { to: "/admin/templates", label: "Templates", icon: "templates" },
   { to: "/admin/practice", label: "Practice", icon: "practice" },
-  { to: "/admin/reports", label: "Reports", icon: "reports" },
   { to: "/admin/leaderboard", label: "Leaderboard", icon: "leaderboard" },
+  { to: "/admin/integrity-probes", label: "Integrity Probes", icon: "prompts" },
 ];
 
 function titleFor(path) {
@@ -27,6 +28,7 @@ function titleFor(path) {
   if (path.startsWith("/admin/practice")) return "Practice";
   if (path.startsWith("/admin/reports")) return "Reports";
   if (path.startsWith("/admin/leaderboard")) return "Leaderboard";
+  if (path.startsWith("/admin/integrity-probes")) return "Integrity Probes";
   return "Dashboard";
 }
 

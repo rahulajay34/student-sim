@@ -20,6 +20,7 @@ import AdminReports from "./pages/admin/AdminReports.jsx";
 import Rubrics from "./pages/admin/Rubrics.jsx";
 import Prompts from "./pages/admin/Prompts.jsx";
 import Templates from "./pages/admin/Templates.jsx";
+import IntegrityProbes from "./pages/admin/IntegrityProbes.jsx";
 
 import Dashboard from "./pages/counsellor/Dashboard.jsx";
 import MyMocks from "./pages/counsellor/MyMocks.jsx";
@@ -77,6 +78,7 @@ function App() {
           <Route path="/admin/reports" element={<AdminReports />} />
           <Route path="/admin/reports/:id" element={<ReportDetail backTo="/admin/reports" />} />
           <Route path="/admin/leaderboard" element={<Leaderboard />} />
+          <Route path="/admin/integrity-probes" element={<IntegrityProbes />} />
         </Route>
 
         {/* Counsellor */}

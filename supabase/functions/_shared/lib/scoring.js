@@ -206,6 +206,70 @@ export function loadScoringConfig(row) {
 }
 
 // ---------------------------------------------------------------------------
+// isGarbled — deterministic STT-noise detector (Issue #4).
+// No LLM, no side effects. Returns true when the counsellor turn looks like a
+// speech-to-text transcription artefact — word salad, incoherent token soup,
+// or text so low-signal that it cannot reflect counsellor skill.
+//
+// Design notes:
+//   • Conservative: only flags CLEAR garble. A technically weak but coherent turn
+//     still goes to the LLM scorer. We would rather under-flag than silence real
+//     feedback on a genuinely bad turn.
+//   • Three complementary signals, each independently sufficient:
+//       1. Very low alpha ratio — if less than 35% of chars are letters the
+//          text is dominated by punctuation/numbers/symbols.
+//       2. Repeated-fragment loop — the same token repeating ≥4 times in a
+//          short text indicates ASR hallucination / audio-loop artifacts.
+//       3. Very short + high non-word density — a 4-10 word turn where ≥60%
+//          of words are not recognisable English/Hinglish tokens (single
+//          consonant clusters, random letter sequences).
+//   • Known-good patterns that must NOT be flagged: Devanagari text, Hinglish
+//     code-switching, normal abbreviations, proper nouns, numbers in context.
+// ---------------------------------------------------------------------------
+export function isGarbled(text) {
+  if (!text || typeof text !== "string") return false;
+  const t = text.trim();
+  if (!t) return false;
+
+  // Very short utterances (≤ 3 chars after trim) are treated as noise.
+  if (t.length <= 3) return true;
+
+  // --- Signal 1: alpha-character ratio ---
+  const letters = (t.match(/\p{L}/gu) || []).length;
+  const nonSpace = t.replace(/\s/g, "").length;
+  if (nonSpace >= 8 && letters / nonSpace < 0.35) return true;
+
+  // --- Signal 2: repeated-fragment loop (ASR hallucination) ---
+  const TOKEN_RE = /[\p{L}\p{M}0-9]+/gu;
+  const tokens = (t.toLowerCase().match(TOKEN_RE) || []).filter((w) => w.length >= 2);
+  if (tokens.length > 0) {
+    const freq = new Map();
+    for (const w of tokens) freq.set(w, (freq.get(w) || 0) + 1);
+    const maxFreq = Math.max(...freq.values());
+    if (maxFreq >= 4 && tokens.length <= 20) return true;
+    if (maxFreq / tokens.length >= 0.6 && tokens.length >= 4) return true;
+  }
+
+  // --- Signal 3: very short turn with high non-word density ---
+  const VOWELS_RE = /[aeiouAEIOU]/;
+  const DEVANAGARI_RE = /\p{Script=Devanagari}/u;
+  const KNOWN_ABBREVS = new Set(["ok", "kk", "hmm", "hm", "mhm", "mm", "dr", "mr", "ms", "st", "vs", "hr", "rs", "upi", "emi", "gst", "pg", "ug", "bba", "bca", "mba", "bsc", "msc", "llb", "ca", "cs", "phd", "bc", "btw", "fyi", "lol", "brb"]);
+  if (tokens.length >= 4 && tokens.length <= 10) {
+    const nonWordCount = tokens.filter((w) => {
+      if (w.length < 2 || w.length > 7) return false;
+      if (VOWELS_RE.test(w)) return false;
+      if (DEVANAGARI_RE.test(w)) return false;
+      if (KNOWN_ABBREVS.has(w)) return false;
+      if (/^\d+$/.test(w)) return false;
+      return true;
+    });
+    if (nonWordCount.length / tokens.length >= 0.6) return true;
+  }
+
+  return false;
+}
+
+// ---------------------------------------------------------------------------
 // isPayAsk — deterministic regex-based pay/commitment-ask detector.
 // No LLM, no side effects. Returns true when the counsellor is asking the
 // student to pay, register, block a seat, or otherwise commit financially.
@@ -316,7 +380,7 @@ ${absenceRule}
 - 0 is for genuinely ordinary turns. But do NOT default a turn to 0 when the counsellor actually answered the student's question or worked their objection — reward it (+2 for a concrete relevant answer, +3..+4 for substantively addressing a raised concern with specifics/empathy, +5..+7 for an outstanding move). Persistence and addressing concerns MUST move the meter up.
 - Plain explaining in the Presentation phase and short factual answers when nothing was asked are 0, not negative.
 - Backchannels and routine acknowledgements are neutral (0).
-- STT TRANSCRIPTION NOISE: Do NOT penalize incorrect, mispronounced, or misspelled names or proper nouns (student names, place names, institute names, programme names, etc.). These are speech-to-text transcription artefacts, not counsellor errors. Score the substance, not the spelling.
+- STT TRANSCRIPTION NOISE: Do NOT penalize incorrect, mispronounced, or misspelled names or proper nouns (student names, place names, institute names, programme names, etc.). These are speech-to-text transcription artefacts, not counsellor errors. Score the substance, not the spelling. BROADER RULE: If the counsellor's turn looks partially or fully garbled — incoherent word sequences, broken fragments, repeated syllables, or text that does not form any recognisable sentence — treat it as an STT transcription error and score it 0 (neutral). Do NOT penalize garbled or incoherent text. If you cannot tell what the counsellor intended to say, return adjustment: 0.
 ${payAskGuidance(payAskCountBefore)}${counterMoveSection(cfg)}
 CALIBRATION ANCHOR (from a real call): the student said "I'm not comfortable paying yet; I still need clarity on the refund policy if the program doesn't lead to a job." The counsellor answered "this 4000 rupees that you will be paying is fully refundable within 7 days if you change your mind, and regarding [placement]...". That is a concrete, correct, relevant answer to the refund concern the student raised — score it +2..+3 (it directly addresses the refund/affordability objection). It is NOT a 0. Use this as your benchmark for what the positive bands look like.
 
@@ -423,6 +487,14 @@ export async function scoreMessage(message, opts, legacyCourseName, chatOpts = {
 
   if (isBackchannel(message, config)) {
     return { adjustment: 0, reason: "Backchannel acknowledgement", addressedObjection: null };
+  }
+
+  // Issue #4: STT garble guard — a clearly-garbled turn is almost certainly a
+  // transcription artefact, not real counsellor speech. Return a neutral score
+  // (0) so the satisfaction aggregate is not dragged down by noise.
+  // NOTE: adjustment=0 means preScore + 0 = preScore — satisfaction is unchanged.
+  if (isGarbled(message)) {
+    return { adjustment: 0, reason: "Garbled/incoherent text — likely STT transcription noise, not scored", addressedObjection: null, garbled: true };
   }
 
   const norm = normalizeOpts(opts, legacyCourseName);

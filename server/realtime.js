@@ -25,6 +25,17 @@ function addressTermOf(session) {
   return (a === "sir" || a === "ma'am") ? a : null;
 }
 
+// ── INDIAN ACCENT block ───────────────────────────────────────────────────────
+// The detailed accent rules — THE single most important thing about how the voice
+// student sounds. Exported as the ONE source of truth so the client hook
+// (useOpenAIRealtime.js) can re-inject this exact text mid-call every few turns to
+// stop the accent fading on long sessions, rather than duplicating the wording.
+export const INDIAN_ACCENT_BLOCK = `ACCENT — THE #1 RULE, NEVER RELAX IT:
+- Speak with an authentic, natural INDIAN ENGLISH accent for EVERY word of EVERY turn — this is the single most important thing about how you sound, and it NEVER fades.
+- As the call runs long it is easy to slip toward a neutral, American or British accent. DO NOT. The moment you notice yourself flattening out, pull straight back. Your accent at minute 20 must sound exactly as Indian as at minute 1.
+- Rhythm is SYLLABLE-TIMED: give each syllable roughly equal weight; do NOT stress syllables the American/British way. Pronounce "v" and "w" the same. Question tags ("isn't it?", "na?", "right?") rise on the last syllable; sentence ends stay flat or slightly rising, not falling sharply.
+- Light Hindi particles (haan, thoda, achha, matlab, "na") and an occasional filler are part of the texture — this is home base, do not drift flat.`;
+
 // ── VOICE DELIVERY block ──────────────────────────────────────────────────────
 // BINDING delivery rules derived from the owner-calibrated style dials
 // (server/data/seed/style-exemplars.json). The old prose block (grounded on
@@ -32,17 +43,15 @@ function addressTermOf(session) {
 // English" and the bot came out robotic and too clean; these rules push fillers,
 // hesitation, light Hindi particles, and the address term to home base. The
 // {addressTerm} placeholder is filled per session. A few prosody numbers from the
-// research doc are kept (tempo/intonation) since they still hold.
+// research doc are kept (tempo/intonation) since they still hold. The accent
+// sub-block is INDIAN_ACCENT_BLOCK (shared with the client's mid-call re-prompt).
 function buildVoiceDelivery(addressTerm) {
   const addrRule = addressTerm
     ? `Address the counsellor as "${addressTerm}" every second or third sentence — this is binding, do not drop it and do not switch to the other one.`
     : `Address the counsellor every second or third sentence. You do not yet know if they are "sir" or "ma'am" — listen for how they sound and use the right one; if they correct you, switch immediately and naturally without making a fuss.`;
   return `VOICE DELIVERY — BINDING. You are a young Indian student speaking on the phone. Every single rule below is mandatory:
 
-ACCENT — THE #1 RULE, NEVER RELAX IT:
-- Speak with an authentic, natural INDIAN ENGLISH accent for EVERY word of EVERY turn — this is the single most important thing about how you sound, and it NEVER fades.
-- As the call runs long it is easy to slip toward a neutral, American or British accent. DO NOT. The moment you notice yourself flattening out, pull straight back. Your accent at minute 20 must sound exactly as Indian as at minute 1.
-- Rhythm is SYLLABLE-TIMED: give each syllable roughly equal weight; do NOT stress syllables the American/British way. Pronounce "v" and "w" the same. Question tags ("isn't it?", "na?", "right?") rise on the last syllable; sentence ends stay flat or slightly rising, not falling sharply.
+${INDIAN_ACCENT_BLOCK}
 
 PACE & PAUSES:
 - Speak at 90–115 words per minute — noticeably slower than a neutral AI voice. Never rush; if you feel yourself speeding up, slow down.
@@ -89,6 +98,18 @@ function hesitancyWord(n) {
   if (!Number.isFinite(v) || v === 3) return null;
   if (v <= 2) return "fairly ready to move forward — if the value is shown reasonably you lean toward yes without dragging it out";
   return "very reluctant to commit — you want to think it over, lean on checking with family or finances, and need strong, repeated reassurance before you would say yes";
+}
+
+// INTEGRITY PROBE — the session may carry an assigned integrity probe
+// ({ id, category, question, groundTruth }). We inject ONLY the question, framed so
+// the voice student works it into the call once, naturally, without revealing it is
+// a test. groundTruth is NEVER included in any prompt. Empty string when no probe.
+function buildRtimeProbeSection(session) {
+  const probe = session?.integrityProbe;
+  const question = probe && typeof probe === "object" ? String(probe.question || "").trim() : "";
+  if (!question) return "";
+  return `ONE QUESTION YOU MUST WORK IN NATURALLY (once, when it fits — do not reveal it is a test):
+"${question}"`;
 }
 
 function difficultyPosture(difficulty) {
@@ -155,6 +176,9 @@ export function buildRealtimeInstructions(session) {
   if (objections) feelParts.push(objections);
   const feel = feelParts.join("\n\n");
 
+  // Integrity probe — assigned at session start, rides session.integrityProbe.
+  const probeSection = buildRtimeProbeSection(s);
+
   // (6) LANGUAGE — the C6 policy, single source of truth.
   const language = `LANGUAGE:\n${LANGUAGE_POLICY}`;
 
@@ -190,6 +214,7 @@ ${addressRule}
     knowledge,
     feel ? `HOW YOU FEEL RIGHT NOW:\n${feel}` : "HOW YOU FEEL RIGHT NOW:\nYou are guarded and a little skeptical; this would take real, specific reassurance before you move at all.",
     language,
+    probeSection,
     voiceDelivery,
     howYouSound,
     rules,

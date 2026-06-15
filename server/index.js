@@ -26,6 +26,7 @@ import {
 import { computeDisposition } from "./disposition.js";
 import { steeringSummary } from "./objections.js";
 import { exemplarsFor, renderAddress } from "./styleExemplars.js";
+import { loadProbes, pickProbe, newProbeId } from "./integrityProbes.js";
 import { writeFileSync, readFileSync } from "fs";
 
 // Voice/text session mode (contract C5). A session is either a VOICE call (OpenAI
@@ -139,6 +140,16 @@ function deniedForReport(req, res, report) {
   if (report.counsellorId === requester.id) return false;
   res.status(403).json({ error: "This report belongs to another counsellor." });
   return true;
+}
+
+// True when the requester resolves to a non-admin counsellor — used to strip
+// admin-only fields (integrityCheck / integrityProbe) at the edge. A missing
+// header (curl / smoke / old clients) is back-compat allow → treated as admin
+// (no strip), matching deniedForSession/deniedForReport above.
+function isNonAdminRequester(req) {
+  const requester = requesterFor(req);
+  if (!requester) return false;
+  return requester.role !== "admin" && requester.role !== "superadmin";
 }
 
 // --- Auth ------------------------------------------------------------------
@@ -739,6 +750,11 @@ async function startSessionHandler(req, res) {
       personaSnapshot, scenarioSnapshot: scenario2, courseSnapshot, currentPhase: 1, satisfactionScore: 50,
       personalityFlavour,
     });
+    // Integrity probe: deterministic pick from the active library, snapshotted on
+    // the session so later admin edits don't change an in-flight grade.
+    const probeCfg = loadProbes(await store.getConfigValue("integrityProbes"));
+    const integrityProbe = pickProbe(probeCfg.probes, sessionId);
+
     const session = {
       id: sessionId,
       assignmentId: assignment ? assignment.id : null,
@@ -772,6 +788,7 @@ async function startSessionHandler(req, res) {
       status: "active",
       startedAt: now, endedAt: null,
     };
+    if (integrityProbe) session.integrityProbe = integrityProbe;
     store.insert("sessions", session);
 
     if (assignment) store.update("assignments", assignment.id, { status: "in_progress", sessionId: session.id });
@@ -1390,6 +1407,9 @@ app.get("/api/sessions/:id", (req, res) => {
   const s = store.getById("sessions", req.params.id);
   if (!s) return res.status(404).json({ error: "Session not found" });
   if (deniedForSession(req, res, s)) return;
+  // integrityProbe carries the trap + groundTruth — admin-only; never to the
+  // owning counsellor.
+  if (isNonAdminRequester(req)) delete s.integrityProbe;
   res.json(s);
 });
 
@@ -1416,6 +1436,8 @@ app.get("/api/reports", (req, res) => {
   if (sessionId) all = all.filter((r) => r.sessionId === sessionId);
   // newest first
   all.sort((a, b) => (a.generatedAt < b.generatedAt ? 1 : -1));
+  // integrityCheck is admin-only — strip from each report for non-admins.
+  if (isNonAdminRequester(req)) for (const r of all) delete r.integrityCheck;
   res.json(all);
 });
 
@@ -1423,6 +1445,8 @@ app.get("/api/reports/:id", (req, res) => {
   const r = store.getById("reports", req.params.id);
   if (!r) return res.status(404).json({ error: "Report not found" });
   if (deniedForReport(req, res, r)) return;
+  // integrityCheck is admin-only — strip for the owning counsellor.
+  if (isNonAdminRequester(req)) delete r.integrityCheck;
   res.json(r);
 });
 
@@ -1472,6 +1496,48 @@ app.put("/api/config/scoring", (req, res) => {
   } catch (err) {
     console.error("Error saving scoring config:", err.message);
     res.status(500).json({ error: "failed to persist scoring config" });
+  }
+});
+
+// --- Integrity probes (admin-only library — never exposed to counsellors) ---
+// 403s a resolved non-admin requester; a missing X-User-Id header is back-compat
+// allow (curl / smoke), consistent with the other admin guards in this file.
+function deniedForAdmin(req, res) {
+  if (isNonAdminRequester(req)) {
+    res.status(403).json({ error: "Admin access required" });
+    return true;
+  }
+  return false;
+}
+
+app.get("/api/integrity-probes", async (req, res) => {
+  if (deniedForAdmin(req, res)) return;
+  try {
+    res.json(loadProbes(await store.getConfigValue("integrityProbes")));
+  } catch (err) {
+    console.error("Error reading integrity probes:", err.message);
+    res.status(500).json({ error: "failed to read integrity probes" });
+  }
+});
+
+app.put("/api/integrity-probes", async (req, res) => {
+  if (deniedForAdmin(req, res)) return;
+  const body = req.body;
+  if (!body || typeof body !== "object" || Array.isArray(body) || !Array.isArray(body.probes)) {
+    return res.status(400).json({ error: "integrity probes config must be an object with a probes array" });
+  }
+  for (const p of body.probes) {
+    if (!p || typeof p !== "object" || typeof p.question !== "string" || typeof p.groundTruth !== "string") {
+      return res.status(400).json({ error: "each probe must have question and groundTruth strings" });
+    }
+    if (!p.id) p.id = newProbeId();
+  }
+  try {
+    await store.upsertConfig("integrityProbes", body);
+    res.json(loadProbes(await store.getConfigValue("integrityProbes")));
+  } catch (err) {
+    console.error("Error saving integrity probes:", err.message);
+    res.status(500).json({ error: "failed to persist integrity probes" });
   }
 });
 

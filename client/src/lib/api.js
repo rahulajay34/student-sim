@@ -138,6 +138,8 @@ export const api = {
   updatePromptConfig: (data) => req("/config/prompts", { method: "PUT", body: data }),
   getScoringConfig: () => req("/config/scoring"),
   updateScoringConfig: (data) => req("/config/scoring", { method: "PUT", body: data }),
+  getIntegrityProbes: () => req("/integrity-probes"),
+  updateIntegrityProbes: (data) => req("/integrity-probes", { method: "PUT", body: data }),
 
   // session prompt inspection (admin-only at UI layer)
   getSessionPrompts: (id) => req(`/sessions/${id}/prompt`),

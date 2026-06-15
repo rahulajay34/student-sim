@@ -434,6 +434,7 @@ const SNAPSHOT_KEYS = [
   "counsellorAddress",
   "openaiVoice",
   "revealPersona",
+  "integrityProbe",
 ];
 
 function sessionFromRow(row) {
@@ -544,6 +545,7 @@ function reportFromRow(row) {
     transcript: row.transcript ?? [],
     personaAddressed: row.persona_addressed ?? null,
     personaCard: row.persona_card ?? null,
+    integrityCheck: row.integrity_check ?? null,
   };
 }
 
@@ -578,6 +580,7 @@ function reportToRow(obj) {
   if (obj.transcript !== undefined) r.transcript = obj.transcript;
   if (obj.personaAddressed !== undefined) r.persona_addressed = obj.personaAddressed;
   if (obj.personaCard !== undefined) r.persona_card = obj.personaCard;
+  if (obj.integrityCheck !== undefined) r.integrity_check = obj.integrityCheck;
   return r;
 }
 

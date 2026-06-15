@@ -265,7 +265,77 @@ Return ONLY a JSON object with this exact shape:
 Do not output anything except the JSON object.`;
 }
 
+// ─── Integrity probe prompt: misselling detector (admin-only) ────────────────
+// Runs only when session.integrityProbe exists. Judges whether the counsellor's
+// answer to the assigned "trap" question was honest, evasive, over-promised, or
+// an outright lie, grounded in the probe's groundTruth (the real Masai policy)
+// and the course facts. The verdict is admin-only (stripped for counsellors at
+// the edge layer) — never shown to the graded counsellor.
+function buildIntegrityPrompt(session) {
+  const probe = session.integrityProbe || {};
+  const c = session.courseSnapshot;
+  const courseFacts = c ? `
+COURSE FACTS (ground truth for this specific programme):
+- Name: ${c.name}; Institute: ${c.institute || "n/a"}; Duration: ${c.duration || "n/a"}; Format: ${c.format || "n/a"}
+- Fee: ${c.feeTotal ? `₹${c.feeTotal}` : "not published"}; seat-block: ${c.feeBooking ? `₹${c.feeBooking}` : "₹4,000"}; ${c.feeNote || ""}
+- Curriculum: ${(c.curriculum || []).join("; ") || "n/a"}
+` : "";
+
+  return `You are a compliance reviewer auditing a mock counselling call for MISSELLING. ${courseHeader(session)}
+
+${metaHeader(session)}
+
+The simulated student was instructed to naturally raise ONE specific "trap" question during the call. Your job: find where (and whether) the student raised it, then judge how HONESTLY the counsellor answered, grounded in the real policy below.
+
+THE PROBE QUESTION the student was told to ask:
+"${probe.question || "(none)"}"
+
+GROUND TRUTH (the honest answer / what makes a reply a lie — this is real Masai policy):
+${probe.groundTruth || "(none)"}
+${courseFacts}
+FULL TRANSCRIPT (turns are numbered):
+${transcriptText(session.transcript)}
+
+Decide:
+1. raised — did the student actually raise this question or its substance at all? (true/false)
+2. verdict — judge the COUNSELLOR's answer against the ground truth:
+   - "honest"       — answered accurately / consistent with the ground truth (or fairly redirected without a false claim).
+   - "evasive"      — dodged, deflected, or gave a non-answer without committing to a false claim.
+   - "overpromised" — leaned beyond the truth / created a misleading impression without an outright false assurance.
+   - "lied"         — made a clearly false assurance that contradicts the ground truth (the liability case).
+   - "not_raised"   — the student never raised it, so the counsellor was not tested.
+3. severity — 0 (none / not_raised), 1 (minor over-statement), 2 (clear over-promise), 3 (clear false assurance / liability).
+4. evidenceQuote — the counsellor's exact words that justify the verdict (empty string if not_raised).
+5. explanation — 1-2 lines, grounded in the ground truth, on why this verdict.
+
+Return ONLY a JSON object with this exact shape:
+{
+  "raised": true|false,
+  "verdict": "honest"|"evasive"|"overpromised"|"lied"|"not_raised",
+  "severity": 0|1|2|3,
+  "evidenceQuote": "counsellor's exact words, or \\"\\"",
+  "explanation": "1-2 lines grounded in the ground truth"
+}
+Do not output anything except the JSON object.`;
+}
+
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, Math.round(Number(n) || 0)));
+
+// ─── Integrity check enum + sanitizer ────────────────────────────────────────
+const INTEGRITY_VERDICT_ENUM = new Set(["honest", "evasive", "overpromised", "lied", "not_raised"]);
+function assembleIntegrityCheck(probe, raw) {
+  const verdict = INTEGRITY_VERDICT_ENUM.has(raw?.verdict) ? raw.verdict : "not_raised";
+  return {
+    probeId: probe?.id ?? null,
+    category: probe?.category ?? null,
+    question: probe?.question ?? "",
+    raised: raw?.raised === true,
+    verdict,
+    severity: clamp(raw?.severity ?? 0, 0, 3),
+    evidenceQuote: typeof raw?.evidenceQuote === "string" ? raw.evidenceQuote : "",
+    explanation: typeof raw?.explanation === "string" ? raw.explanation : "",
+  };
+}
 
 const OBJECTION_ENUM = new Set([
   "fee", "emi_affordability", "parents_family", "time_commitment",
@@ -419,6 +489,21 @@ const REPORT_D_SCHEMA = {
     score: { type: "number" },
   },
   required: ["concerns", "summary", "score"],
+  additionalProperties: false,
+};
+
+// Integrity probe: misselling detector (admin-only). Severity/verdict are
+// clamped to the enum/range in assembleIntegrityCheck after the call.
+const INTEGRITY_SCHEMA = {
+  type: "object",
+  properties: {
+    raised: { type: "boolean" },
+    verdict: { type: "string" },
+    severity: { type: "number" },
+    evidenceQuote: { type: "string" },
+    explanation: { type: "string" },
+  },
+  required: ["raised", "verdict", "severity", "evidenceQuote", "explanation"],
   additionalProperties: false,
 };
 
@@ -637,15 +722,25 @@ export async function generateReport(session) {
   const drillsPrompt = buildDrillsPrompt(session, criteria);   // decoupled from A
   const personaPrompt = buildPersonaAddressedPrompt(session);
 
-  // All four calls are independent → dispatch them together via allSettled.
+  // Integrity probe (admin-only misselling detector) is an INDEPENDENT extra
+  // call — only dispatched when this session carries an assigned probe. It
+  // rides the same parallel allSettled fan-out so it is timeout-protected and
+  // its failure is non-fatal (sets report.partial, never throws).
+  const hasProbe = !!session.integrityProbe;
+  const integrityPrompt = hasProbe ? buildIntegrityPrompt(session) : null;
+
+  // All calls are independent → dispatch them together via allSettled.
   const settled = await Promise.allSettled([
     runCall("Call A (rubric)", rubricPrompt, REPORT_A_SCHEMA),
     runCall("Call B (narrative)", narrativePrompt, REPORT_B_SCHEMA),
     runCall("Call C (drills)", drillsPrompt, REPORT_C_SCHEMA),
     runCall("Call D (persona)", personaPrompt, REPORT_D_SCHEMA),
+    hasProbe
+      ? runCall("Call E (integrity)", integrityPrompt, INTEGRITY_SCHEMA)
+      : Promise.resolve({ ok: false, skipped: true }),
   ]);
   const unwrap = (s) => (s.status === "fulfilled" ? s.value : { ok: false, error: s.reason });
-  const [resultA, resultB, resultC, resultD] = settled.map(unwrap);
+  const [resultA, resultB, resultC, resultD, resultE] = settled.map(unwrap);
 
   if (!resultA.ok) {
     console.error("[report] Call A failed entirely; returning neutral fallback.", resultA.error?.message);
@@ -664,6 +759,18 @@ export async function generateReport(session) {
   const personaAddressed = resultD.ok
     ? assemblePersonaAddressed(resultD.value)
     : (partial = true, DEFAULT_PERSONA_ADDRESSED());
+
+  // Integrity check: only when a probe was assigned. Failure (not the skipped
+  // case) marks the report partial but is non-fatal; old sessions with no probe
+  // leave report.integrityCheck undefined.
+  let integrityCheck;
+  if (hasProbe) {
+    if (resultE.ok) {
+      integrityCheck = assembleIntegrityCheck(session.integrityProbe, resultE.value);
+    } else {
+      partial = true;
+    }
+  }
 
   const sessionMinutes = session.startedAt
     ? Math.round((Date.now() - new Date(session.startedAt).getTime()) / 60000 * 10) / 10
@@ -686,6 +793,7 @@ export async function generateReport(session) {
     personaCard: personaCard(session),
     personaAddressed,
   };
+  if (integrityCheck) report.integrityCheck = integrityCheck;
   if (partial) report.partial = true;
   return report;
 }

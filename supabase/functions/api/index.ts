@@ -20,6 +20,7 @@ import { loadScoringConfig } from "../_shared/lib/scoring.js";
 import { advancePhase, initPhaseCounters, initMilestones } from "../_shared/lib/phases.js";
 import { initObjectionState } from "../_shared/lib/objections.js";
 import { stubReportSections } from "../_shared/lib/report.js";
+import { loadProbes, pickProbe, newProbeId } from "../_shared/lib/integrityProbes.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -837,6 +838,11 @@ app.post("/sessions/start", wrap(async (c) => {
     personalityFlavour,
   });
 
+  // Integrity probe: deterministic pick from the active library, snapshotted on the
+  // session so later admin edits don't change an in-flight grade.
+  const probeCfg = loadProbes(await store.getConfigValue("integrityProbes"));
+  const integrityProbe = pickProbe(probeCfg.probes, sessionId);
+
   const session = {
     id: sessionId,
     assignmentId: assignment ? assignment.id : null,
@@ -866,6 +872,7 @@ app.post("/sessions/start", wrap(async (c) => {
     startedAt: now,
     endedAt: null,
   };
+  if (integrityProbe) session.integrityProbe = integrityProbe;
 
   try {
     await store.insert("sessions", session);
@@ -904,6 +911,8 @@ app.get("/sessions/:id", wrap(async (c) => {
   const session = await store.getById("sessions", id);
   if (!session) throw httpError(404, "Session not found");
   assertOwnerOrAdmin(ctx, session.counsellorId);
+  // integrityProbe carries the trap + groundTruth — admin-only; never to the owning counsellor.
+  if (ctx.role !== "admin" && ctx.role !== "superadmin") delete session.integrityProbe;
   return jsonResponse(session, 200, origin);
 }));
 
@@ -1061,6 +1070,8 @@ app.get("/reports", wrap(async (c) => {
   // Non-admin: only own reports
   if (ctx.role !== "admin" && ctx.role !== "superadmin") {
     all = all.filter((r) => r.counsellorId === ctx.id);
+    // integrityCheck is admin-only — strip from each report for non-admins.
+    for (const r of all) delete r.integrityCheck;
   } else {
     if (counsellorId) all = all.filter((r) => r.counsellorId === counsellorId);
   }
@@ -1077,6 +1088,8 @@ app.get("/reports/:id", wrap(async (c) => {
   const report = await store.getById("reports", id);
   if (!report) throw httpError(404, "Report not found");
   assertOwnerOrAdmin(ctx, report.counsellorId);
+  // integrityCheck is admin-only — strip for the owning counsellor.
+  if (ctx.role !== "admin" && ctx.role !== "superadmin") delete report.integrityCheck;
   return jsonResponse(report, 200, origin);
 }));
 
@@ -1205,6 +1218,36 @@ app.put("/config/scoring", wrap(async (c) => {
   const saved = await getAppConfigValue("scoring");
   const cfg = loadScoringConfig(saved);
   return jsonResponse(cfg, 200, origin);
+}));
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INTEGRITY PROBES (admin-only library — never exposed to counsellors)
+// ─────────────────────────────────────────────────────────────────────────────
+app.get("/integrity-probes", wrap(async (c) => {
+  const origin = getOrigin(c.req.raw);
+  const ctx = await authenticate(c.req.raw);
+  assertAdmin(ctx);
+  const row = await getAppConfigValue("integrityProbes");
+  return jsonResponse(loadProbes(row), 200, origin);
+}));
+
+app.put("/integrity-probes", wrap(async (c) => {
+  const origin = getOrigin(c.req.raw);
+  const ctx = await authenticate(c.req.raw);
+  assertAdmin(ctx);
+  const body = await c.req.json().catch(() => null);
+  if (!body || typeof body !== "object" || Array.isArray(body) || !Array.isArray(body.probes)) {
+    throw httpError(400, "integrity probes config must be an object with a probes array");
+  }
+  for (const p of body.probes) {
+    if (!p || typeof p !== "object" || typeof p.question !== "string" || typeof p.groundTruth !== "string") {
+      throw httpError(400, "each probe must have question and groundTruth strings");
+    }
+    if (!p.id) p.id = newProbeId();
+  }
+  await store.upsertConfig("integrityProbes", body, ctx.id);
+  const saved = await getAppConfigValue("integrityProbes");
+  return jsonResponse(loadProbes(saved), 200, origin);
 }));
 
 // ─────────────────────────────────────────────────────────────────────────────

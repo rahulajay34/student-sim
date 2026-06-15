@@ -378,10 +378,105 @@ function PersonaAddressedSection({ data, generating }) {
   );
 }
 
+// Verdict → Badge color + label
+function verdictColor(verdict) {
+  if (verdict === "lied" || verdict === "overpromised") return "danger";
+  if (verdict === "evasive") return "warn";
+  if (verdict === "honest") return "success";
+  return "slate"; // not_raised / absent / unknown
+}
+
+function verdictLabel(verdict) {
+  const map = {
+    lied: "Lied",
+    overpromised: "Overpromised",
+    evasive: "Evasive",
+    honest: "Honest",
+    not_raised: "Not raised",
+    absent: "Absent",
+  };
+  return map[verdict] || verdict || "Unknown";
+}
+
+// Admin-only card — integrity trap result for this report.
+// Rendered only when isAdmin && report.integrityCheck is present.
+function IntegrityCheckCard({ check }) {
+  const {
+    question,
+    verdict,
+    severity,
+    evidenceQuote,
+    explanation,
+    category,
+  } = check;
+
+  return (
+    <Card className="p-6 border-danger/20">
+      <CardHeader
+        title="Integrity check"
+        subtitle="Admin-only — fact-checking an integrity trap embedded in this session"
+        action={
+          <Badge color="slate" className="text-xs">
+            Admin only
+          </Badge>
+        }
+      />
+      <div className="mt-4 space-y-4">
+        {/* Probe question */}
+        <div>
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+            Probe question
+          </span>
+          {category && (
+            <Badge color="slate" className="ml-2 text-xs">
+              {category}
+            </Badge>
+          )}
+          <p className="mt-1 text-sm font-medium text-ink">{question || "—"}</p>
+        </div>
+
+        {/* Verdict + severity */}
+        <div className="flex items-center gap-3">
+          <Badge color={verdictColor(verdict)}>
+            {verdictLabel(verdict)}
+          </Badge>
+          {typeof severity === "number" && (
+            <span className="text-xs text-muted">
+              Severity&nbsp;
+              <span className="font-semibold tabular-nums text-ink">{severity}</span>
+              /3
+            </span>
+          )}
+        </div>
+
+        {/* Evidence quote */}
+        {evidenceQuote && (
+          <div className="rounded-xl border border-line bg-canvas/60 px-4 py-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+              Evidence
+            </span>
+            <p className="mt-1.5 text-sm italic text-muted">"{evidenceQuote}"</p>
+          </div>
+        )}
+
+        {/* Explanation */}
+        {explanation && (
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+              Explanation
+            </span>
+            <p className="mt-1 text-sm text-ink/80">{explanation}</p>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 export default function ReportDetail({ backTo = "/app/reports" }) {
   const { id } = useParams();
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const isAdmin = ["admin", "superadmin"].includes(user?.role);
 
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -992,6 +1087,11 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
 
       {/* PERSONA CONCERNS ADDRESSED (issue 2) */}
       <PersonaAddressedSection data={pa} generating={generating} />
+
+      {/* INTEGRITY CHECK — admin/superadmin only */}
+      {isAdmin && report.integrityCheck && (
+        <IntegrityCheckCard check={report.integrityCheck} />
+      )}
 
       {/* SCORE ARC */}
       <Card className="p-6">

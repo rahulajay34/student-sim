@@ -127,6 +127,19 @@ ${summary}
 ${pivotRule}`;
 }
 
+// INTEGRITY PROBE — the session may carry an assigned integrity probe
+// ({ id, category, question, groundTruth }). Inject ONLY the question, framed so
+// the student works it into the conversation once, naturally, without revealing it
+// is a test. groundTruth is NEVER included in any prompt. Renders "" when no probe
+// is assigned (old sessions, or sessions without integrityProbe).
+function buildIntegrityProbeSection(session) {
+  const probe = session?.integrityProbe;
+  const question = probe && typeof probe === "object" ? String(probe.question || "").trim() : "";
+  if (!question) return "";
+  return `ONE QUESTION YOU MUST WORK IN NATURALLY (once, when it fits — do not reveal it is a test):
+"${question}"`;
+}
+
 function buildScenarioSection(scenario) {
   if (!scenario || (!scenario.situation && !scenario.contextNotes && !scenario.title)) return "";
   const lines = ["THIS SPECIFIC MOCK SCENARIO:"];
@@ -355,6 +368,9 @@ export function buildSystemPromptParts(persona, scenario, currentPhase, satisfac
       };
   const dispositionSection = buildDispositionSection(dispositionSession);
   const objectionStateSection = buildObjectionStateSection(cfg, objectionState);
+  // Integrity probe — reads session.integrityProbe (threaded as the last arg);
+  // empty when the session carries no probe.
+  const integrityProbeSection = buildIntegrityProbeSection(dispositionSession);
   const turnVerbositySection = buildTurnVerbositySection(cfg, turnVerbosity);
   const momentumSection = buildMomentumSection(cfg, lastAdjustment);
 
@@ -397,7 +413,7 @@ ${persona.coreAnxiety}`;
   const variable = `${buildPhaseSection(cfg, currentPhase, booking)}
 
 ${dispositionSection}
-${tuningSection ? `\n${tuningSection}\n` : ""}${momentumSection ? `\n${momentumSection}\n` : ""}${objectionStateSection ? `\n${objectionStateSection}\n` : ""}
+${tuningSection ? `\n${tuningSection}\n` : ""}${momentumSection ? `\n${momentumSection}\n` : ""}${objectionStateSection ? `\n${objectionStateSection}\n` : ""}${integrityProbeSection ? `\n${integrityProbeSection}\n` : ""}
 YOUR PERSONA-SPECIFIC BEHAVIOUR BY PHASE:
 ${persona.behaviourPrompt}
 

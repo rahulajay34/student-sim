@@ -42,16 +42,40 @@ function micConstraints(deviceId) {
 // loadPct/error/enable/disable/getAnalyser) plus realtime extras (changeVoice,
 // muted/setMuted, sendText, sendSteering).
 //
-// Periodic accent reminder (issue 1c): re-injected every ~4 completed student
-// turns. Wording rotates so it does not read as a stuck loop. Cheap + non-
-// destructive — rides the same system-injection path as steering.
-const ACCENT_REMINDER_EVERY = 4;
-const ACCENT_REMINDER_LINES = [
-  "Keep your natural Indian English accent — syllable-timed, with the light Hinglish rhythm; do not let it drift to neutral.",
-  "Quick reminder: hold your authentic Indian English accent and the occasional Hindi particle, exactly as at the start of the call.",
-  "Stay in your Indian-English voice and rhythm; if you have started sounding neutral, pull straight back to it.",
-  "Keep that Indian English accent strong and natural — don't flatten out as the call runs long.",
+// Periodic accent RE-PROMPT (issue #1 — accent must not fade): on a long call the
+// connect-time accent instructions slide out of the model's working context and the
+// voice drifts to neutral. A one-line nudge was not enough, so every ~3 completed
+// student turns we RE-INJECT the WHOLE Indian-accent instruction block again — not a
+// short reminder — through the same non-destructive system-injection path as
+// steering. Cheap relative to the call; far cheaper than re-minting the token.
+const ACCENT_REPROMPT_EVERY = 3;
+
+// The detailed accent rules — restated IN FULL each time. This is the single
+// client-side source of truth for the re-prompt; it mirrors INDIAN_ACCENT_BLOCK in
+// server/realtime.js (the client bundle cannot import server code). If you change
+// the wording, change it in both places.
+const INDIAN_ACCENT_BLOCK = [
+  "ACCENT — THE #1 RULE, NEVER RELAX IT:",
+  "- Speak with an authentic, natural INDIAN ENGLISH accent for EVERY word of EVERY turn — this is the single most important thing about how you sound, and it NEVER fades.",
+  "- As the call runs long it is easy to slip toward a neutral, American or British accent. DO NOT. The moment you notice yourself flattening out, pull straight back. Your accent now must sound exactly as Indian as at the start of the call.",
+  "- Rhythm is SYLLABLE-TIMED: give each syllable roughly equal weight; do NOT stress syllables the American/British way. Pronounce \"v\" and \"w\" the same. Question tags (\"isn't it?\", \"na?\", \"right?\") rise on the last syllable; sentence ends stay flat or slightly rising, not falling sharply.",
+  "- Keep the natural Indian-English texture: light Hindi particles (haan, thoda, achha, matlab, sentence-final \"na\"), an occasional filler, the syllable-timed rhythm. This is your home base — do not drift to a flat neutral voice.",
+].join("\n");
+
+// A short lead-in that varies each time so the re-prompt does not read as an
+// identical stuck loop. The full accent block above follows it verbatim.
+const ACCENT_REPROMPT_LEADINS = [
+  "Reminder on how you must sound for the rest of this call:",
+  "Hold your voice exactly here — re-read these accent rules and apply them right now:",
+  "Your accent may be drifting as the call runs long. Reset to these rules in full:",
+  "Quick voice check — stay anchored to all of this, not just part of it:",
 ];
+
+// Build one full re-prompt message: a varied lead-in + the WHOLE accent block.
+function buildAccentReprompt(seq) {
+  const lead = ACCENT_REPROMPT_LEADINS[seq % ACCENT_REPROMPT_LEADINS.length];
+  return `${lead}\n\n${INDIAN_ACCENT_BLOCK}`;
+}
 
 const SDP_URL = "https://api.openai.com/v1/realtime/calls";
 
@@ -106,12 +130,11 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
   const steerWarnedRef = useRef(false);
   const sendSteeringRawRef = useRef(null); // points at sendSteeringRaw (set below; lets handleEvent re-send)
 
-  // Periodic accent reminder (issue 1c): the standing voice instructions set the
+  // Periodic accent RE-PROMPT (issue #1): the standing voice instructions set the
   // Indian-English accent at connect time, but over a long call that fades from
-  // context and the accent drifts to neutral. Every ~4 completed student turns we
-  // re-inject a short, varied "keep your natural Indian English accent" nudge
-  // through the same non-destructive system-injection path as steering. Wording
-  // rotates so it never reads as a stuck loop.
+  // context and the accent drifts to neutral. Every ~3 completed student turns we
+  // re-inject the WHOLE Indian-accent instruction block (varied lead-in, full rules
+  // re-stated) through the same non-destructive system-injection path as steering.
   const studentTurnCountRef = useRef(0);
   const accentReminderSeqRef = useRef(0);
 
@@ -337,12 +360,14 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
       case "response.output_audio_transcript.done": {
         const text = (evt.transcript || "").trim();
         if (text) onTranscriptRef.current?.({ role: "student", text });
-        // Periodic accent reminder: every ~4 completed student turns, nudge the
-        // accent back to home base through the non-destructive injection path.
+        // Periodic accent RE-PROMPT: every ~3 completed student turns, re-inject the
+        // WHOLE Indian-accent instruction block (with a varied lead-in) back into the
+        // model's context through the non-destructive injection path, so the accent
+        // never fades on a long call.
         studentTurnCountRef.current += 1;
-        if (studentTurnCountRef.current % ACCENT_REMINDER_EVERY === 0) {
-          const line = ACCENT_REMINDER_LINES[accentReminderSeqRef.current++ % ACCENT_REMINDER_LINES.length];
-          sendSteeringRawRef.current?.(line);
+        if (studentTurnCountRef.current % ACCENT_REPROMPT_EVERY === 0) {
+          const msg = buildAccentReprompt(accentReminderSeqRef.current++);
+          sendSteeringRawRef.current?.(msg);
         }
         break;
       }
