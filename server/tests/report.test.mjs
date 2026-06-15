@@ -209,16 +209,28 @@ test("A,B,C,D run in parallel; all sections assembled", async () => {
       "product_knowledge", "closing_payment_ask", "communication_empathy", "personalised_experience",
     ],
   );
-  // Each entry carries its human label + clamped 0-5 score + summary.
+  // Each entry carries its human label + rawScore + calibrated score + summary.
+  // CALIB offsets: rapport_opening+1.0, needs_discovery+0.5, programme_presentation+0.6,
+  //   objection_handling+0.9, product_knowledge+1.2, closing_payment_ask+0.8,
+  //   communication_empathy+1.2, personalised_experience+0.8. All clamped to [0,5], 1dp.
   const byKey = Object.fromEntries(nr.parameters.map((p) => [p.key, p]));
   assert.equal(byKey.rapport_opening.label, "Rapport & Opening");
-  assert.equal(byKey.rapport_opening.score, 5, "out-of-range 6 clamps to 5");
-  assert.equal(byKey.objection_handling.score, 0, "omitted parameter defaults to 0");
+  // raw 6 clamps to 5; calibrated = clamp5(5 + 1.0) = 5.0
+  assert.equal(byKey.rapport_opening.rawScore, 5, "raw out-of-range 6 clamps to 5");
+  assert.equal(byKey.rapport_opening.score, 5, "calibrated rapport_opening = 5.0");
+  // omitted parameter → raw=0; calibrated = clamp5(0 + 0.9) = 0.9
+  assert.equal(byKey.objection_handling.rawScore, 0, "omitted parameter rawScore defaults to 0");
+  assert.equal(byKey.objection_handling.score, 0.9, "calibrated objection_handling = 0.9");
   assert.equal(byKey.objection_handling.summary, "", "omitted parameter summary defaults to ''");
-  assert.equal(byKey.needs_discovery.score, 2);
-  // total = sum(scores)/40*100, rounded to 1 decimal.
-  // scores: 5,2,3,0,4,3,4,2 = 23 → 23/40*100 = 57.5
-  assert.equal(nr.total, 57.5, "total = sum(scores)/40*100, 1 decimal");
+  // needs_discovery raw=2; calibrated = clamp5(2 + 0.5) = 2.5
+  assert.equal(byKey.needs_discovery.rawScore, 2);
+  assert.equal(byKey.needs_discovery.score, 2.5);
+  // total = sum(calibrated scores)/40*100, rounded to 1 decimal.
+  // calibrated: rapport_opening=5, needs_discovery=2.5, programme_presentation=3.6,
+  //   objection_handling=0.9, product_knowledge=5 (clamp5(4+1.2)), closing_payment_ask=3.8,
+  //   communication_empathy=5 (clamp5(4+1.2)), personalised_experience=2.8
+  // sum = 5+2.5+3.6+0.9+5+3.8+5+2.8 = 28.6 → 28.6/40*100 = 71.5
+  assert.equal(nr.total, 71.5, "total = sum(calibrated scores)/40*100, 1 decimal");
 });
 
 // ============================================================================

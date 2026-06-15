@@ -212,10 +212,11 @@ function TraitBar({ label, value }) {
 }
 
 // ─── New param bar (0-5 scale; admin-only "New Report Section") ───────────────
-// Color mapping: <=2 → danger/red, 3 → warn/amber, >=4 → success/green.
+// Color mapping (scores are human-calibrated decimals, e.g. 3.6): >=4 → success/green,
+// >=2.5 → warn/amber, <2.5 → danger/red.
 function newParamColor(score) {
   if (score >= 4) return "success";
-  if (score === 3) return "warn";
+  if (score >= 2.5) return "warn";
   return "danger";
 }
 

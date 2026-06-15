@@ -351,10 +351,14 @@ const NEW_REPORT_ANCHORS = `1. rapport_opening (Rapport & Opening)
    0 ignored/dismissed the concern · 1 acknowledged but barely addressed (no details) · 2 answered with no specifics (vague reassurance) ·
    3 answered partially but reasonably, some specifics, not fully resolved · 4 resolved most concerns with concrete specifics + empathy, minor gaps ·
    5 fully resolved each concern with specific facts/data/proof + workable alternatives; confident, no pressure
-5. product_knowledge (Product Knowledge & Accuracy)
-   0 major errors / fabricated / misselling (false guarantees) · 1 very shaky; doesn't know basics (fees/EMI/dates) or wrong info ·
-   2 knows some facts but clear gaps/uncertainty · 3 mostly accurate, main facts, a few gaps/hedges · 4 strong accurate knowledge, minor gaps, no false claims ·
-   5 complete, accurate, confident command of all details; no misselling
+5. product_knowledge (Product Knowledge & Accuracy) — score the BREADTH and CONFIDENCE of command of the programme (curriculum, format, placement process, fee/EMI structure), NOT numeric perfection.
+  5 = complete, confident command across the programme.
+  4 = strong command; at most a minor slip.
+  3 = solid overall command with a few gaps OR a single wrong/inconsistent figure (a fee number, a date) — a lone numeric error is a MINOR deduction, not a 1-2, if command was otherwise good.
+  2 = clearly shaky: several gaps, repeated self-contradiction, or vague on basics.
+  1 = could not answer basics / mostly wrong.
+  0 = no product knowledge shown.
+  CAP at 2 ONLY for outright misselling — a false guarantee (guaranteed job/placement, fake refund, "we will get you a company"). A wrong fee figure alone is NOT misselling.
 6. closing_payment_ask (Closing & Payment Ask)
    0 no close/next step · 1 vague "let me know", no ask · 2 mentions a next step but unclear/weak, no concrete ask ·
    3 asks for seat-block/next step but tentative/mistimed · 4 clear low-pressure ask, secures follow-up/near-decision, minor gaps ·
@@ -391,7 +395,26 @@ EXAMPLE B — an average call (human total 60%):
 
 EXAMPLE C — a weak call (human total 45%):
   rapport_opening 2, needs_discovery 3, programme_presentation 2, objection_handling 3, product_knowledge 1, closing_payment_ask 2, communication_empathy 3, personalised_experience 2
-  Grader note: "Didn't understand the persona; weak rapport; started selling immediately; shaky course knowledge (unsure on dates/EMI/placement); pushing the lead rather than understanding." (Genuine weakness earns 1-2 on the failed dimensions — but competent ones, like discovery and communication here, still get a 3.)`;
+  Grader note: "Didn't understand the persona; weak rapport; started selling immediately; shaky course knowledge (unsure on dates/EMI/placement); pushing the lead rather than understanding." (Genuine weakness earns 1-2 on the failed dimensions — but competent ones, like discovery and communication here, still get a 3.)
+
+EXAMPLE D — a REAL flawed-but-competent call. Human total 65%. Read the excerpt, then the human scores, and note how forgiving the human grader is of name slips, a fee slip, and rambling:
+
+  COUNSELLOR: Hi Tamil, how are you doing?            [wrong name]
+  STUDENT: I'm doing well... how do we get started?
+  COUNSELLOR: My name is David, I'll guide you through this course... first, tell me about yourself.
+  STUDENT: I just finished my B.Com in finance, not working right now.
+  COUNSELLOR: ...tell me about your parents as well, Samuel.        [wrong name again]
+  COUNSELLOR: got it, Anil. Any other requests?                     [wrong name again]
+  COUNSELLOR: You'll get certification from the institute, professors from IIT plus industry experts, and we have placement opportunities. Any doubts so far?
+  STUDENT: What's the total fee?
+  COUNSELLOR: 22,000 plus GST; EMI or one-time. A refundable 4,000 seat amount is adjusted into the fee.  [a fee figure that doesn't match the real programme fee]
+  COUNSELLOR: Classes Wednesday and Saturday; budget 8-10 hours a week; recordings are available during the course but not after, for privacy reasons.
+  COUNSELLOR: We have end-to-end placement assistance — you need 65% attendance and 70% marks to qualify.
+  STUDENT: So placement support is solid if I meet that?
+  COUNSELLOR: Yes, we make your resume, optimise LinkedIn, train you for interviews, and we will get you a company.
+
+  HUMAN SCORES: rapport_opening 4, needs_discovery 3, programme_presentation 4, objection_handling 3, product_knowledge 3, closing_payment_ask 3, communication_empathy 4, personalised_experience 2  (= 65%)
+  Why: despite repeatedly getting the name wrong, a stray non-English line, a likely-wrong fee number, and a loose "we will get you a company" claim, the counsellor DID greet warmly, run discovery, present structure/projects/schedule/placement criteria clearly, and communicate understandably — so rapport, presentation and communication are 4s, product_knowledge stays a 3 (the fee slip is minor, not a 1-2), and only personalisation (generic to the learner) drops to 2. A competent-but-flawed call is mostly 3-4.`;
 
 function buildNewReportPrompt(session) {
   const p = session.personaSnapshot || {};
@@ -841,17 +864,37 @@ function assemblePersonaAddressed(rawD) {
   };
 }
 
+// ─── Per-parameter calibration offsets (CHANGE 3 v3) ────────────────────────
+// CALIB is the measured (human - claude) per-parameter offset for this
+// model+prompt, refit as more human-graded calls accumulate. Add the offset to
+// the raw model score to land on the calibrated score reported to the user.
+const CALIB = {
+  rapport_opening: 1.0,
+  needs_discovery: 0.5,
+  programme_presentation: 0.6,
+  objection_handling: 0.9,
+  product_knowledge: 1.2,
+  closing_payment_ask: 0.8,
+  communication_empathy: 1.2,
+  personalised_experience: 0.8,
+};
+const clamp5 = (x) => Math.max(0, Math.min(5, x));
+
 // ─── Assemble the New Report Section from its scoring call ────────────────────
-// 8 parameters in fixed order, each clamped 0-5, with the human label attached.
-// total = sum(scores) / 40 * 100, rounded to 1 decimal.
+// 8 parameters in fixed order. Each carries rawScore (the clamped model score)
+// and score (calibrated: rawScore + CALIB[key], clamped to 0-5, 1dp).
+// total = sum(calibrated scores) / 40 * 100, rounded to 1 decimal.
 function assembleNewReport(raw) {
   const byKey = new Map((Array.isArray(raw?.parameters) ? raw.parameters : []).map((p) => [p.key, p]));
   const parameters = NEW_REPORT_PARAMS.map(({ key, label }) => {
     const p = byKey.get(key) || {};
+    const rawScore = clamp(p.score ?? 0, 0, 5);
+    const score = Math.round(clamp5(rawScore + (CALIB[key] || 0)) * 10) / 10;
     return {
       key,
       label,
-      score: clamp(p.score ?? 0, 0, 5),
+      score,
+      rawScore,
       summary: typeof p.summary === "string" ? p.summary : "",
     };
   });
