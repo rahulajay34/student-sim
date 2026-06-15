@@ -6,6 +6,17 @@ function safe(num, den) {
   return num / den;
 }
 
+// The canonical report score: the New Report Section total (0-100), falling
+// back to the legacy overall.percent for any report lacking newReport.
+function reportPercent(r) {
+  return Number.isFinite(r?.newReport?.total) ? r.newReport.total : r?.overall?.percent;
+}
+
+// Map a 0-100 score to its band label, or null when not a finite number.
+function bandForPercent(n) {
+  return Number.isFinite(n) ? (n >= 70 ? "Excellent" : n >= 50 ? "Good" : "Needs work") : null;
+}
+
 function rubricItems(report) {
   if (!Array.isArray(report.rubric)) return [];
   return report.rubric.map((r) => ({ key: r.key, score: r.score })).filter((r) => r.key && typeof r.score === "number");
@@ -81,12 +92,12 @@ function canonicalObjectionKey(cat) {
 const PERSONA_CATEGORIES = ["studying", "same-field", "diff-field", "non-working"];
 
 function reportMetricValue(report, metric) {
-  if (!Number.isFinite(report?.overall?.percent)) return null;
+  if (!Number.isFinite(reportPercent(report))) return null;
   if (metric === "satisfaction") {
     const v = report.finalScore;
     return typeof v === "number" && Number.isFinite(v) ? v : null;
   }
-  const v = report.overall.percent;
+  const v = reportPercent(report);
   return typeof v === "number" && Number.isFinite(v) ? v : null;
 }
 
@@ -210,20 +221,20 @@ export function buildAdminAnalytics({ reports, assignments, users }) {
 
   const counsellors = users.filter((u) => u.role === "counsellor");
 
-  const mocksCompleted = reports.filter((r) => Number.isFinite(r.overall?.percent)).length;
+  const mocksCompleted = reports.filter((r) => Number.isFinite(reportPercent(r))).length;
   const totalAssigned = assignments.length;
   const completedAssignments = assignments.filter((a) => a.status === "completed").length;
   const completionRatePct = totalAssigned === 0 ? 0 : Math.round(safe(completedAssignments, totalAssigned) * 100);
 
-  const percents = reports.map((r) => r.overall?.percent).filter((v) => typeof v === "number" && Number.isFinite(v));
+  const percents = reports.map((r) => reportPercent(r)).filter((v) => typeof v === "number" && Number.isFinite(v));
   const avgScore = percents.length === 0 ? null : Math.round(safe(percents.reduce((s, v) => s + v, 0), percents.length));
 
   let trendDelta = null;
   if (percents.length >= 2) {
     const sorted = [...reports]
-      .filter((r) => typeof r.overall?.percent === "number")
+      .filter((r) => Number.isFinite(reportPercent(r)))
       .sort((a, b) => (a.generatedAt < b.generatedAt ? -1 : 1))
-      .map((r) => r.overall.percent);
+      .map((r) => reportPercent(r));
     const n = sorted.length;
     const w = Math.min(5, Math.floor(n / 2));
     const lastW = sorted.slice(-w);
@@ -250,7 +261,7 @@ export function buildAdminAnalytics({ reports, assignments, users }) {
   const criteria = criteriaKeys.map((key) => ({ key, label: allKeysMap.get(key) }));
 
   const heatmapRows = counsellors.map((c) => {
-    const ownReports = reports.filter((r) => r.counsellorId === c.id && Number.isFinite(r.overall?.percent));
+    const ownReports = reports.filter((r) => r.counsellorId === c.id && Number.isFinite(reportPercent(r)));
     const keyScores = {};
     for (const r of ownReports) {
       for (const item of rubricItems(r)) {
@@ -281,7 +292,7 @@ export function buildAdminAnalytics({ reports, assignments, users }) {
   const weekMap = new Map();
   for (const r of reports) {
     if (!r.generatedAt) continue;
-    const pct = r.overall?.percent;
+    const pct = reportPercent(r);
     if (typeof pct !== "number" || !Number.isFinite(pct)) continue;
     const ws = isoWeekMonday(new Date(r.generatedAt));
     if (!weekMap.has(ws)) weekMap.set(ws, []);
@@ -301,11 +312,11 @@ export function buildAdminAnalytics({ reports, assignments, users }) {
 
   const counsellorsList = counsellors.map((c) => {
     const ownReports = reports
-      .filter((r) => r.counsellorId === c.id && typeof r.overall?.percent === "number")
+      .filter((r) => r.counsellorId === c.id && Number.isFinite(reportPercent(r)))
       .sort((a, b) => (a.generatedAt < b.generatedAt ? -1 : 1));
 
     const mocks = ownReports.length;
-    const allPcts = ownReports.map((r) => r.overall.percent);
+    const allPcts = ownReports.map((r) => reportPercent(r));
     const avgPercent = mocks === 0 ? null : Math.round(safe(allPcts.reduce((s, v) => s + v, 0), mocks));
 
     let lastFiveDelta = null;
@@ -374,8 +385,8 @@ export function buildAdminAnalytics({ reports, assignments, users }) {
       id: r.id,
       counsellorName: r.counsellorName || "",
       personaName: r.personaName || "",
-      percent: r.overall.percent,
-      band: r.overall.band,
+      percent: reportPercent(r),
+      band: bandForPercent(reportPercent(r)),
       outcome: r.overall.outcome,
       generatedAt: r.generatedAt,
     }));
@@ -401,7 +412,7 @@ export function buildCounsellorAnalytics(counsellorId, { reports, assignments, u
 
   const trend = ownReports.map((r, i) => ({
     turn: i + 1,
-    percent: r.overall.percent,
+    percent: reportPercent(r),
     generatedAt: r.generatedAt,
     reportId: r.id,
   }));
@@ -430,7 +441,7 @@ export function buildCounsellorAnalytics(counsellorId, { reports, assignments, u
     mine[key] = scores && scores.length > 0 ? Math.round(avg(scores) * 10) / 10 : null;
   }
 
-  const otherReports = reports.filter((r) => r.counsellorId !== counsellorId && Number.isFinite(r.overall?.percent));
+  const otherReports = reports.filter((r) => r.counsellorId !== counsellorId && Number.isFinite(reportPercent(r)));
   const teamSource = otherReports.length > 0 ? otherReports : reports;
   const teamKeyScores = {};
   for (const r of teamSource) {
@@ -451,7 +462,7 @@ export function buildCounsellorAnalytics(counsellorId, { reports, assignments, u
   const pendingMocks = ownAssignments.filter((a) => a.status === "assigned" || a.status === "in_progress").length;
   const completedMocks = ownAssignments.filter((a) => a.status === "completed").length;
 
-  const ownPercents = ownReports.map((r) => r.overall.percent).filter((v) => typeof v === "number" && Number.isFinite(v));
+  const ownPercents = ownReports.map((r) => reportPercent(r)).filter((v) => typeof v === "number" && Number.isFinite(v));
   const avgPercent = ownPercents.length === 0 ? null : Math.round(safe(ownPercents.reduce((s, v) => s + v, 0), ownPercents.length));
 
   let recommendedDrill = null;

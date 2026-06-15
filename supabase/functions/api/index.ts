@@ -1070,8 +1070,9 @@ app.get("/reports", wrap(async (c) => {
   // Non-admin: only own reports
   if (ctx.role !== "admin" && ctx.role !== "superadmin") {
     all = all.filter((r) => r.counsellorId === ctx.id);
-    // integrityCheck / newReport are admin-only — strip from each report for non-admins.
-    for (const r of all) { delete r.integrityCheck; delete r.newReport; }
+    // integrityCheck is admin-only — strip from each report for non-admins.
+    // (newReport is visible to everyone — it now drives the score shown on the list.)
+    for (const r of all) { delete r.integrityCheck; }
   } else {
     if (counsellorId) all = all.filter((r) => r.counsellorId === counsellorId);
   }
@@ -1088,8 +1089,9 @@ app.get("/reports/:id", wrap(async (c) => {
   const report = await store.getById("reports", id);
   if (!report) throw httpError(404, "Report not found");
   assertOwnerOrAdmin(ctx, report.counsellorId);
-  // integrityCheck / newReport are admin-only — strip for the owning counsellor.
-  if (ctx.role !== "admin" && ctx.role !== "superadmin") { delete report.integrityCheck; delete report.newReport; }
+  // integrityCheck is admin-only — strip for the owning counsellor.
+  // (newReport is visible to everyone — it now drives the score shown on the list/detail.)
+  if (ctx.role !== "admin" && ctx.role !== "superadmin") { delete report.integrityCheck; }
   return jsonResponse(report, 200, origin);
 }));
 

@@ -8,7 +8,7 @@ import Badge from "../../ui/Badge";
 import EmptyState from "../../ui/EmptyState";
 import Table from "../../ui/Table";
 import { api } from "../../lib/api";
-import { bandColor, rubricColor, TOKEN_HEX, relativeDate } from "../../lib/format";
+import { bandColor, rubricColor, TOKEN_HEX, relativeDate, reportScore, bandForScore } from "../../lib/format";
 
 // ---------------------------------------------------------------------------
 // Inline SVG icons
@@ -306,15 +306,15 @@ export default function AdminDashboard() {
             if (!alive) return;
             // Mirror analytics.js: only scored reports; most recent 6.
             const scored = (all || [])
-              .filter((r) => r.overall && Number.isFinite(r.overall?.percent))
+              .filter((r) => Number.isFinite(reportScore(r)))
               .sort((a, b) => (a.generatedAt < b.generatedAt ? 1 : -1))
               .slice(0, 6)
               .map((r) => ({
                 id: r.id,
                 counsellorName: r.counsellorName || "",
                 personaName: r.personaName || "",
-                percent: r.overall?.percent,
-                band: r.overall?.band,
+                percent: reportScore(r),
+                band: bandForScore(reportScore(r)),
                 outcome: r.overall?.outcome,
                 generatedAt: r.generatedAt,
               }));

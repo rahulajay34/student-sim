@@ -64,6 +64,23 @@ export function bandColor(band) {
   return "danger";
 }
 
+// The score shown for a report across the site: the New Report Section total
+// (8-parameter eval, 0-100) when present, falling back to the legacy overall
+// percent for any report that predates it. Returns null when neither is scored.
+export function reportScore(report) {
+  const v = report?.newReport?.total ?? report?.overall?.percent;
+  return Number.isFinite(v) ? v : null;
+}
+
+// Band label derived from a 0-100 score (mirrors bandColor's thresholds), used
+// for the badge next to the new score. Returns null for an unscored report.
+export function bandForScore(n) {
+  if (!Number.isFinite(n)) return null;
+  if (n >= 70) return "Excellent";
+  if (n >= 50) return "Good";
+  return "Needs work";
+}
+
 // 'success' | 'warn' | 'danger' for a difficulty level.
 export function difficultyColor(level) {
   if (level === "easy") return "success";

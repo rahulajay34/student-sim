@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth.jsx";
-import { bandColor, relativeDate } from "../../lib/format";
+import { bandColor, relativeDate, reportScore, bandForScore } from "../../lib/format";
 import Card from "../../ui/Card";
 import Table from "../../ui/Table";
 import Badge from "../../ui/Badge";
@@ -67,18 +67,22 @@ export default function Reports() {
     {
       key: "score",
       header: "Score",
-      render: (r) => (
-        <div className="flex items-center gap-2.5">
-          <span className="tabular-nums font-semibold text-ink">
-            {r.overall?.percent != null ? `${r.overall.percent}%` : "—"}
-          </span>
-          {r.overall?.band ? (
-            <Badge color={bandColor(r.overall.band)}>{r.overall.band}</Badge>
-          ) : (
-            <Badge color="slate">generating</Badge>
-          )}
-        </div>
-      ),
+      render: (r) => {
+        const score = reportScore(r);
+        const band = bandForScore(score);
+        return (
+          <div className="flex items-center gap-2.5">
+            <span className="tabular-nums font-semibold text-ink">
+              {score != null ? `${Math.round(score)}%` : "—"}
+            </span>
+            {band ? (
+              <Badge color={bandColor(band)}>{band}</Badge>
+            ) : (
+              <Badge color="slate">generating</Badge>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: "outcome",

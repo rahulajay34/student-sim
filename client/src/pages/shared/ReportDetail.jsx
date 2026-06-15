@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../../lib/api";
-import { bandColor, formatDate, TOKEN_HEX } from "../../lib/format";
+import { bandColor, formatDate, TOKEN_HEX, reportScore, bandForScore } from "../../lib/format";
 import { useAuth } from "../../lib/auth";
 import Card, { CardHeader } from "../../ui/Card";
 import Badge from "../../ui/Badge";
@@ -18,6 +18,11 @@ import PhaseStepper from "./PhaseStepper";
 // Poll the report every 2s while it's still generating; give up at 3 minutes.
 const POLL_INTERVAL_MS = 2000;
 const POLL_TIMEOUT_MS = 3 * 60 * 1000;
+
+// Visibility flag: the legacy "Rubric breakdown" card is hidden from the report
+// page (the New Report Section supersedes it). The card's code is intentionally
+// retained below — flip this to `true` to bring it back.
+const SHOW_OLD_RUBRIC_BREAKDOWN = false;
 
 // Missing status (old reports) is treated as a finished, ready report.
 const statusOf = (report) => report?.status || "ready";
@@ -675,6 +680,9 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
   } = report;
 
   const converted = overall.outcome === "Converted";
+  // The headline score: New Report Section total, falling back to legacy percent.
+  const heroScore = reportScore(report);
+  const heroBand = bandForScore(heroScore);
   // Prefer the stub's persisted finalScore; fall back to the last arc point.
   const finalScore =
     typeof report.finalScore === "number"
@@ -818,9 +826,9 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
                   —<span className="text-2xl font-semibold text-muted/40">%</span>
                 </span>
               ) : (
-                <HeroPercent percent={overall.percent} animate={!isFallback} />
+                <HeroPercent percent={heroScore == null ? null : Math.round(heroScore)} animate={!isFallback} />
               )}
-              {overall.band && <Badge color={bandColor(overall.band)}>{overall.band}</Badge>}
+              {heroBand && <Badge color={bandColor(heroBand)}>{heroBand}</Badge>}
               {overall.outcome && (
                 <Badge color={converted ? "success" : "slate"}>{overall.outcome}</Badge>
               )}
@@ -857,17 +865,12 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
       {/* PERSONA CARD (issue 9) */}
       <PersonaCardSection card={pc} />
 
-      {/* NEW REPORT SECTION — admin/superadmin only; present only when report.newReport is set */}
-      {isAdmin && report.newReport && (
+      {/* NEW REPORT SECTION — present only when report.newReport is set */}
+      {report.newReport && (
         <Card className="p-6 border-brand-200">
           <CardHeader
             title="New Report Section"
-            subtitle="8-parameter evaluation · admin only"
-            action={
-              <Badge color="slate" className="text-xs">
-                Admin only
-              </Badge>
-            }
+            subtitle="8-parameter evaluation"
           />
           {/* Overall score */}
           <div className="mt-4 flex items-center gap-4">
@@ -905,7 +908,8 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
         <div className="flex-1 border-t border-line" />
       </div>
 
-      {/* RUBRIC */}
+      {/* RUBRIC — hidden from the page (code retained; see SHOW_OLD_RUBRIC_BREAKDOWN) */}
+      {SHOW_OLD_RUBRIC_BREAKDOWN && (
       <Card className="p-6">
         <CardHeader title="Rubric breakdown" subtitle="Weighted criteria across the call" />
         {generating ? (
@@ -930,6 +934,7 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
           <EmptyState title="No rubric data" hint="This report has no scored criteria." />
         )}
       </Card>
+      )}
 
       {/* PHASE BREAKDOWN */}
       <Card className="p-6">

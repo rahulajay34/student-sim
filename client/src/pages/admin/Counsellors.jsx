@@ -4,6 +4,7 @@ import Avatar from "../../ui/Avatar";
 import Spinner from "../../ui/Spinner";
 import EmptyState from "../../ui/EmptyState";
 import { api } from "../../lib/api";
+import { reportScore } from "../../lib/format";
 
 // One small labelled metric within a counsellor card.
 function Stat({ label, value }) {
@@ -102,7 +103,7 @@ export default function Counsellors() {
             const completed = mine.filter((a) => a.status === "completed");
             const myReports = reports.filter((r) => r.counsellorId === c.id);
             const scored = myReports
-              .map((r) => r.overall?.percent)
+              .map((r) => reportScore(r))
               .filter((p) => typeof p === "number");
             const avg = scored.length
               ? Math.round(scored.reduce((s, p) => s + p, 0) / scored.length)

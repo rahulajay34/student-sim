@@ -1436,8 +1436,9 @@ app.get("/api/reports", (req, res) => {
   if (sessionId) all = all.filter((r) => r.sessionId === sessionId);
   // newest first
   all.sort((a, b) => (a.generatedAt < b.generatedAt ? 1 : -1));
-  // integrityCheck / newReport are admin-only — strip from each report for non-admins.
-  if (isNonAdminRequester(req)) for (const r of all) { delete r.integrityCheck; delete r.newReport; }
+  // integrityCheck is admin-only — strip from each report for non-admins.
+  // (newReport is visible to everyone — it now drives the score shown on the list.)
+  if (isNonAdminRequester(req)) for (const r of all) { delete r.integrityCheck; }
   res.json(all);
 });
 
@@ -1445,8 +1446,9 @@ app.get("/api/reports/:id", (req, res) => {
   const r = store.getById("reports", req.params.id);
   if (!r) return res.status(404).json({ error: "Report not found" });
   if (deniedForReport(req, res, r)) return;
-  // integrityCheck / newReport are admin-only — strip for the owning counsellor.
-  if (isNonAdminRequester(req)) { delete r.integrityCheck; delete r.newReport; }
+  // integrityCheck is admin-only — strip for the owning counsellor.
+  // (newReport is visible to everyone — it now drives the score shown on the list/detail.)
+  if (isNonAdminRequester(req)) { delete r.integrityCheck; }
   res.json(r);
 });
 

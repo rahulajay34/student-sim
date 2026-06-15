@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
-import { bandColor, relativeDate } from "../../lib/format";
+import { bandColor, relativeDate, reportScore, bandForScore } from "../../lib/format";
 import Card from "../../ui/Card";
 import Table from "../../ui/Table";
 import Select from "../../ui/Select";
@@ -58,7 +58,7 @@ export default function AdminReports() {
     return reports.filter((r) => {
       if (counsellorId && r.counsellorId !== counsellorId) return false;
       if (!q) return true;
-      return [r.counsellorName, r.personaName, r.scenarioTitle, r.overall?.band, r.overall?.outcome]
+      return [r.counsellorName, r.personaName, r.scenarioTitle, bandForScore(reportScore(r)), r.overall?.outcome]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q));
     });
@@ -103,19 +103,23 @@ export default function AdminReports() {
       key: "score",
       header: "Score",
       sortable: true,
-      sortValue: (r) => r.overall?.percent ?? -1,
-      render: (r) => (
-        <div className="flex items-center gap-2.5">
-          <span className="tabular-nums font-semibold text-ink">
-            {r.overall?.percent != null ? `${r.overall.percent}%` : "—"}
-          </span>
-          {r.overall?.band ? (
-            <Badge color={bandColor(r.overall.band)}>{r.overall.band}</Badge>
-          ) : (
-            <Badge color="slate">generating</Badge>
-          )}
-        </div>
-      ),
+      sortValue: (r) => reportScore(r) ?? -1,
+      render: (r) => {
+        const score = reportScore(r);
+        const band = bandForScore(score);
+        return (
+          <div className="flex items-center gap-2.5">
+            <span className="tabular-nums font-semibold text-ink">
+              {score != null ? `${Math.round(score)}%` : "—"}
+            </span>
+            {band ? (
+              <Badge color={bandColor(band)}>{band}</Badge>
+            ) : (
+              <Badge color="slate">generating</Badge>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: "outcome",
