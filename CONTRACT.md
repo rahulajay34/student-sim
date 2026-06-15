@@ -39,7 +39,10 @@ existing patterns and keep it minimal.
 ## 2. Data shapes (server JSON store)
 
 ```
-User      { id, name, email, password, role: "admin"|"counsellor", avatarColor }
+User      { id, name, email, password, role: "admin"|"counsellor"|"superadmin", avatarColor, gender:"male"|"female"|null }
+// publicUser (served to clients) additionally carries:
+//   code: string  — stable deterministic short code (e.g. "MAS-C-1A2B"), derived from user id; shown next to counsellor names
+//   gender: "male"|"female"|null
 Persona   { id, name, category, label, coreAnxiety, behaviourPrompt, description,
             personality: { talkativeness:1-5, humour:1-5, skepticism:1-5, formality:1-5, quirks:[string] },
             createdAt, updatedAt }
@@ -48,8 +51,8 @@ Course    { id: "course-<8hex>", slug: "<institute>/<course>", name, category,  
             institute,                       // "IIM Ranchi", "IIT Patna", ...
             partner: "Masai School",
             duration, format,                // "6 months", "Online" / "Online + campus immersion"
-            feeTotal: number|null,           // ₹ total programme fee
-            feeBooking: number|null,         // ₹ seat-block / booking amount
+            feeTotal: number|null,           // ₹ total programme fee (full cost of the programme; NOT the booking fee)
+            feeBooking: number|null,         // ₹ seat-block / booking / admission fee (small upfront amount, ~₹4000)
             feeNote: string,                 // free text: GST, upfront-vs-EMI nuance
             emiNote: string,
             curriculum: [string],            // module titles
@@ -77,7 +80,7 @@ Session   { id, assignmentId|null, counsellorId, mode:"assigned"|"practice",
             personalityFlavour: { mood, activeQuirks:[string], talkativeness, humour, skepticism, formality, notes },
             voice:{key,name,gender},         // student identity picked at start (server/voices.js); drives display name + OpenAI gender-match
                                              // NOTE: elevenLabsVoiceId is absent (removed with the classic/ElevenLabs engines)
-            counsellorAddress:"sir"|"ma'am"|null,  // inferred from counsellor's first name at session start; null = ambiguous
+            counsellorAddress:"sir"|"ma'am"|null,  // resolved at session start: prefers counsellor's stored gender (user.gender) over first-name inference; null = ambiguous
             leadCard:{profileId,name,gender,age,occupation,education,city}|null,  // resolved from profileId at start; null for bare-persona sessions
             scenarioSnapshot:Scenario,       // Scenario may carry pushiness:1-5 and hesitancy:1-5 sliders (neutral 3)
             courseSnapshot:Course|null,      // full Course record snapshotted at session start
@@ -92,6 +95,7 @@ Session   { id, assignmentId|null, counsellorId, mode:"assigned"|"practice",
             //   course_fit_relevance, language_english, tech_access) + "other".
             //   lastPhrasing: last verbatim text the student used for this objection; prompt bans its re-use.
             //   Loop-break nudge fires at timesRaised >= 2.
+            payAskCount: number,              // counts how many times the counsellor asked for payment/commitment this session (default 0); persisted
             currentPhase:1..5, satisfactionScore:0..100,
             lastTurnVerbosity:"open"|"short"|null,  // per-turn verbosity override rolled server-side each
             //   counsellor turn (probability of "open" scales with personality talkativeness; phase 3 forces
@@ -105,7 +109,7 @@ Report    { id, sessionId, assignmentId|null, counsellorId, counsellorName, pers
             status:"generating"|"ready"|"fallback",  // "generating" while the background LLM job runs;
             //   "ready" on success; "fallback" when Call A failed (neutral placeholder, regenerable:true).
             //   Old reports without this field are treated as "ready".
-            partial?: true,                 // set when Call B or C failed but Call A succeeded (sections default to empty arrays/"")
+            partial?: true,                 // set when any non-A call fails but A succeeded (sections default to empty arrays/"")
             overall:{ percent:0..100, band:"Needs Work"|"Good"|"Excellent", headline:string,
                       outcome:"Converted"|"Not Converted", outcomeDetail },
             //   headline: "Next session, focus on …" — one punchy sentence from Call B; "" while generating or if B failed.
@@ -117,12 +121,24 @@ Report    { id, sessionId, assignmentId|null, counsellorId, counsellorName, pers
             strengths:[{point,quote}], improvements:[{point,quote,suggestion}],
             keyMoments:[{turn:number, type:"best"|"miss", note:string}],
             drills:[{title, focusCriterion, objectionCategory, instruction}],
+            personaAddressed: { concerns: [{concern:string, addressed:"fully"|"partially"|"not_addressed",
+                                howRelatedToCourse:string, evidence:string, comment:string}],
+                                summary:string, score:1..10 },
+            //   0–5 concerns; LLM call D (concurrent with A/B/C); on failure defaults to { concerns:[], summary:"", score:7 }
+            //   and report.partial is set. Concern = a persona trait or scenario-specific anxiety the counsellor addressed (or not).
+            personaCard: { name:string, label:string, category:string, coreAnxiety:string,
+                           traits:{ talkativeness:1..5|null, humour:1..5|null, skepticism:1..5|null, formality:1..5|null,
+                                    quirks:[string] },
+                           scenario:{ title:string, difficulty:string, pushiness:1..5|null, hesitancy:1..5|null } },
+            //   snapshot of the persona + scenario used in this session; available INSTANTLY in the stub (stubReportSections).
             benchmarks:{ sessionMinutes:number|null, medianPaidMinutes:number|null,
                          paymentAskSeen:boolean, paymentAskNormPct:number|null },
             scoreArc:[{turn,score}],
             transcript: (copy of session.transcript — persisted immediately in the stub),
             finalScore: number|null,        // session.satisfactionScore at end time — persisted in the stub
             generatedAt }
+            // Report generation: LLM calls A (rubric + phaseBreakdown), B (narrative + keyMoments), C (drills), D (personaAddressed)
+            //   run concurrently via Promise.allSettled. Fail-soft: A fail → fallback; B/C/D fail → partial:true + section defaults.
             // Legacy reports (pre-v2, no rubricSnapshot) use the fixed 6-criterion rubric:
             //   rapport(15), discovery(20), objections(25), knowledge(15), closing(15), communication(10).
 ```
@@ -135,6 +151,11 @@ behaviour-anchored scoring levels (1 Poor · 2 Developing · 3 Competent · 4 Pr
 Band by percent: `<50` Needs Work · `50–74` Good · `≥75` Excellent.
 Legacy reports without a `rubricSnapshot` use the fixed 6-criterion list noted above.
 
+**Edge migrations:**
+- `0007_profile_gender.sql` — adds `profiles.gender` column.
+- `0008_report_persona.sql` — adds `reports.persona_addressed` (jsonb), `reports.persona_card` (jsonb),
+  `sessions.pay_ask_count` (smallint); updates `commit_report` and `commit_session_turn` RPCs accordingly.
+
 ---
 
 ## 3. REST API (base `/api`, proxied by Vite to :3001)
@@ -142,7 +163,8 @@ Legacy reports without a `rubricSnapshot` use the fixed 6-criterion list noted a
 | Method | Path | Body | Returns |
 |---|---|---|---|
 | POST | `/login` | `{email,password}` | `{user}` or 401 `{error}` |
-| GET | `/counsellors` | — | `[{id,name,email,role,avatarColor}]` |
+| GET | `/counsellors` | — | `[publicUser]` — each has `{id,name,email,role,avatarColor,code,gender}` |
+| PATCH | `/users/:id` | `{gender:"male"\|"female"\|null}` | updated `publicUser` — a counsellor may patch only their own profile; admin/superadmin may patch anyone; 400 invalid gender, 404 not found |
 | GET | `/personas` | — | `[Persona]` |
 | POST | `/personas` | `{name,category,label,coreAnxiety,behaviourPrompt,description,personality?}` | `Persona` |
 | PUT | `/personas/:id` | partial Persona (incl. personality) | `Persona` |
@@ -173,6 +195,7 @@ Legacy reports without a `rubricSnapshot` use the fixed 6-criterion list noted a
 | PUT | `/config/prompts` | prompt-config object | merged prompt-config (persisted; loaders fail soft to defaults) |
 | GET | `/config/scoring` | — | scoring-config (`scoring-config.json` over built-in defaults) |
 | PUT | `/config/scoring` | scoring-config object | persisted scoring-config (coerced) |
+| GET | `/leaderboard?metric=&board=` | — | Leaderboard (see shape below) — stub/generating reports excluded |
 
 Server owns the transcript: `/sessions/:id/message` appends to the stored session; the client
 does NOT send history. `start` for `mode:"assigned"` derives persona+scenario from the assignment
@@ -194,6 +217,9 @@ backfill `scoreAfter` + `scoreReason` onto the counsellor entry → resolve the 
 student's new objection (`advancePhase` category / `detectObjectionCategory` → `raiseObjection`) →
 persist `objectionState` → compute the instant counsellor `cue` (`instantCue`, zero-LLM; receives
 the cue v2 context `lastCounsellorAdjustment` + `lastCounsellorScoreReason` + live `objectionState`).
+
+**Scoring policy invariants:** (a) the scorer never penalizes incorrect, mispronounced, or misspelled names or proper nouns — these are treated as STT transcription noise; (b) the FIRST pay-ask (payment/commitment request) is never penalized; only repeated pushy pressure beyond the first is penalized, gated by `session.payAskCount`.
+
 Backchannel acknowledgements (`isBackchannel`) skip the scoring LLM (adjustment 0). The student
 reply passes a coherence gate (structural screen + near-deterministic VALID/INVALID check, fails
 OPEN): incoherent question/invite turns are regenerated once; incoherent statement turns get a
@@ -263,6 +289,19 @@ Computed entirely in-memory from `reports`/`assignments`/`users` stores. No NaN 
 empty store → zeros/nulls/[] per field. Criterion averaging unions rubric keys across all template
 versions by key.
 
+### Leaderboard (addendum to §3)
+
+`GET /api/leaderboard?metric=percent|satisfaction&board=average|high|byPersona`
+
+- `metric`: `"percent"` — `report.overall.percent` (default); `"satisfaction"` — end-of-session satisfaction score.
+- `board`: `"average"` — mean across sessions (default); `"high"` — best single session; `"byPersona"` — segmented by lead-profile category.
+- Row shape: `{ counsellorId, name, code, value, sessions, rank }`.
+- `average`/`high` response: `{ metric, board, top, isAdmin, rows:[row], truncated:boolean, viewerRank:number|null }`.
+- `byPersona` response: `{ metric, board, top, isAdmin, categories:{ <category>: { rows:[row], truncated, viewerRank } } }`.
+  Categories: `"studying"`, `"same-field"`, `"diff-field"`, `"non-working"`, plus `"other"` if present.
+- Visibility: counsellor caller → top 10 rows (own row appended outside top 10; `viewerRank` set); admin/superadmin → full list (`truncated:false`).
+- Stub/generating reports excluded. Edge function: `GET /leaderboard`.
+
 **Client API client:** `src/lib/api.js` exports a flat object `api` with one async method per
 endpoint, e.g. `api.login(email,password)`, `api.getPersonas()`, `api.createPersona(data)`,
 `api.updatePersona(id,data)`, `api.deletePersona(id)`, `api.getCounsellors()`,
@@ -275,7 +314,7 @@ endpoint, e.g. `api.login(email,password)`, `api.getPersonas()`, `api.createPers
 `api.getReports(counsellorId?,sessionId?)`, `api.getReport(id)`, `api.getLeadProfiles(category?)`,
 `api.getAdminAnalytics()`, `api.getCounsellorAnalytics(id)`,
 `api.getPromptConfig()`, `api.updatePromptConfig(data)`, `api.getScoringConfig()`, `api.updateScoringConfig(data)`,
-`api.getSessionPrompts(id)`.
+`api.getSessionPrompts(id)`, `api.getLeaderboard(metric?, board?)`, `api.patchUser(id, {gender})`.
 Each throws `Error(data.error)` on non-2xx.
 
 ---
@@ -284,9 +323,13 @@ Each throws `Error(data.error)` on non-2xx.
 
 Public: `/login`.
 Admin (role `admin`, `AdminLayout`): `/admin` dashboard, `/admin/counsellors`, `/admin/personas`,
-`/admin/courses`, `/admin/rubrics`, `/admin/assignments`, `/admin/assignments/new`, `/admin/reports`, `/admin/reports/:id`.
+`/admin/courses`, `/admin/assignments`, `/admin/assignments/new`, `/admin/reports`, `/admin/reports/:id`,
+`/admin/leaderboard`.
+Superadmin-only (role `superadmin`): `/superadmin/rubrics` (rubric templates), `/superadmin/templates`,
+`/superadmin/prompts` (Prompts & Scoring). These were formerly under `/admin/*` and are now restricted to superadmin.
 Counsellor (role `counsellor`, `CounsellorLayout`): `/app` dashboard, `/app/mocks`, `/app/practice`,
-`/app/session/new` (green room — expects router state `{mode,assignmentId?,...}`), `/app/session/:sessionId`, `/app/reports`, `/app/reports/:id`.
+`/app/session/new` (green room — expects router state `{mode,assignmentId?,...}`), `/app/session/:sessionId`,
+`/app/reports`, `/app/reports/:id`, `/app/leaderboard`, `/app/profile` (gender selector + profile info).
 `/` redirects by role. Unauthenticated ⇒ `/login`. `ProtectedRoute` + `useAuth()` live in `src/lib/auth.jsx`.
 
 ---
