@@ -186,6 +186,18 @@ Legacy reports without a `rubricSnapshot` use the fixed 6-criterion list noted a
 - `0011_transcript_latin.sql` — extends `commit_report` RPC to accept `transcript` in the patch (no new
   column — `reports.transcript` already exists), so the report-worker can write back the
   Latin-script-enriched transcript (Call G adds `latinText` to non-Latin turns).
+- `0012_usage_events.sql` — adds `usage_events` (per-call API cost: provider/model/feature/mode + token
+  columns + `usd_cost` + `meta`; RLS on, no policies → service-role only) and the SQL RPCs
+  `usage_overview(from,to,model)`, `usage_sessions(from,to,model,limit,offset)`,
+  `usage_session_detail(session)` (service-role grant).
+
+**Usage endpoints (admin/superadmin only):**
+| GET | `/usage?from&to&model&page&pageSize` | `{ overview:{ totalUsd, totalCalls, totalSessions, totalInputTokens, totalOutputTokens, totalAudioTokens, byModel[], byProvider[], byFeature[], byDay[] }, sessions:{ rows:[{sessionId,ownerId,counsellorName,personaLabel,calls,tokens,usd,lastAt}], total, page, pageSize }, models[], fxRate, fxSource, fxFetchedAt }` — USD amounts; client renders INR via `fxRate` (live USD→INR, cached in `app_config.usdInrRate`). |
+| GET | `/usage/session/:id` | `{ calls:[{id,createdAt,provider,model,feature,mode,inputTokens,outputTokens,cacheReadTokens,cacheWriteTokens,audioInputTokens,audioOutputTokens,usd}] }` — per-call drilldown for one session. |
+
+`POST /sessions/:id/observe` additionally accepts optional `realtimeUsage` + `transcriptionUsage` (OpenAI
+voice/transcription token usage forwarded by the browser; recorded as `usage_events` features
+`voice`/`transcription`).
 
 ---
 

@@ -14,6 +14,7 @@ const NAV = [
   { to: "/admin/assignments", label: "Assignments", icon: "assignments" },
   { to: "/admin/templates", label: "Templates", icon: "templates" },
   { to: "/admin/practice", label: "Practice", icon: "practice" },
+  { to: "/admin/usage", label: "Usage", icon: "usage" },
   { to: "/admin/leaderboard", label: "Leaderboard", icon: "leaderboard" },
   { to: "/admin/integrity-probes", label: "Integrity Probes", icon: "prompts" },
 ];

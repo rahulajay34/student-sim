@@ -14,6 +14,9 @@ import { instantCue, llmCue } from "./cues.js";
 import { getFirstMessage, getStudentReply, getStudentReplyStream } from "./engine.js";
 import { scoreMessage, isBackchannel, loadScoringConfig, saveScoringConfig, scoringPromptForInspection } from "./scoring.js";
 import { generateReport, needsRegeneration, reportPromptForInspection, stubReportSections, buildFallbackReport } from "./report.js";
+import { setUsageSink } from "./llm.js";
+import { recordLlmUsage, recordUsage } from "./usageStore.js";
+import { resolveUsdInrRate } from "./usageFx.js";
 import { buildAdminAnalytics, buildCounsellorAnalytics, buildLeaderboard } from "./analytics.js";
 import { classifyCounsellorTurn } from "./classify.js";
 import { getPromptConfig, invalidatePromptConfigCache } from "./promptConfig.js";
@@ -45,6 +48,10 @@ console.log("Anthropic API key loaded:", process.env.ANTHROPIC_API_KEY ? "YES" :
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Record token usage for every LLM call (scoring / reply / cue / report) for cost
+// tracking. The long-lived process inserts synchronously into the "usage" store.
+setUsageSink(recordLlmUsage);
 
 const publicUser = (u) =>
   u && {
@@ -1189,6 +1196,19 @@ app.post("/api/sessions/:id/observe", lockedHandler(async (req, res) => {
 
   if (!Array.isArray(session.objectionState)) session.objectionState = initObjectionState();
 
+  // OpenAI voice cost: record realtime + transcription usage forwarded by the browser.
+  try {
+    const um = { sessionId: session.id || null, counsellorId: session.counsellorId || null, personaLabel: session.personaSnapshot?.label || null };
+    if (req.body?.realtimeUsage && typeof req.body.realtimeUsage === "object") {
+      recordUsage({ ...um, provider: "openai", model: process.env.OPENAI_REALTIME_MODEL || "gpt-realtime", feature: "voice", usage: req.body.realtimeUsage });
+    }
+    if (req.body?.transcriptionUsage && typeof req.body.transcriptionUsage === "object") {
+      recordUsage({ ...um, provider: "openai", model: process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe", feature: "transcription", usage: req.body.transcriptionUsage });
+    }
+  } catch (err) {
+    console.warn("[usage] voice usage record failed:", err && err.message);
+  }
+
   try {
     let turnType = null;
     let reason = null;
@@ -1726,6 +1746,100 @@ app.post("/api/assignment-templates/:id/assign", (req, res) => {
     created.push(assignment);
   }
   res.json({ created: created.length, assignments: created });
+});
+
+// --- Usage (API cost tracking) ---------------------------------------------
+function legacyAdminOnly(req, res) {
+  const r = requesterFor(req);
+  if (r && r.role !== "admin" && r.role !== "superadmin") {
+    res.status(403).json({ error: "Admins only." });
+    return false;
+  }
+  return true;
+}
+
+let _legacyFxCache = null;
+async function legacyUsdInr() {
+  const { record, changed } = await resolveUsdInrRate(_legacyFxCache);
+  if (changed) _legacyFxCache = record;
+  return record;
+}
+
+app.get("/api/usage", async (req, res) => {
+  if (!legacyAdminOnly(req, res)) return;
+  const from = req.query.from ? Date.parse(req.query.from) : null;
+  const to = req.query.to ? Date.parse(req.query.to) : null;
+  const model = req.query.model || null;
+  const page = Math.max(1, parseInt(req.query.page || "1", 10) || 1);
+  const pageSize = Math.min(100, Math.max(5, parseInt(req.query.pageSize || "25", 10) || 25));
+  const all = store.getAll("usage") || [];
+  const inRange = all.filter((e) => {
+    const t = Date.parse(e.createdAt || "");
+    if (from && !(t >= from)) return false;
+    if (to && !(t < to)) return false;
+    if (model && e.model !== model) return false;
+    return true;
+  });
+  const sum = (f) => inRange.reduce((n, e) => n + (Number(e[f]) || 0), 0);
+  const byKey = (keyFn) => {
+    const m = new Map();
+    for (const e of inRange) {
+      const k = keyFn(e) || "other";
+      const o = m.get(k) || { key: k, usd: 0, calls: 0 };
+      o.usd += Number(e.usdCost) || 0; o.calls++; m.set(k, o);
+    }
+    return [...m.values()].sort((a, b) => b.usd - a.usd);
+  };
+  const byDay = () => {
+    const m = new Map();
+    for (const e of inRange) {
+      const k = (e.createdAt || "").slice(0, 10);
+      const o = m.get(k) || { key: k, usd: 0, calls: 0 };
+      o.usd += Number(e.usdCost) || 0; o.calls++; m.set(k, o);
+    }
+    return [...m.values()].sort((a, b) => (a.key < b.key ? -1 : 1));
+  };
+  const overview = {
+    totalUsd: sum("usdCost"), totalCalls: inRange.length,
+    totalSessions: new Set(inRange.map((e) => e.sessionId).filter(Boolean)).size,
+    totalInputTokens: sum("inputTokens"), totalOutputTokens: sum("outputTokens"),
+    totalAudioTokens: sum("audioInputTokens") + sum("audioOutputTokens"),
+    byModel: byKey((e) => e.model), byProvider: byKey((e) => e.provider),
+    byFeature: byKey((e) => e.feature), byDay: byDay(),
+  };
+  const gm = new Map();
+  for (const e of inRange) {
+    const k = e.sessionId || "(none)";
+    const g = gm.get(k) || { sessionId: e.sessionId, ownerId: e.ownerId, calls: 0, tokens: 0, usd: 0, lastAt: null, personaLabel: e.personaLabel || null };
+    g.calls++; g.usd += Number(e.usdCost) || 0;
+    g.tokens += (Number(e.inputTokens) || 0) + (Number(e.outputTokens) || 0) + (Number(e.cacheReadTokens) || 0) + (Number(e.cacheWriteTokens) || 0) + (Number(e.audioInputTokens) || 0) + (Number(e.audioOutputTokens) || 0);
+    if (!g.lastAt || e.createdAt > g.lastAt) g.lastAt = e.createdAt;
+    if (!g.ownerId && e.ownerId) g.ownerId = e.ownerId;
+    if (!g.personaLabel && e.personaLabel) g.personaLabel = e.personaLabel;
+    gm.set(k, g);
+  }
+  const groups = [...gm.values()].sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1));
+  const total = groups.length;
+  const rows = groups.slice((page - 1) * pageSize, (page - 1) * pageSize + pageSize).map((g) => {
+    const u = g.ownerId ? store.getById("users", g.ownerId) : null;
+    return { ...g, counsellorName: (u && u.name) || "(unknown)" };
+  });
+  const models = [...new Set(all.map((e) => e.model).filter(Boolean))].sort();
+  const fx = await legacyUsdInr();
+  res.json({ overview, sessions: { rows, total, page, pageSize }, models, fxRate: fx.rate, fxSource: fx.source, fxFetchedAt: fx.fetchedAt });
+});
+
+app.get("/api/usage/session/:id", (req, res) => {
+  if (!legacyAdminOnly(req, res)) return;
+  const all = store.getAll("usage") || [];
+  const calls = all.filter((e) => e.sessionId === req.params.id)
+    .sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1))
+    .map((e) => ({
+      id: e.id, createdAt: e.createdAt, provider: e.provider, model: e.model, feature: e.feature, mode: e.mode,
+      inputTokens: e.inputTokens, outputTokens: e.outputTokens, cacheReadTokens: e.cacheReadTokens,
+      cacheWriteTokens: e.cacheWriteTokens, audioInputTokens: e.audioInputTokens, audioOutputTokens: e.audioOutputTokens, usd: e.usdCost,
+    }));
+  res.json({ calls });
 });
 
 // --- Analytics -------------------------------------------------------------

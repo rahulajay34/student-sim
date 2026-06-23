@@ -15,6 +15,7 @@ const ICONS = {
   templates: "M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2",
   leaderboard: "M3 3v18h18M7 14l3-3 3 3 5-5",
   profile: "M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z",
+  usage: "M3 3v18h18M8 17V9m4 8V5m4 12v-6",
 };
 
 function Icon({ name }) {

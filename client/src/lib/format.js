@@ -104,6 +104,28 @@ export const TOKEN_HEX = {
   slate: "#64748b",
 };
 
+// Format a USD amount as INR using the supplied live rate. Small amounts keep
+// paise precision; larger ones round to whole rupees with Indian digit grouping.
+export function fmtINR(usd, rate = 86.5) {
+  const inr = (Number(usd) || 0) * (Number(rate) || 0);
+  const maxFrac = inr < 100 ? 2 : 0;
+  try {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency", currency: "INR", maximumFractionDigits: maxFrac, minimumFractionDigits: 0,
+    }).format(inr);
+  } catch {
+    return `₹${inr.toFixed(maxFrac)}`;
+  }
+}
+
+// Compact integer formatter (e.g. 12,345 or 1.2M) for token counts.
+export function fmtTokens(n) {
+  const v = Number(n) || 0;
+  if (v >= 1e6) return `${(v / 1e6).toFixed(1)}M`;
+  if (v >= 1e4) return `${(v / 1e3).toFixed(0)}k`;
+  try { return new Intl.NumberFormat("en-IN").format(v); } catch { return String(v); }
+}
+
 export function formatDate(iso) {
   if (!iso) return "";
   try {

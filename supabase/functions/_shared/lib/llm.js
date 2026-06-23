@@ -39,6 +39,24 @@ function getClient() {
   return _client;
 }
 
+// ─── Usage sink ───────────────────────────────────────────────────────────────
+// The host registers a sink that records token usage for cost tracking. chat()
+// and chatStream() call it after a successful response when the caller passed an
+// `options.usage` meta object. The sink receives { provider, model, mode, usage,
+// meta } and must never throw (we wrap the call). No sink → no-op.
+let _usageSink = null;
+export function setUsageSink(fn) {
+  _usageSink = typeof fn === "function" ? fn : null;
+}
+function emitUsage(model, mode, usage, meta) {
+  if (!_usageSink || !meta || !usage) return;
+  try {
+    _usageSink({ provider: "anthropic", model, mode, usage, meta });
+  } catch (err) {
+    console.warn("[llm] usage sink threw:", err && err.message);
+  }
+}
+
 export function _setClientForTests(fakeClient) {
   _client = fakeClient;
 }
@@ -166,6 +184,7 @@ export async function chat(messages, options = {}, _unusedModel) {
   try {
     const client = getClient();
     const res = await client.messages.create(params, reqOpts);
+    emitUsage(model, norm.mode, res.usage, options.usage);
     return extractTextFromContent(res.content);
   } catch (err) {
     mapSdkError(err, norm.timeoutMs);
@@ -188,15 +207,21 @@ export async function* chatStream(messages, options = {}) {
     mapSdkError(err, norm.timeoutMs);
   }
 
+  const usageAcc = {};
   try {
     for await (const event of stream) {
-      if (
+      if (event.type === "message_start" && event.message?.usage) {
+        Object.assign(usageAcc, event.message.usage);
+      } else if (event.type === "message_delta" && event.usage) {
+        Object.assign(usageAcc, event.usage);
+      } else if (
         event.type === "content_block_delta" &&
         event.delta.type === "text_delta"
       ) {
         yield event.delta.text;
       }
     }
+    emitUsage(model, norm.mode, usageAcc, options.usage);
   } catch (err) {
     mapSdkError(err, norm.timeoutMs);
   }

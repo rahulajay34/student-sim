@@ -286,7 +286,8 @@ export async function llmCue(session) {
 
     const raw = await chat(
       [{ role: "user", content: prompt }],
-      { ...DETERMINISTIC_SAMPLING, ...REASONING_OPTIONS, timeoutMs: 30_000, jsonSchema: CUE_SCHEMA },
+      { ...DETERMINISTIC_SAMPLING, ...REASONING_OPTIONS, timeoutMs: 30_000, jsonSchema: CUE_SCHEMA,
+        usage: { feature: "cue", sessionId: session.id || null, counsellorId: session.counsellorId || null, personaLabel: session.personaSnapshot?.label || null } },
     );
 
     const parsed = extractJson(raw);

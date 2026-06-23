@@ -678,7 +678,7 @@ export default function Session() {
 
   const RESPONSE_LATENCY_LIMIT_MS = 15_000;
 
-  function handleRealtimeTranscript({ role, text, deliveryMetrics }) {
+  function handleRealtimeTranscript({ role, text, deliveryMetrics, realtimeUsage, transcriptionUsage }) {
     // Defensively strip any leaked [emotion:X] tag so it never reaches the bubble,
     // /observe, or the report (the realtime prompt already forbids it).
     const clean = (text || "").replace(/\[emotion:[^\]]*\]/gi, "").replace(/\s+/g, " ").trim();
@@ -704,8 +704,12 @@ export default function Session() {
           counsellorText: clean,
           ...(deliveryMetrics ? { deliveryMetrics } : {}),
           ...(responseDelayed ? { responseDelayed: true } : {}),
+          ...(transcriptionUsage ? { transcriptionUsage } : {}),
         }
-      : { studentText: clean };
+      : {
+          studentText: clean,
+          ...(realtimeUsage ? { realtimeUsage } : {}),
+        };
     observeChainRef.current = observeChainRef.current
       .catch(() => {})
       .then(() => api.observeTurn(sid, body))

@@ -53,6 +53,26 @@ function getClient() {
   return _client;
 }
 
+// ─── Usage sink ───────────────────────────────────────────────────────────────
+// The host registers a sink that records token usage for cost tracking. chat()
+// and chatStream() call it AFTER a successful response when the caller passed an
+// `options.usage` meta object ({ feature, sessionId, counsellorId, personaLabel }).
+// The sink receives { provider:"anthropic", model, mode, usage, meta } and must
+// never throw (we wrap the call). No sink registered → no-op (zero overhead).
+let _usageSink = null;
+export function setUsageSink(fn) {
+  _usageSink = typeof fn === "function" ? fn : null;
+}
+function emitUsage(model, mode, usage, meta) {
+  if (!_usageSink || !meta || !usage) return;
+  try {
+    _usageSink({ provider: "anthropic", model, mode, usage, meta });
+  } catch (err) {
+    // Telemetry must never break a real request.
+    console.warn("[llm] usage sink threw:", err && err.message);
+  }
+}
+
 /**
  * _setClientForTests(fakeClient)
  * Inject a stub client for unit tests. Pass null to restore the real client.
@@ -240,6 +260,7 @@ export async function chat(messages, options = {}, _unusedModel) {
   try {
     const client = getClient();
     const res = await client.messages.create(params, reqOpts);
+    emitUsage(model, norm.mode, res.usage, options.usage);
     return extractTextFromContent(res.content);
   } catch (err) {
     mapSdkError(err, norm.timeoutMs);
@@ -271,15 +292,24 @@ export async function* chatStream(messages, options = {}) {
     mapSdkError(err, norm.timeoutMs);
   }
 
+  // Accumulate token usage across stream events so the sink can record cost.
+  // message_start carries input/cache tokens; message_delta carries the running
+  // output_tokens. Emitted once the stream completes normally.
+  const usageAcc = {};
   try {
     for await (const event of stream) {
-      if (
+      if (event.type === "message_start" && event.message?.usage) {
+        Object.assign(usageAcc, event.message.usage);
+      } else if (event.type === "message_delta" && event.usage) {
+        Object.assign(usageAcc, event.usage);
+      } else if (
         event.type === "content_block_delta" &&
         event.delta.type === "text_delta"
       ) {
         yield event.delta.text;
       }
     }
+    emitUsage(model, norm.mode, usageAcc, options.usage);
   } catch (err) {
     mapSdkError(err, norm.timeoutMs);
   }

@@ -21,6 +21,7 @@ import { advancePhase, initPhaseCounters, initMilestones } from "../_shared/lib/
 import { initObjectionState } from "../_shared/lib/objections.js";
 import { stubReportSections } from "../_shared/lib/report.js";
 import { loadProbes, pickProbe, newProbeId } from "../_shared/lib/integrityProbes.js";
+import { resolveUsdInrRate } from "../_shared/lib/usageFx.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -201,6 +202,20 @@ async function getAppConfigValue(key) {
     console.warn(`[api] getAppConfigValue(${key}) failed:`, err && err.message);
     return null;
   }
+}
+
+// Live USD→INR rate, cached in app_config (key "usdInrRate") and refreshed at most
+// twice a day. Returns the record { rate, fetchedAt, source }; falls back to a sane
+// default if the network is unavailable.
+async function currentUsdInrRate(byUserId) {
+  let cached = null;
+  try { cached = await store.getConfigValue("usdInrRate"); } catch { /* none yet */ }
+  const { record, changed } = await resolveUsdInrRate(cached);
+  if (changed) {
+    try { await store.upsertConfig("usdInrRate", record, byUserId || null); }
+    catch (err) { console.warn("[usage] fx rate save failed:", err && err.message); }
+  }
+  return record;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1116,6 +1131,59 @@ app.post("/reports/:id/regenerate", wrap(async (c) => {
   await db.from("reports").update({ status: "generating" }).eq("id", id);
   fireReportWorker(id);
   return jsonResponse({ reportId: id, status: "generating" }, 200, origin);
+}));
+
+// ─────────────────────────────────────────────────────────────────────────────
+// USAGE (API cost tracking) — admin/superadmin only
+// ─────────────────────────────────────────────────────────────────────────────
+app.get("/usage", wrap(async (c) => {
+  const origin = getOrigin(c.req.raw);
+  const ctx = await authenticate(c.req.raw);
+  assertAdmin(ctx);
+  const from = c.req.query("from") ? new Date(c.req.query("from")).toISOString() : null;
+  const to = c.req.query("to") ? new Date(c.req.query("to")).toISOString() : null;
+  const model = c.req.query("model") || null;
+  const page = Math.max(1, parseInt(c.req.query("page") || "1", 10) || 1);
+  const pageSize = Math.min(100, Math.max(5, parseInt(c.req.query("pageSize") || "25", 10) || 25));
+
+  const db = getSupabaseAdmin();
+  const [overviewRes, sessionsRes, fx] = await Promise.all([
+    db.rpc("usage_overview", { p_from: from, p_to: to, p_model: model }),
+    db.rpc("usage_sessions", { p_from: from, p_to: to, p_model: model, p_limit: pageSize, p_offset: (page - 1) * pageSize }),
+    currentUsdInrRate(ctx.id),
+  ]);
+  if (overviewRes.error) throw httpError(500, "usage_overview failed: " + overviewRes.error.message);
+  if (sessionsRes.error) throw httpError(500, "usage_sessions failed: " + sessionsRes.error.message);
+
+  // Resolve counsellor display names + the distinct model list for the filter.
+  const [users, modelsRes] = await Promise.all([
+    store.getAll("users").catch(() => []),
+    db.from("usage_events").select("model"),
+  ]);
+  const nameById = new Map((users || []).map((u) => [u.id, u.name]));
+  const agg = sessionsRes.data || {};
+  const rows = (agg.rows || []).map((r) => ({ ...r, counsellorName: nameById.get(r.ownerId) || "(unknown)" }));
+  const models = Array.from(new Set((modelsRes.data || []).map((x) => x.model).filter(Boolean))).sort();
+
+  return jsonResponse({
+    overview: overviewRes.data || {},
+    sessions: { rows, total: agg.total || 0, page, pageSize },
+    models,
+    fxRate: fx.rate,
+    fxSource: fx.source,
+    fxFetchedAt: fx.fetchedAt,
+  }, 200, origin);
+}));
+
+app.get("/usage/session/:id", wrap(async (c) => {
+  const origin = getOrigin(c.req.raw);
+  const ctx = await authenticate(c.req.raw);
+  assertAdmin(ctx);
+  const id = c.req.param("id");
+  const db = getSupabaseAdmin();
+  const { data, error } = await db.rpc("usage_session_detail", { p_session: id });
+  if (error) throw httpError(500, "usage_session_detail failed: " + error.message);
+  return jsonResponse({ calls: data || [] }, 200, origin);
 }));
 
 // ─────────────────────────────────────────────────────────────────────────────

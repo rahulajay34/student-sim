@@ -39,6 +39,8 @@ import {
 import { instantCue, llmCue } from "../_shared/lib/cues.js";
 import { getStudentReply, getStudentReplyStream } from "../_shared/lib/engine.js";
 import { scoreMessage, isBackchannel, loadScoringConfig } from "../_shared/lib/scoring.js";
+import { setUsageSink } from "../_shared/lib/llm.js";
+import { bufferLlmUsage, bufferUsage, flushUsage } from "../_shared/usageStore.js";
 import { setActivePromptConfig } from "../_shared/lib/promptConfig.js";
 import { classifyCounsellorTurn } from "../_shared/lib/classify.js";
 import {
@@ -190,7 +192,7 @@ async function scoreObserveTurn(message, opts, cfg) {
   }
   try {
     const scored = await Promise.race([
-      scoreMessage(message, opts, undefined, { timeoutMs: 14000 }, cfg),
+      scoreMessage(message, opts, undefined, { timeoutMs: 14000, usage: { feature: "scoring", sessionId: opts.session?.id || null, counsellorId: opts.session?.counsellorId || null, personaLabel: opts.session?.personaSnapshot?.label || null } }, cfg),
       new Promise((resolve) => setTimeout(
         () => resolve({ adjustment: 0, reason: "score timeout", addressedObjection: null }),
         15000,
@@ -283,6 +285,15 @@ async function kickReportWorker(reportId) {
 // Hono app
 // ─────────────────────────────────────────────────────────────────────────────
 const app = new Hono();
+
+// Record token usage for every per-turn LLM call (scoring, student reply, cue).
+setUsageSink(bufferLlmUsage);
+// Flush buffered usage events (a single batched insert, awaited) after each
+// request so the edge runtime doesn't kill the write before it lands.
+app.use("*", async (c, next) => {
+  await next();
+  await flushUsage();
+});
 
 // Resolve + authenticate + ownership-guard a session. Throws httpError on any
 // failure; returns the fresh session object on success.
@@ -406,7 +417,7 @@ app.post("/sessions/:id/message", async (c) => {
       : scoreMessage(message, {
           recentTurns, phase: session.currentPhase, turnType, courseName: session.courseSnapshot?.name,
           openObjections: openObjForScore, session,
-        }, undefined, {}, cfg);
+        }, undefined, { usage: { feature: "scoring", sessionId: session.id || null, counsellorId: session.counsellorId || null, personaLabel: session.personaSnapshot?.label || null } }, cfg);
 
     const replyPromise = (async () => {
       if (emitToken) {
@@ -603,6 +614,25 @@ app.post("/sessions/:id/observe", async (c) => {
       return c.json({ error: "This session has ended." }, 409, cors);
     }
     if (!Array.isArray(session.objectionState)) session.objectionState = initObjectionState();
+
+    // ── OpenAI voice cost: record per-turn realtime + transcription usage that the
+    // browser forwards from the data channel (response.done / transcription events).
+    // Best-effort telemetry; never blocks the turn. Flushed by the app middleware.
+    try {
+      const usageMeta = {
+        sessionId: session.id || null,
+        counsellorId: session.counsellorId || null,
+        personaLabel: session.personaSnapshot?.label || null,
+      };
+      if (body?.realtimeUsage && typeof body.realtimeUsage === "object") {
+        bufferUsage({ ...usageMeta, provider: "openai", model: getEnv("OPENAI_REALTIME_MODEL") || "gpt-realtime", feature: "voice", usage: body.realtimeUsage });
+      }
+      if (body?.transcriptionUsage && typeof body.transcriptionUsage === "object") {
+        bufferUsage({ ...usageMeta, provider: "openai", model: getEnv("OPENAI_TRANSCRIBE_MODEL") || "gpt-4o-mini-transcribe", feature: "transcription", usage: body.transcriptionUsage });
+      }
+    } catch (err) {
+      console.warn("[usage] voice usage record failed:", err && err.message);
+    }
 
     const [cfg] = await Promise.all([scoringConfig(), activatePromptConfig()]);
     const windowSize = cfg.recentTurnsWindow;

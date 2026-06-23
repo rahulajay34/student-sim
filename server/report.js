@@ -1125,20 +1125,30 @@ export async function generateReport(session) {
   const needsTranslit = translitItems.length > 0;
   const translitPrompt = needsTranslit ? buildTransliterationPrompt(translitItems) : null;
 
+  // Usage/cost meta attached to every report LLM call (recorded by the usage sink
+  // in llm.js). All report fan-out calls share the "report" feature.
+  const usageMeta = {
+    feature: "report",
+    sessionId: session.id || null,
+    counsellorId: session.counsellorId || null,
+    personaLabel: session.personaSnapshot?.label || null,
+  };
+  const um = (overrides) => ({ usage: usageMeta, ...overrides });
+
   // All calls are independent → dispatch them together. runCall never rejects
   // (it returns {ok:false} on failure), so each settled result carries the
   // {ok,...} object in .value.
   const settled = await Promise.allSettled([
-    runCall("Call A (rubric)", rubricPrompt, REPORT_A_SCHEMA),
-    runCall("Call B (narrative)", narrativePrompt, REPORT_B_SCHEMA),
-    runCall("Call C (drills)", drillsPrompt, REPORT_C_SCHEMA),
-    runCall("Call D (persona)", personaPrompt, REPORT_D_SCHEMA),
+    runCall("Call A (rubric)", rubricPrompt, REPORT_A_SCHEMA, null, um()),
+    runCall("Call B (narrative)", narrativePrompt, REPORT_B_SCHEMA, null, um()),
+    runCall("Call C (drills)", drillsPrompt, REPORT_C_SCHEMA, null, um()),
+    runCall("Call D (persona)", personaPrompt, REPORT_D_SCHEMA, null, um()),
     hasProbe
-      ? runCall("Call E (integrity)", integrityPrompt, INTEGRITY_SCHEMA)
+      ? runCall("Call E (integrity)", integrityPrompt, INTEGRITY_SCHEMA, null, um())
       : Promise.resolve({ ok: false, skipped: true }),
-    runCall("Call F (new report)", newReportPrompt.user, NEW_REPORT_SCHEMA, newReportPrompt.system),
+    runCall("Call F (new report)", newReportPrompt.user, NEW_REPORT_SCHEMA, newReportPrompt.system, um()),
     needsTranslit
-      ? runCall("Call G (transliterate)", translitPrompt, TRANSLIT_SCHEMA, null, { mode: "fast" })
+      ? runCall("Call G (transliterate)", translitPrompt, TRANSLIT_SCHEMA, null, um({ mode: "fast" }))
       : Promise.resolve({ ok: false, skipped: true }),
   ]);
   const unwrap = (s) => (s.status === "fulfilled" ? s.value : { ok: false, error: s.reason });

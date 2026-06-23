@@ -112,6 +112,9 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
   // Timestamp (performance.now()) when the AI's audio last stopped — used to
   // measure how long the counsellor waited before starting their reply.
   const aiStoppedAtRef = useRef(null);
+  // OpenAI realtime usage from the latest response.done — attached to the next
+  // student transcript so the server can record voice cost.
+  const lastResponseUsageRef = useRef(null);
   // A finished utterance whose transcription hasn't arrived yet. OpenAI can fire
   // speech_started(N+1) BEFORE transcription.completed(N); without this snapshot
   // the late transcript would read (and then reset) N+1's accumulator, corrupting
@@ -331,7 +334,8 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
         const wasPending = !!pendingUtterRef.current;
         if (text) {
           const deliveryMetrics = computeDeliveryMetrics(text);
-          onTranscriptRef.current?.({ role: "counsellor", text, deliveryMetrics });
+          const transcriptionUsage = evt.usage || null;
+          onTranscriptRef.current?.({ role: "counsellor", text, deliveryMetrics, transcriptionUsage });
         }
         if (wasPending) {
           // The transcript belonged to the parked utterance — the live accumulator
@@ -355,11 +359,15 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
         break;
       case "response.done":
         if (enabledRef.current && statusRef.current === "speaking") setStatusBoth("idle");
+        // Capture token usage for this response; attached to the student transcript below.
+        if (evt.response?.usage) lastResponseUsageRef.current = evt.response.usage;
         break;
       // The student's spoken reply, transcribed — marks a completed turn pair.
       case "response.output_audio_transcript.done": {
         const text = (evt.transcript || "").trim();
-        if (text) onTranscriptRef.current?.({ role: "student", text });
+        const realtimeUsage = lastResponseUsageRef.current;
+        lastResponseUsageRef.current = null;
+        if (text) onTranscriptRef.current?.({ role: "student", text, realtimeUsage });
         // Periodic accent RE-PROMPT: every ~3 completed student turns, re-inject the
         // WHOLE Indian-accent instruction block (with a varied lead-in) back into the
         // model's context through the non-destructive injection path, so the accent

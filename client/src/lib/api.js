@@ -100,15 +100,31 @@ export const api = {
   // observe (C2): feed a completed voice turn to MiniMax for live scoring/cue/phase/
   // objections. Counsellor turns may carry deliveryMetrics; the response adds a
   // compact `steering` string used to nudge the voice model mid-call.
-  observeTurn: (id, { counsellorText, studentText, deliveryMetrics } = {}) =>
+  observeTurn: (id, { counsellorText, studentText, deliveryMetrics, responseDelayed, realtimeUsage, transcriptionUsage } = {}) =>
     req(`/sessions/${id}/observe`, {
       method: "POST",
       body: {
         counsellorText: counsellorText || "",
         studentText: studentText || "",
         ...(deliveryMetrics ? { deliveryMetrics } : {}),
+        ...(responseDelayed ? { responseDelayed: true } : {}),
+        ...(realtimeUsage ? { realtimeUsage } : {}),
+        ...(transcriptionUsage ? { transcriptionUsage } : {}),
       },
     }),
+
+  // usage (admin cost tracking)
+  getUsage: ({ from, to, model, page, pageSize } = {}) => {
+    const params = new URLSearchParams();
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+    if (model) params.set("model", model);
+    if (page) params.set("page", String(page));
+    if (pageSize) params.set("pageSize", String(pageSize));
+    const qs = params.toString();
+    return req(`/usage${qs ? `?${qs}` : ""}`);
+  },
+  getUsageSession: (id) => req(`/usage/session/${id}`),
 
   // reports
   getReports: (counsellorId, sessionId) => {

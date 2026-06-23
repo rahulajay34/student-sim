@@ -204,9 +204,19 @@ async function gateReply({ text, emotion }, { last, turnHint, systemPrompt, tran
   return { text: ack, emotion: "neutral" };
 }
 
+// Usage/cost meta for the student-reply LLM call (recorded by the llm.js sink).
+function studentUsage(session) {
+  return {
+    feature: "student_reply",
+    sessionId: session.id || null,
+    counsellorId: session.counsellorId || null,
+    personaLabel: session.personaSnapshot?.label || null,
+  };
+}
+
 export async function getStudentReply(session) {
   const ctx = prepareReply(session);
-  const raw = await chat(ctx.messages, { ...studentSampling(session), systemParts: ctx.systemParts });
+  const raw = await chat(ctx.messages, { ...studentSampling(session), systemParts: ctx.systemParts, usage: studentUsage(session) });
   const parsed = parseEmotion(raw);
   return ensureNonEmpty(await gateReply(parsed, ctx));
 }
@@ -214,7 +224,7 @@ export async function getStudentReply(session) {
 export async function* getStudentReplyStream(session) {
   const ctx = prepareReply(session);
   let buf = "";
-  for await (const tok of chatStream(ctx.messages, { ...studentSampling(session), systemParts: ctx.systemParts })) {
+  for await (const tok of chatStream(ctx.messages, { ...studentSampling(session), systemParts: ctx.systemParts, usage: studentUsage(session) })) {
     buf += tok;
     yield tok;
   }

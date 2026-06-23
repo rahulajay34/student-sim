@@ -17,6 +17,7 @@ import Courses from "./pages/admin/Courses.jsx";
 import Assignments from "./pages/admin/Assignments.jsx";
 import AssignmentCreate from "./pages/admin/AssignmentCreate.jsx";
 import AdminReports from "./pages/admin/AdminReports.jsx";
+import Usage from "./pages/admin/Usage.jsx";
 import Rubrics from "./pages/admin/Rubrics.jsx";
 import Prompts from "./pages/admin/Prompts.jsx";
 import Templates from "./pages/admin/Templates.jsx";
@@ -77,6 +78,7 @@ function App() {
           <Route path="/admin/practice" element={<Practice />} />
           <Route path="/admin/reports" element={<AdminReports />} />
           <Route path="/admin/reports/:id" element={<ReportDetail backTo="/admin/reports" />} />
+          <Route path="/admin/usage" element={<Usage />} />
           <Route path="/admin/leaderboard" element={<Leaderboard />} />
           <Route path="/admin/integrity-probes" element={<IntegrityProbes />} />
         </Route>

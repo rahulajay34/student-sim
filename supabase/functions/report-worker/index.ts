@@ -24,6 +24,11 @@ import { getEnv } from "../_shared/env.js";
 import { getSupabaseAdmin } from "../_shared/supabaseAdmin.js";
 import { getById } from "../_shared/store.js";
 import { generateReport } from "../_shared/lib/report.js";
+import { setUsageSink } from "../_shared/lib/llm.js";
+import { bufferLlmUsage, flushUsage } from "../_shared/usageStore.js";
+
+// Record token usage for every report LLM call (Calls A–G) for cost tracking.
+setUsageSink(bufferLlmUsage);
 
 // ---------------------------------------------------------------------------
 // JSON helpers
@@ -238,9 +243,13 @@ async function handle(req) {
     assembled = await generateReport(session);
   } catch (err) {
     console.error("[report-worker] generateReport threw:", err.message);
+    await flushUsage();  // persist any usage events recorded before the throw
     // Do NOT clear the lease — let it expire so the sweeper can re-kick.
     return json({ error: "Report generation failed: " + err.message }, 500);
   }
+  // Persist the report's token-usage events (awaited so the edge runtime doesn't
+  // kill the write before it lands).
+  await flushUsage();
 
   // ----- Step 5: build commit patch and call commit_report -----
   const patch = buildCommitPatch(assembled, reportRow);
