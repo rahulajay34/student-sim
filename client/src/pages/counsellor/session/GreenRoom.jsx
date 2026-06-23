@@ -377,7 +377,7 @@ export default function GreenRoom({
           You&apos;re about to join a mock counselling call
         </h1>
         <p className="mt-2 text-sm" style={{ color: "#8b90a8" }}>
-          Review the brief, then join by voice — or practise by text.
+          Review the brief, then join the call by voice.
         </p>
       </div>
 
@@ -520,8 +520,8 @@ export default function GreenRoom({
               className="rounded-xl px-4 py-3 text-xs"
               style={{ background: "#161a26", border: "1px solid #262a36", color: "#8b90a8" }}
             >
-              No mic? You can still practise by text — the chat runs the same coaching engine,
-              just without spoken audio.
+              A working mic is required — this call is voice-only. Make sure your microphone is
+              allowed and selected above before you join.
             </div>
           </div>
         </div>
@@ -540,9 +540,9 @@ export default function GreenRoom({
           </div>
         )}
 
-        {/* ── Footer: join options (voice + text, equal prominence) ── */}
-        <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-          {/* Primary: Join voice call */}
+        {/* ── Footer: join voice call ── */}
+        <div className="mt-8 flex justify-center">
+          {/* Join voice call (voice-only — text practice removed) */}
           <button
             type="button"
             disabled={joining}
@@ -571,28 +571,6 @@ export default function GreenRoom({
                 Join call
               </>
             )}
-          </button>
-
-          {/* Secondary-but-visible: Practice by text (same size row, secondary variant) */}
-          <button
-            type="button"
-            disabled={joining}
-            onClick={() => onJoin("text")}
-            className="flex min-w-[220px] items-center justify-center gap-2 rounded-2xl px-8 py-3.5 text-base font-semibold transition-colors disabled:opacity-60"
-            style={{ background: "#161a26", color: "#e7e9f4", border: "1px solid #3a3f52" }}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.7"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-5 w-5"
-            >
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
-            Practice by text
           </button>
         </div>
       </div>
