@@ -41,6 +41,9 @@ import { getStudentReply, getStudentReplyStream } from "../_shared/lib/engine.js
 import { scoreMessage, isBackchannel, loadScoringConfig } from "../_shared/lib/scoring.js";
 import { setUsageSink } from "../_shared/lib/llm.js";
 import { bufferLlmUsage, bufferUsage, flushUsage } from "../_shared/usageStore.js";
+import { transcribeVerbatim } from "../_shared/whisper.js";
+import { computeFluencyMetrics } from "../_shared/lib/fluencyMetrics.js";
+import { judgeFluency } from "../_shared/lib/fluency.js";
 import { setActivePromptConfig } from "../_shared/lib/promptConfig.js";
 import { classifyCounsellorTurn } from "../_shared/lib/classify.js";
 import {
@@ -752,6 +755,87 @@ app.post("/sessions/:id/cue", async (c) => {
     console.error("Error in /sessions/:id/cue:", err?.message);
     const cue = fallbackInstantCue();
     return c.json({ cue, source: cue.source }, 200, cors);
+  }
+});
+
+// ── POST /sessions/:id/fluency ───────────────────────────────────────────────
+// Spoken-English fluency. Downloads the counsellor's recorded call audio (service
+// role), re-transcribes it VERBATIM with Whisper (word timings + un-cleaned text),
+// computes deterministic metrics, has Claude judge it, and writes report.fluency.
+// Owner or admin; called by the client AFTER it uploads the audio at call end. No
+// audio / no report → graceful skip. Additive: written directly (not via
+// commit_report), so report regenerations preserve it.
+app.post("/sessions/:id/fluency", async (c) => {
+  const sessionId = c.req.param("id");
+  const cors = corsHeaders(c.req.header("origin"));
+
+  let session;
+  try {
+    session = await loadAuthorizedSession(c, sessionId);
+  } catch (err) {
+    return errorResponse(err, cors);
+  }
+
+  const db = getSupabaseAdmin();
+  const objectPath = `${sessionId}/counsellor.webm`;
+  const usageMeta = {
+    sessionId: session.id,
+    counsellorId: session.counsellorId,
+    personaLabel: session.personaSnapshot?.label || null,
+  };
+  try {
+    // 1. Get the audio. The client POSTs the recorded blob in the request body
+    //    (the only writer is this function, via the service role — no Storage RLS
+    //    dependency); we persist it to the private bucket for retention/re-runs.
+    //    On a re-run with no body, fall back to the stored object.
+    let bytes;
+    const ct = (c.req.header("content-type") || "").toLowerCase();
+    if (ct.startsWith("audio/") || ct === "application/octet-stream") {
+      bytes = new Uint8Array(await c.req.arrayBuffer());
+      if (bytes.byteLength >= 2000) {
+        try {
+          await db.storage.from("call-audio").upload(objectPath, bytes, { contentType: "audio/webm", upsert: true });
+        } catch (e) {
+          console.warn("[fluency] audio persist failed (continuing):", e?.message);
+        }
+      }
+    } else {
+      const dl = await db.storage.from("call-audio").download(objectPath);
+      if (dl.error || !dl.data) {
+        return c.json({ status: "skipped", reason: "no_audio" }, 200, cors);
+      }
+      bytes = new Uint8Array(await dl.data.arrayBuffer());
+    }
+    if (!bytes || bytes.byteLength < 2000) {
+      return c.json({ status: "skipped", reason: "audio_too_short" }, 200, cors);
+    }
+
+    // 2. Verbatim re-transcription (Whisper, word-level timestamps).
+    const tr = await transcribeVerbatim(bytes, "counsellor.webm");
+    try {
+      bufferUsage({ ...usageMeta, provider: "openai", model: "whisper-1", feature: "transcription", usage: { durationSeconds: tr.duration } });
+    } catch { /* telemetry only */ }
+    if (!tr.text || !tr.text.trim()) {
+      return c.json({ status: "skipped", reason: "no_speech" }, 200, cors);
+    }
+
+    // 3. Deterministic metrics + 4. Claude fluency judge.
+    const metrics = computeFluencyMetrics(tr.words, tr.text, tr.duration);
+    const fluency = await judgeFluency(tr.text, metrics, session, { feature: "fluency", ...usageMeta });
+
+    // 5. Persist onto the session's report (direct, lease-free additive write).
+    const { data: rep } = await db.from("reports").select("id")
+      .eq("session_id", sessionId).order("generated_at", { ascending: false }).limit(1).maybeSingle();
+    if (!rep?.id) {
+      return c.json({ status: "skipped", reason: "no_report" }, 200, cors);
+    }
+    const { error: upErr } = await db.from("reports").update({ fluency }).eq("id", rep.id);
+    if (upErr) throw new Error("fluency persist failed: " + upErr.message);
+
+    return c.json({ status: "ok", overall: fluency.overall }, 200, cors);
+  } catch (err) {
+    console.error("[fluency] failed:", err?.message);
+    return c.json({ error: "Fluency analysis failed: " + (err?.message || "unknown") }, 500, cors);
   }
 });
 

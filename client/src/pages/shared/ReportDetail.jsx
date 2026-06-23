@@ -603,6 +603,25 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
     };
   }, [id, isGenerating, retryNonce]);
 
+  // Spoken-English fluency lands shortly AFTER the report is ready (separate
+  // post-upload pipeline). For a voice session with no fluency yet, poll a short
+  // while so the card appears without a manual refresh. Stops once it arrives or
+  // after ~90s (e.g. recording failed / consent path).
+  const isVoiceSession = !!report && (report.transcript || []).some((t) => t.role === "counsellor" && t.deliveryMetrics);
+  const fluencyPending = !!report && !isGenerating && isVoiceSession && !report.fluency;
+  const fluencyPollStartRef = useRef(null);
+  useEffect(() => {
+    if (!fluencyPending) { fluencyPollStartRef.current = null; return undefined; }
+    if (!fluencyPollStartRef.current) fluencyPollStartRef.current = Date.now();
+    let active = true;
+    const timer = setInterval(() => {
+      if (!active) return;
+      if (Date.now() - fluencyPollStartRef.current > 90_000) { clearInterval(timer); return; }
+      api.getReport(id).then((data) => { if (active && data?.fluency) setReport(data); }).catch(() => {});
+    }, 4000);
+    return () => { active = false; clearInterval(timer); };
+  }, [id, fluencyPending]);
+
   // Regenerate a fallback (or timed-out) report by re-calling /end for the session.
   async function handleRegenerate() {
     if (!report?.sessionId || regenerating) return;
@@ -902,6 +921,67 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
           )}
         </Card>
       )}
+
+      {/* SPOKEN ENGLISH FLUENCY — voice sessions; lands shortly after the report */}
+      {report.fluency ? (
+        <Card className="p-6 border-brand-200">
+          <CardHeader
+            title="Spoken English Fluency"
+            subtitle="How fluently & confidently you spoke — judged from your voice, not the cleaned transcript"
+          />
+          <div className="mt-4 flex items-center gap-4">
+            <div className="shrink-0">
+              <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted">Overall</div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-4xl font-bold tabular-nums text-ink">{report.fluency.overall}</span>
+                <span className="text-2xl font-semibold text-muted">%</span>
+              </div>
+              {report.fluency.cefr && (
+                <div className="mt-1.5"><Badge>{`CEFR ~${report.fluency.cefr}`}</Badge></div>
+              )}
+            </div>
+            <div className="flex-1">
+              <ScoreMeter score={report.fluency.overall} />
+              {report.fluency.headline && <p className="mt-2 text-sm text-muted">{report.fluency.headline}</p>}
+            </div>
+          </div>
+          {Array.isArray(report.fluency.parameters) && report.fluency.parameters.length > 0 && (
+            <div className="mt-6 space-y-5">
+              {report.fluency.parameters.map((param) => (
+                <NewParamBar key={param.key} item={param} />
+              ))}
+            </div>
+          )}
+          {Array.isArray(report.fluency.examples) && report.fluency.examples.length > 0 && (
+            <div className="mt-6">
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Examples from your speech</div>
+              <ul className="space-y-2">
+                {report.fluency.examples.map((ex, i) => (
+                  <li key={i} className="rounded-xl border border-line bg-canvas/60 p-3">
+                    <p className="text-sm italic text-ink">“{ex.quote}”</p>
+                    {ex.issue && <p className="mt-1 text-xs text-muted">{ex.issue}</p>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {report.fluency.metrics && (
+            <p className="mt-4 text-xs text-muted/70">
+              {report.fluency.metrics.wpm != null ? `${report.fluency.metrics.wpm} wpm · ` : ""}
+              {`${report.fluency.metrics.filledPauseCount} fillers · `}
+              {report.fluency.metrics.longPauseCount != null ? `${report.fluency.metrics.longPauseCount} long pauses · ` : ""}
+              {`${report.fluency.metrics.repairCount} repetitions`}
+            </p>
+          )}
+        </Card>
+      ) : fluencyPending ? (
+        <Card className="p-6">
+          <CardHeader title="Spoken English Fluency" subtitle="Analyzing your spoken English from the call recording…" />
+          <div className="mt-4 flex items-center gap-3 text-sm text-muted">
+            <Spinner size={16} /> This usually takes under a minute.
+          </div>
+        </Card>
+      ) : null}
 
       {/* OLD REPORT SECTION label — divider before legacy rubric/scoring cards */}
       <div className="flex items-center gap-3">

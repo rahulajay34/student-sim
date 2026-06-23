@@ -547,6 +547,7 @@ function reportFromRow(row) {
     personaCard: row.persona_card ?? null,
     integrityCheck: row.integrity_check ?? null,
     newReport: row.new_report ?? null,
+    fluency: row.fluency ?? null,
   };
 }
 
@@ -583,6 +584,7 @@ function reportToRow(obj) {
   if (obj.personaCard !== undefined) r.persona_card = obj.personaCard;
   if (obj.integrityCheck !== undefined) r.integrity_check = obj.integrityCheck;
   if (obj.newReport !== undefined) r.new_report = obj.newReport;
+  if (obj.fluency !== undefined) r.fluency = obj.fluency;
   return r;
 }
 

@@ -95,6 +95,9 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
   // newer call's refs or leak a mic stream.
   const connectGenRef = useRef(0);
   const micStreamRef = useRef(null);
+  // Whole-call counsellor-audio recorder (for spoken-English fluency analysis).
+  const recorderRef = useRef(null);
+  const recordedChunksRef = useRef([]);
   const audioElRef = useRef(null);
   const audioCtxRef = useRef(null);
   const analyserRef = useRef(null);
@@ -259,8 +262,47 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
     return Object.keys(out).length ? out : undefined;
   }
 
+  // ── Whole-call counsellor-audio recording (fluency analysis) ──
+  // Records the SAME mic track already sent over WebRTC (no second getUserMedia).
+  // Records only the counsellor — never the student's synthesized voice.
+  function startCallRecording(stream) {
+    try {
+      const track = stream?.getAudioTracks?.()[0];
+      if (!track || typeof MediaRecorder === "undefined") return;
+      recordedChunksRef.current = [];
+      const mime = MediaRecorder.isTypeSupported?.("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : (MediaRecorder.isTypeSupported?.("audio/webm") ? "audio/webm" : "");
+      const rec = new MediaRecorder(
+        new MediaStream([track]),
+        mime ? { mimeType: mime, audioBitsPerSecond: 32000 } : { audioBitsPerSecond: 32000 },
+      );
+      rec.ondataavailable = (e) => { if (e.data && e.data.size) recordedChunksRef.current.push(e.data); };
+      rec.start(3000); // 3s timeslice so chunks accrue even if the tab is killed
+      recorderRef.current = rec;
+    } catch {
+      recorderRef.current = null; // recording is best-effort — never block the call
+    }
+  }
+
+  // Stop the recorder and resolve the assembled blob (null if nothing recorded).
+  // Call this BEFORE disable()/teardown so the final chunk flushes.
+  const finishRecording = useCallback(() => new Promise((resolve) => {
+    const rec = recorderRef.current;
+    const assemble = () => {
+      const chunks = recordedChunksRef.current;
+      if (!chunks.length) return null;
+      return new Blob(chunks, { type: rec?.mimeType || chunks[0]?.type || "audio/webm" });
+    };
+    if (!rec || rec.state === "inactive") { resolve(assemble()); return; }
+    rec.onstop = () => resolve(assemble());
+    try { rec.requestData?.(); } catch { /* noop */ }
+    try { rec.stop(); } catch { resolve(assemble()); }
+  }), []);
+
   const teardown = useCallback(() => {
     stopRmsSampling();
+    try { if (recorderRef.current && recorderRef.current.state !== "inactive") recorderRef.current.stop(); } catch { /* noop */ }
     try { dcRef.current?.close(); } catch { /* noop */ }
     try { pcRef.current?.getSenders?.().forEach((s) => { try { s.track?.stop(); } catch { /* noop */ } }); } catch { /* noop */ }
     try { pcRef.current?.close(); } catch { /* noop */ }
@@ -453,6 +495,7 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
       return;
     }
     micStreamRef.current = micStream;
+    startCallRecording(micStream);
 
     // Local mic AnalyserNode tap for delivery-metrics energy variance (separate
     // from the remote-audio analyser that drives the orb).
@@ -710,7 +753,7 @@ export function useOpenAIRealtime({ sessionId, onTranscript, onError, defaultVoi
   return {
     engine: "openai",
     enabled, status, loadPct: 0, error, voice, muted,
-    enable, disable, changeVoice, changeMic, setMuted, getAnalyser, sendText, sendSteering,
+    enable, disable, changeVoice, changeMic, setMuted, getAnalyser, sendText, sendSteering, finishRecording,
     // classic-only no-ops so shared UI/handlers are safe when this engine is active
     speak: () => {}, speakChunk: () => {}, beginUtterance: () => {}, endUtterance: () => {},
     stopSpeaking: () => {}, startListening: () => {}, stopListening: () => {},

@@ -801,6 +801,20 @@ export default function Session() {
     setShowEndConfirm(true);
   }
 
+  // Spoken-English fluency: POST the recorded counsellor audio to the edge fn,
+  // which stores it (service role) + runs the analysis. Best-effort + detached —
+  // never blocks the wrap/navigation; silently no-ops for text sessions (no
+  // recording) or any failure.
+  async function triggerFluency(sid, blobPromise) {
+    try {
+      const blob = await blobPromise;
+      if (!blob || blob.size < 2000) return;
+      await api.analyzeFluency(sid, blob);
+    } catch (e) {
+      console.warn("[fluency] pipeline failed:", e?.message);
+    }
+  }
+
   function doEndSession() {
     if (ending) return;
     setShowEndConfirm(false);
@@ -816,6 +830,9 @@ export default function Session() {
       const ss = secs % 60;
       setWrappingElapsed(mm > 0 ? `${mm}m ${ss}s` : `${ss}s`);
     }
+    // Finish the call recording (flush the final chunk) BEFORE disabling voice
+    // (which stops the mic track). Promise is consumed by triggerFluency below.
+    const fluencyBlobPromise = isVoice ? (voice.finishRecording?.() ?? Promise.resolve(null)) : null;
     // Disable voice before entering the wrapping transition.
     if (isVoice && voice.enabled) voice.disable();
     setUiState("wrapping");
@@ -829,6 +846,8 @@ export default function Session() {
       .catch(() => {})
       .then(() => api.endSession(sid))
       .then((res) => {
+        // Report stub now exists → upload audio + run fluency (detached, best-effort).
+        if (fluencyBlobPromise) triggerFluency(sid, fluencyBlobPromise);
         navigate(reportPathFor(res.reportId));
       })
       .catch((e) => {

@@ -521,7 +521,8 @@ export default function GreenRoom({
               style={{ background: "#161a26", border: "1px solid #262a36", color: "#8b90a8" }}
             >
               A working mic is required — this call is voice-only. Make sure your microphone is
-              allowed and selected above before you join.
+              allowed and selected above before you join. Your voice is recorded during the call to
+              coach your spoken English fluency.
             </div>
           </div>
         </div>

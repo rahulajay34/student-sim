@@ -190,6 +190,26 @@ Legacy reports without a `rubricSnapshot` use the fixed 6-criterion list noted a
   columns + `usd_cost` + `meta`; RLS on, no policies → service-role only) and the SQL RPCs
   `usage_overview(from,to,model)`, `usage_sessions(from,to,model,limit,offset)`,
   `usage_session_detail(session)` (service-role grant).
+- `0013_fluency_report.sql` — adds `reports.fluency` (jsonb) and a private `call-audio` Storage bucket
+  with owner insert/update RLS keyed on session ownership (reads are service-role only). `reports.fluency`
+  is written by `POST /sessions/:id/fluency` via a **direct** service-role update (not `commit_report`), so
+  report regenerations preserve it.
+
+**Spoken English Fluency (voice sessions, Supabase stack):**
+| POST | `/sessions/:id/fluency` | (no body) | `{ status:"ok", overall } \| { status:"skipped", reason }` — owner/admin. Downloads the counsellor's `call-audio/{id}/counsellor.webm`, re-transcribes verbatim with Whisper (word timings), computes deterministic fluency metrics, has Claude judge, and writes `report.fluency`. Called by the client AFTER it uploads the recording at call end (browser → `supabase.storage.from("call-audio").upload(...)`). |
+
+`report.fluency` shape (admin + owning counsellor; absent on text sessions / no recording):
+```
+fluency: {
+  overall: number,                 // 0-100 (sum of 5 sub-scores / 25 * 100)
+  cefr: string|null,               // e.g. "B2"
+  headline: string,
+  parameters: [{ key, label, score(0-5), summary }],  // fluency, hesitation, grammar, lexical, coherence
+  examples: [{ quote, issue }],    // 0-3 verbatim quotes
+  metrics: { wordCount, wpm, articulationRatePerSec, longPauseCount, meanLengthOfRunWords,
+             filledPauseCount, filledPauseRatePer100, repairCount, ... }  // deterministic, from Whisper word timings
+}
+```
 
 **Usage endpoints (admin/superadmin only):**
 | GET | `/usage?from&to&model&page&pageSize` | `{ overview:{ totalUsd, totalCalls, totalSessions, totalInputTokens, totalOutputTokens, totalAudioTokens, byModel[], byProvider[], byFeature[], byDay[] }, sessions:{ rows:[{sessionId,ownerId,counsellorName,personaLabel,calls,tokens,usd,lastAt}], total, page, pageSize }, models[], fxRate, fxSource, fxFetchedAt }` — USD amounts; client renders INR via `fxRate` (live USD→INR, cached in `app_config.usdInrRate`). |

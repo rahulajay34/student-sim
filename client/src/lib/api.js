@@ -113,6 +113,26 @@ export const api = {
       },
     }),
 
+  // spoken-english fluency — POST the recorded call audio (raw blob body); the
+  // edge fn (service role) stores it + runs Whisper/judge and writes report.fluency.
+  analyzeFluency: async (id, blob) => {
+    const token = await getAccessToken();
+    const res = await fetch(`/api/sessions/${id}/fluency`, {
+      method: "POST",
+      headers: {
+        "Content-Type": blob?.type || "audio/webm",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: blob,
+    });
+    if (!res.ok) {
+      let msg = `Fluency analysis failed (${res.status})`;
+      try { msg = (await res.json()).error || msg; } catch { /* non-JSON */ }
+      throw new Error(msg);
+    }
+    return res.json();
+  },
+
   // usage (admin cost tracking)
   getUsage: ({ from, to, model, page, pageSize } = {}) => {
     const params = new URLSearchParams();

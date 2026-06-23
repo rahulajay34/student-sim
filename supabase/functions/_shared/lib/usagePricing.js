@@ -27,6 +27,8 @@ export const PRICING = {
     },
     // gpt-4o-mini-transcribe (counsellor STT).
     "gpt-4o-mini-transcribe": { textInput: 1.25, textOutput: 5.0, audioInput: 3.0 },
+    // whisper-1 (verbatim re-transcription for fluency) — billed per audio minute.
+    "whisper-1": { perMinute: 0.006 },
   },
 };
 
@@ -112,6 +114,24 @@ export function priceOpenAITranscribe(model, usage = {}) {
   };
 }
 
+// ─── OpenAI Whisper (per-minute transcription) ────────────────────────────────
+// usage shape: { durationSeconds }. Stores the audio seconds in audio_input_tokens
+// (the schema has no seconds column) so the figure isn't lost; usd_cost is exact.
+export function priceOpenAIWhisper(model, usage = {}) {
+  const p = PRICING.openai[model] || PRICING.openai["whisper-1"];
+  const seconds = num(usage.durationSeconds);
+  const usd = (seconds / 60) * p.perMinute;
+  return {
+    input_tokens: 0,
+    output_tokens: 0,
+    cache_write_tokens: 0,
+    cache_read_tokens: 0,
+    audio_input_tokens: Math.round(seconds),
+    audio_output_tokens: 0,
+    usd_cost: round6(usd),
+  };
+}
+
 // ─── Unified dispatcher ───────────────────────────────────────────────────────
 // raw: { provider, model, feature?, mode?, usage }
 // Returns a flat event-ready object (token columns + usd_cost), no PII.
@@ -120,9 +140,13 @@ export function priceUsage(raw = {}) {
   const model = raw.model || ANTHROPIC_FALLBACK;
   let cost;
   if (provider === "openai") {
-    cost = raw.feature === "transcription"
-      ? priceOpenAITranscribe(model, raw.usage)
-      : priceOpenAIRealtime(model, raw.usage);
+    if (model === "whisper-1") {
+      cost = priceOpenAIWhisper(model, raw.usage);
+    } else if (raw.feature === "transcription") {
+      cost = priceOpenAITranscribe(model, raw.usage);
+    } else {
+      cost = priceOpenAIRealtime(model, raw.usage);
+    }
   } else {
     cost = priceAnthropic(model, raw.usage);
   }
