@@ -75,6 +75,46 @@ function transcriptText(transcript) {
     .join("\n");
 }
 
+// ─── Transcript transliteration (Call G) ─────────────────────────────────────
+// Some STT turns land in a non-Latin script: genuine Hindi captured in
+// Devanagari, or Arabic/other-script fragments that are really STT noise. The
+// generated report should read in ONE script. We detect only turns carrying a
+// non-Latin LETTER (romanized Hinglish is already Latin and left untouched),
+// send just those turns to a single cheap fast-mode call, and store the Latin
+// rendering as turn.latinText next to the untouched original turn.text.
+// English-only transcripts trigger NO extra call (zero added cost).
+
+// True when text has at least one letter outside the Latin script. The lookahead
+// asserts the char is a letter, the consuming class requires it be non-Latin —
+// so digits, ₹, punctuation and emoji (not letters) never match, and accented
+// Latin (é, ñ) stays Latin. Devanagari/Arabic/CJK letters match.
+const NON_LATIN_LETTER = /(?=\p{L})\P{Script=Latin}/u;
+export function hasNonLatinScript(text) {
+  return typeof text === "string" && NON_LATIN_LETTER.test(text);
+}
+
+// Strip inline [emotion:X] artifacts + collapse whitespace before sending a turn
+// to the transliteration call (mirrors transcriptText's cleaning).
+function cleanForTranslit(text) {
+  return text ? text.replace(/\[emotion:[^\]]*\]/gi, "").replace(/\s+/g, " ").trim() : "";
+}
+
+function buildTransliterationPrompt(items) {
+  const lines = items.map((t) => `[${t.i}] (${t.role}) ${t.text}`).join("\n");
+  return `You normalise mock sales-call transcript turns into the LATIN (Roman) alphabet so the whole transcript reads in one script. Each turn below was captured by speech-to-text and contains non-Latin characters.
+
+RULES:
+- TRANSLITERATE genuine speech into the Latin alphabet, preserving the ORIGINAL words and language — do NOT translate the meaning into English. E.g. Hindi "मुझे फीस के बारे में बताइए" → "mujhe fees ke baare mein bataiye".
+- Keep any English / already-Latin words exactly as they are.
+- Some turns are speech-to-text NOISE: gibberish, or a stray foreign-script fragment that makes no sense in an Indian admissions call. If a turn is unintelligible, output exactly "[unclear audio]" for it (best effort first — only fall back to this when it truly cannot be read).
+- Output exactly one entry per input turn, keyed by the same index. No commentary.
+
+TURNS:
+${lines}
+
+Return ONLY a JSON object: { "turns": [ { "i": <index>, "latin": "<latin-script text, or [unclear audio]>" } ] }`;
+}
+
 // Voice delivery is only gradable when delivery metrics exist on the transcript.
 function sessionHasVoiceMetrics(session) {
   return (session.transcript || []).some((m) => m.deliveryMetrics);
@@ -712,10 +752,31 @@ const NEW_REPORT_SCHEMA = {
   additionalProperties: false,
 };
 
+// Call G: transcript transliteration (non-Latin turns → Latin script).
+const TRANSLIT_SCHEMA = {
+  type: "object",
+  properties: {
+    turns: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          i: { type: "number" },
+          latin: { type: "string" },
+        },
+        required: ["i", "latin"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["turns"],
+  additionalProperties: false,
+};
+
 // ─── Per-call runner with 2-attempt retry ────────────────────────────────────
 // Attempt 1 and 2: both use mode:"reasoning", 60s timeout.
 // Returns { ok:true, value } or { ok:false, error }.
-async function runCall(label, prompt, jsonSchema, system) {
+async function runCall(label, prompt, jsonSchema, system, overrides) {
   const callOpts = {
     ...DETERMINISTIC_SAMPLING,
     mode: "reasoning",
@@ -723,6 +784,7 @@ async function runCall(label, prompt, jsonSchema, system) {
     timeoutMs: CALL_TIMEOUT_MS,
     maxRetries: 0,
     jsonSchema,
+    ...overrides,
   };
   const messages = system
     ? [{ role: "system", content: system }, { role: "user", content: prompt }]
@@ -971,6 +1033,27 @@ function assembleNewReport(raw) {
   return { total, parameters };
 }
 
+// ─── Assemble the transliterated transcript from Call G ──────────────────────
+// Returns a COPY of the transcript with turn.latinText set on every non-Latin
+// turn the model returned a Latin rendering for (original turn.text untouched).
+// Returns null when nothing usable came back, so the caller can skip the write
+// and mark the report partial.
+function applyTransliteration(transcript, raw) {
+  const byIndex = new Map(
+    (Array.isArray(raw?.turns) ? raw.turns : []).map((t) => [Number(t.i), t.latin]),
+  );
+  let changed = false;
+  const out = (transcript || []).map((m, i) => {
+    const latin = byIndex.get(i);
+    if (typeof latin === "string" && latin.trim() && hasNonLatinScript(m.text)) {
+      changed = true;
+      return { ...m, latinText: latin.trim() };
+    }
+    return m;
+  });
+  return changed ? out : null;
+}
+
 // ─── Public: report prompt for inspection endpoint ───────────────────────────
 /**
  * reportPromptForInspection(session)
@@ -1033,6 +1116,15 @@ export async function generateReport(session) {
   // report.newReport left undefined).
   const newReportPrompt = buildNewReportPrompt(session);
 
+  // Transcript transliteration (Call G): find turns captured in a non-Latin
+  // script (Devanagari/Arabic/…). Only those turns are sent — in ONE cheap
+  // fast-mode call — so an English-only transcript adds no call at all.
+  const translitItems = (session.transcript || [])
+    .map((m, i) => ({ i, role: m.role === "counsellor" ? "COUNSELLOR" : "STUDENT", text: cleanForTranslit(m.text) }))
+    .filter((t) => hasNonLatinScript(t.text));
+  const needsTranslit = translitItems.length > 0;
+  const translitPrompt = needsTranslit ? buildTransliterationPrompt(translitItems) : null;
+
   // All calls are independent → dispatch them together. runCall never rejects
   // (it returns {ok:false} on failure), so each settled result carries the
   // {ok,...} object in .value.
@@ -1045,9 +1137,12 @@ export async function generateReport(session) {
       ? runCall("Call E (integrity)", integrityPrompt, INTEGRITY_SCHEMA)
       : Promise.resolve({ ok: false, skipped: true }),
     runCall("Call F (new report)", newReportPrompt.user, NEW_REPORT_SCHEMA, newReportPrompt.system),
+    needsTranslit
+      ? runCall("Call G (transliterate)", translitPrompt, TRANSLIT_SCHEMA, null, { mode: "fast" })
+      : Promise.resolve({ ok: false, skipped: true }),
   ]);
   const unwrap = (s) => (s.status === "fulfilled" ? s.value : { ok: false, error: s.reason });
-  const [resultA, resultB, resultC, resultD, resultE, resultF] = settled.map(unwrap);
+  const [resultA, resultB, resultC, resultD, resultE, resultF, resultG] = settled.map(unwrap);
 
   // Call A is the spine of the report. If it failed entirely → fallback.
   if (!resultA.ok) {
@@ -1112,6 +1207,21 @@ export async function generateReport(session) {
   };
   if (integrityCheck) report.integrityCheck = integrityCheck;
   if (newReport) report.newReport = newReport;
+
+  // Transliterated transcript (Call G): replace the transcript with a copy that
+  // carries turn.latinText on the converted turns (original turn.text kept for
+  // the admin "show original" toggle). Non-fatal — on failure mark partial and
+  // leave the stub transcript untouched.
+  if (needsTranslit) {
+    if (resultG.ok) {
+      const enriched = applyTransliteration(session.transcript, resultG.value);
+      if (enriched) report.transcript = enriched;
+      else partial = true;
+    } else {
+      partial = true;
+    }
+  }
+
   if (partial) report.partial = true;
   return report;
 }

@@ -103,7 +103,9 @@ Session   { id, assignmentId|null, counsellorId, mode:"assigned"|"practice",
             scoreHistory:[{turn,score,adjustment,reason}],
             transcript:[{role:"counsellor"|"student", text, phase, scoreAfter, ts,
                          turnType?, scoreReason?, deliveryMetrics?,  // counsellor entries
-                         emotion? }],                                  // student entries
+                         emotion?,                                     // student entries
+                         latinText? }],  // set on the report copy only, for turns captured in a non-Latin
+                         //   script (Call G transliteration); original `text` preserved. Absent on the live session.
             integrityProbe:{id,category,question,groundTruth}|null,
             //   snapshot of the admin-assigned integrity trap (one per session, deterministic pick via FNV-1a
             //   hash of session id over active probes). Admin-only: stripped from GET /sessions/:id for
@@ -138,7 +140,8 @@ Report    { id, sessionId, assignmentId|null, counsellorId, counsellorName, pers
             benchmarks:{ sessionMinutes:number|null, medianPaidMinutes:number|null,
                          paymentAskSeen:boolean, paymentAskNormPct:number|null },
             scoreArc:[{turn,score}],
-            transcript: (copy of session.transcript — persisted immediately in the stub),
+            transcript: (copy of session.transcript — persisted immediately in the stub; the report-worker
+                          overwrites it with a `latinText`-enriched copy when Call G converts non-Latin turns),
             finalScore: number|null,        // session.satisfactionScore at end time — persisted in the stub
             integrityCheck: { probeId, category, question, raised:boolean,
                               verdict:"honest"|"evasive"|"overpromised"|"lied"|"not_raised",
@@ -180,6 +183,9 @@ Legacy reports without a `rubricSnapshot` use the fixed 6-criterion list noted a
   `integrityProbes` via `insert … on conflict do nothing`.
 - `0010_new_report.sql` — adds `reports.new_report` (jsonb); extends `commit_report` RPC to accept
   `new_report` in the patch.
+- `0011_transcript_latin.sql` — extends `commit_report` RPC to accept `transcript` in the patch (no new
+  column — `reports.transcript` already exists), so the report-worker can write back the
+  Latin-script-enriched transcript (Call G adds `latinText` to non-Latin turns).
 
 ---
 
@@ -443,6 +449,11 @@ and a mic `AnalyserNode`; forwarded to `/observe` for `voice_delivery` grading.
 
 - Student entries: `{ role:"student", text, phase, scoreAfter, ts, emotion?: string }`
 - Counsellor entries: `{ role:"counsellor", text, phase, scoreAfter, ts, turnType?: string, scoreReason?: string, deliveryMetrics?: object }`
+- `latinText?: string` (both roles) — set ONLY on the report's transcript copy, by the report-worker's
+  Call G, for turns captured in a non-Latin script (Devanagari/Arabic/…). It is the Latin-script
+  transliteration (preserving the original words/language; `"[unclear audio]"` for STT noise). The
+  original `text` is always preserved. The report UI shows `latinText ?? text` by default; an admin-only
+  "Show original" toggle reveals the raw `text`. Absent on the live session row and on all-English turns.
 
 The `deliveryMetrics` field on counsellor entries (shape: `{ wpm?, pauses?, energyVar?, durationMs?, tone?, paceVerdict?, energyVerdict? }`)
 is used by `report.js` to grade the `voice_delivery` rubric criterion (criterion is excluded and

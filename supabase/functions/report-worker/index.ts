@@ -123,6 +123,14 @@ function buildCommitPatch(report, reportRow) {
     patch.new_report = report.newReport;
   }
 
+  // Transliterated transcript (Call G) — present only when the worker converted
+  // one or more non-Latin turns to Latin script. Replaces the stub transcript so
+  // the report reads in one script (each converted turn keeps its original text
+  // plus a latinText field). Whitelisted in commit_report by migration 0011.
+  if (Array.isArray(report.transcript) && report.transcript.length) {
+    patch.transcript = report.transcript;
+  }
+
   // partial flag
   if (report.partial === true) {
     patch.partial = true;

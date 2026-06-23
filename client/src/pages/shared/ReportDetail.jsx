@@ -526,6 +526,9 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
   const [promptsOpen, setPromptsOpen] = useState(false);
   const [pollTimedOut, setPollTimedOut] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  // Admin-only: flip the transcript between the Latin-script converted view
+  // (default) and the original captured text.
+  const [showOriginal, setShowOriginal] = useState(false);
 
   // Initial load.
   useEffect(() => {
@@ -1198,16 +1201,29 @@ export default function ReportDetail({ backTo = "/app/reports" }) {
 
       {/* TRANSCRIPT */}
       <Card className="p-6">
-        <CardHeader
-          title="Transcript"
-          subtitle={
-            isAdmin
-              ? "Full conversation with phase markers, turn types, and score notes"
-              : "Full conversation with phase markers"
-          }
-        />
+        <div className="flex items-start justify-between gap-3">
+          <CardHeader
+            title="Transcript"
+            subtitle={
+              isAdmin
+                ? "Full conversation with phase markers, turn types, and score notes"
+                : "Full conversation with phase markers"
+            }
+          />
+          {/* Admin-only toggle — shown only when some turns were converted to
+              Latin script (non-English call). */}
+          {isAdmin && transcript.some((t) => t.latinText) && (
+            <button
+              type="button"
+              onClick={() => setShowOriginal((v) => !v)}
+              className="shrink-0 rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-muted hover:text-ink hover:bg-canvas"
+            >
+              {showOriginal ? "Show converted" : "Show original"}
+            </button>
+          )}
+        </div>
         {transcript.length ? (
-          <TranscriptView transcript={transcript} showScoreReason={isAdmin} />
+          <TranscriptView transcript={transcript} showScoreReason={isAdmin} showOriginal={showOriginal} />
         ) : (
           <EmptyState title="No transcript" hint="This session has no recorded turns." />
         )}

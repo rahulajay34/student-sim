@@ -50,7 +50,7 @@ function TurnTypeBadge({ type }) {
   );
 }
 
-function Bubble({ turn, showScoreReason }) {
+function Bubble({ turn, showScoreReason, showOriginal }) {
   const isCounsellor = turn.role === "counsellor";
   const time = formatTime(turn.ts);
   const emotion =
@@ -63,9 +63,13 @@ function Bubble({ turn, showScoreReason }) {
       : null;
   const turnType = isCounsellor ? turn.turnType : null;
   const scoreAfter = isCounsellor ? turn.scoreAfter : null;
+  // Turns captured in a non-Latin script carry a Latin-script latinText (set at
+  // report time). Show the converted text by default; "show original" (admin
+  // toggle) flips back to the raw captured turn.text.
+  const converted = !showOriginal && turn.latinText ? turn.latinText : (turn.text || "");
   // Strip old inline [emotion:X] artifacts embedded in the text by pre-split
   // sessions (modern sessions carry emotion in turn.emotion, shown as a chip).
-  const displayText = (turn.text || "").replace(/\[emotion:[^\]]*\]/gi, "").trim();
+  const displayText = converted.replace(/\[emotion:[^\]]*\]/gi, "").trim();
 
   return (
     <div className={`flex flex-col ${isCounsellor ? "items-end" : "items-start"}`}>
@@ -107,7 +111,7 @@ function Bubble({ turn, showScoreReason }) {
   );
 }
 
-export default function TranscriptView({ transcript = [], showScoreReason = false }) {
+export default function TranscriptView({ transcript = [], showScoreReason = false, showOriginal = false }) {
   if (!transcript || transcript.length === 0) {
     return (
       <div className="flex items-center justify-center py-10 text-sm text-muted">
@@ -123,6 +127,7 @@ export default function TranscriptView({ transcript = [], showScoreReason = fals
           key={turn.ts ? `${turn.ts}-${i}` : i}
           turn={turn}
           showScoreReason={showScoreReason}
+          showOriginal={showOriginal}
         />
       ))}
     </div>

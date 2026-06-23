@@ -24,6 +24,7 @@ function callKind(input) {
   const prompt = Array.isArray(input)
     ? input.map((m) => m.content).join("\n")
     : input;
+  if (prompt.includes("TRANSLITERATE genuine speech")) return "G";
   if (prompt.includes("THE 8 PARAMETERS WITH THEIR EXACT 0-5 ANCHORS")) return "F";
   if (prompt.includes("ADDRESSED this specific")) return "D";
   if (prompt.includes("prescribing practice drills")) return "C";
@@ -508,4 +509,70 @@ test("personaCard name precedence + null defaults", () => {
   assert.deepEqual(bare.traits.quirks, []);
   assert.equal(bare.scenario.pushiness, null);
   assert.equal(bare.scenario.hesitancy, null);
+});
+
+// ============================================================================
+// Call G (transcript transliteration): non-Latin turns are detected, sent to a
+// single extra call, and the report transcript gets latinText on those turns
+// (originals preserved). All-English transcripts trigger NO Call G.
+// ============================================================================
+const ALL_SUCCESS = (extra = {}) => async (messages) => {
+  const kind = callKind(messages);
+  if (kind === "A") return RESP_A;
+  if (kind === "B") return RESP_B;
+  if (kind === "C") return RESP_C;
+  if (kind === "D") return RESP_D;
+  if (kind === "F") return RESP_F;
+  if (kind === "G") return extra.G ?? JSON.stringify({ turns: [] });
+  throw new Error("unexpected prompt kind: " + kind);
+};
+
+test("Call G transliterates only the non-Latin turns; originals preserved", async () => {
+  const kinds = [];
+  _setChatForTests(async (messages) => {
+    kinds.push(callKind(messages));
+    return ALL_SUCCESS({
+      G: JSON.stringify({
+        turns: [
+          { i: 1, latin: "mujhe fees ke baare mein bataiye" }, // Hindi turn
+          { i: 3, latin: "[unclear audio]" },                   // STT noise
+        ],
+      }),
+    })(messages);
+  });
+
+  const session = makeSession({
+    transcript: [
+      { role: "counsellor", text: "Hi, happy to help you with the programme." }, // English — untouched
+      { role: "student", text: "मुझे फीस के बारे में बताइए" },                      // Hindi
+      { role: "counsellor", text: "Sure, the EMI is manageable." },               // English
+      { role: "student", text: "مرحبا أهلا" },                                     // noise
+    ],
+  });
+
+  const report = await generateReport(session);
+
+  assert.ok(kinds.includes("G"), "Call G must be dispatched when non-Latin turns exist");
+  assert.ok(report.transcript, "report carries the enriched transcript");
+  // English turns: untouched, no latinText.
+  assert.equal(report.transcript[0].latinText, undefined);
+  assert.equal(report.transcript[2].latinText, undefined);
+  // Non-Latin turns: latinText set, original text preserved.
+  assert.equal(report.transcript[1].latinText, "mujhe fees ke baare mein bataiye");
+  assert.equal(report.transcript[1].text, "मुझे फीस के बारे में बताइए");
+  assert.equal(report.transcript[3].latinText, "[unclear audio]");
+  assert.ok(!report.partial, "successful Call G must not mark the report partial");
+});
+
+test("all-English transcript skips Call G (no extra call, no transcript rewrite)", async () => {
+  const kinds = [];
+  _setChatForTests(async (messages) => {
+    kinds.push(callKind(messages));
+    return ALL_SUCCESS()(messages);
+  });
+
+  const report = await generateReport(makeSession()); // default transcript is all English
+
+  assert.ok(!kinds.includes("G"), "Call G must NOT run for an all-English transcript");
+  assert.equal(report.transcript, undefined, "no transcript rewrite when nothing was converted");
 });
