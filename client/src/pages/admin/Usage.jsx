@@ -132,6 +132,7 @@ function SessionRow({ row, rate }) {
                     <th className="px-2 py-1 font-medium">Model</th>
                     <th className="px-2 py-1 text-right font-medium">In/Out tok</th>
                     <th className="px-2 py-1 text-right font-medium">Audio tok</th>
+                    <th className="px-2 py-1 text-right font-medium" title="Cached prompt tokens (read + write). Billed at the cheap cached rate; counted in the session token total.">Cache tok</th>
                     <th className="px-2 py-1 text-right font-medium">Cost</th>
                   </tr>
                 </thead>
@@ -143,6 +144,7 @@ function SessionRow({ row, rate }) {
                       <td className="px-2 py-1.5 text-xs text-muted">{cl.model}</td>
                       <td className="px-2 py-1.5 text-right text-xs tabular-nums text-muted">{fmtTokens(cl.inputTokens)}/{fmtTokens(cl.outputTokens)}</td>
                       <td className="px-2 py-1.5 text-right text-xs tabular-nums text-muted">{fmtTokens((cl.audioInputTokens || 0) + (cl.audioOutputTokens || 0))}</td>
+                      <td className="px-2 py-1.5 text-right text-xs tabular-nums text-muted">{fmtTokens((cl.cacheReadTokens || 0) + (cl.cacheWriteTokens || 0))}</td>
                       <td className="px-2 py-1.5 text-right text-xs font-medium tabular-nums text-ink">{fmtINR(cl.usd, rate)}</td>
                     </tr>
                   ))}
