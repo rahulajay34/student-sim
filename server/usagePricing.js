@@ -25,6 +25,19 @@ export const PRICING = {
       audioInput: 32.0, audioOutput: 64.0,
       cachedInput: 0.40,
     },
+    // gpt-realtime-mini (cheaper S2S tier). ~3x cheaper audio than gpt-realtime.
+    // Best-effort list prices (per 1M tokens) — VERIFY against billing.
+    "gpt-realtime-mini-2025-12-15": {
+      textInput: 0.60, textOutput: 2.40,
+      audioInput: 10.0, audioOutput: 20.0,
+      cachedInput: 0.30,
+    },
+    // bare alias in case OPENAI_REALTIME_MODEL is set without the date suffix.
+    "gpt-realtime-mini": {
+      textInput: 0.60, textOutput: 2.40,
+      audioInput: 10.0, audioOutput: 20.0,
+      cachedInput: 0.30,
+    },
     // gpt-4o-mini-transcribe (counsellor STT).
     "gpt-4o-mini-transcribe": { textInput: 1.25, textOutput: 5.0, audioInput: 3.0 },
     // whisper-1 (verbatim re-transcription for fluency) — billed per audio minute.
